@@ -1,17 +1,4 @@
-const products = [
-  {id:1,name:"Samsung Galaxy S24 Ultra",category:"Smartphones",price:689000,oldPrice:749000,emoji:"📱",rating:4.9,reviews:42,badge:"-8%"},
-  {id:2,name:"Casque Gaming RGB Pro X7",category:"Gaming",price:29900,oldPrice:39900,emoji:"🎧",rating:4.8,reviews:68,badge:"-25%"},
-  {id:3,name:"Smart TV Box 4K Ultra",category:"IPTV",price:34900,oldPrice:null,emoji:"📺",rating:4.7,reviews:35,badge:"Nouveau"},
-  {id:4,name:"Apple Watch Series 9",category:"Montres",price:249000,oldPrice:279000,emoji:"⌚",rating:4.9,reviews:51,badge:"-11%"},
-  {id:5,name:"Manette Gaming Sans Fil",category:"Gaming",price:24500,oldPrice:30000,emoji:"🎮",rating:4.6,reviews:89,badge:"-18%"},
-  {id:6,name:"Écouteurs AirPods Pro 2",category:"Audio",price:159000,oldPrice:null,emoji:"🎧",rating:4.9,reviews:73,badge:"Best seller"},
-  {id:7,name:"Chargeur Rapide GaN 65W",category:"Accessoires",price:19900,oldPrice:24900,emoji:"🔌",rating:4.7,reviews:102,badge:"-20%"},
-  {id:8,name:"PC Portable Ultra Slim 15",category:"Informatique",price:429000,oldPrice:479000,emoji:"💻",rating:4.8,reviews:27,badge:"-10%"},
-  {id:9,name:"Support Smartphone Magnétique",category:"Accessoires",price:12500,oldPrice:null,emoji:"🧲",rating:4.5,reviews:54,badge:"Nouveau"},
-  {id:10,name:"Clavier Mécanique RGB",category:"Gaming",price:38500,oldPrice:45000,emoji:"⌨️",rating:4.8,reviews:46,badge:"-14%"},
-  {id:11,name:"iPhone 15 Pro Max",category:"Smartphones",price:799000,oldPrice:849000,emoji:"📱",rating:4.9,reviews:61,badge:"-6%"},
-  {id:12,name:"Enceinte Bluetooth 360",category:"Audio",price:27500,oldPrice:35000,emoji:"🔊",rating:4.7,reviews:84,badge:"-21%"}
-];
+let products = [];
 
 let cart = JSON.parse(localStorage.getItem("dt-cart") || "[]");
 let wishlist = JSON.parse(localStorage.getItem("dt-wishlist") || "[]");
@@ -165,12 +152,37 @@ $("#menuToggle").addEventListener("click", () => $("#mainNav").classList.toggle(
 
 $("#checkoutButton").addEventListener("click", () => {$("#cartDrawer").classList.remove("active");$("#checkoutModal").classList.add("active");$("#checkoutModal").setAttribute("aria-hidden","false");});
 $$(".payment-options button").forEach(btn => btn.addEventListener("click", () => {$$(".payment-options button").forEach(b => b.classList.remove("selected"));btn.classList.add("selected");}));
-$("#payButton").addEventListener("click", () => {
+$("#payButton").addEventListener("click", async () => {
   const fields = $$("#checkoutModal input");
   if([...fields].some(field => !field.value.trim())){showToast("Informations manquantes","Veuillez renseigner vos coordonnées de livraison.");return;}
   const provider = $(".payment-options button.selected").dataset.payment;
-  cart=[];persist();renderCart();closeAll();fields.forEach(f => f.value="");
-  showToast("Commande confirmée",`Paiement ${provider} simulé avec succès.`);
+  const payButton = $("#payButton");
+  payButton.disabled = true;
+  payButton.textContent = "Création de la commande...";
+  try {
+    const response = await fetch("/api/orders", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        customer: {
+          name: fields[0].value,
+          phone: fields[1].value,
+          address: fields[2].value
+        },
+        items: cart.map(item => ({id: item.id, quantity: item.qty})),
+        paymentProvider: provider
+      })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "La commande n'a pas pu être créée.");
+    cart=[];persist();renderCart();closeAll();fields.forEach(f => f.value="");
+    showToast(`Commande ${result.orderId}`,`Commande créée. Paiement ${provider} en attente.`);
+  } catch (error) {
+    showToast("Commande impossible",error.message);
+  } finally {
+    payButton.disabled = false;
+    payButton.textContent = "Payer maintenant";
+  }
 });
 
 $("#newsletterForm").addEventListener("submit", e => {e.preventDefault();e.target.reset();showToast("Inscription réussie","Bienvenue dans la communauté DieguemTech !");});
@@ -183,7 +195,24 @@ setInterval(() => {
   $("#minutes").textContent=String(Math.floor(diff%3600000/60000)).padStart(2,"0");
 },1000);
 
-renderProducts();
-renderCart();
-renderWishlist();
-persist();
+async function initializeStore(){
+  try {
+    const response = await fetch("/api/products");
+    if (!response.ok) throw new Error("Catalogue indisponible.");
+    products = await response.json();
+    cart = cart.filter(item => products.some(product => product.id === item.id));
+    wishlist = wishlist.filter(id => products.some(product => product.id === id));
+    renderProducts();
+    renderCart();
+    renderWishlist();
+    persist();
+  } catch (error) {
+    $("#productsGrid").innerHTML = "";
+    $("#emptyState").style.display = "block";
+    $("#emptyState h3").textContent = "Le catalogue est temporairement indisponible";
+    $("#emptyState p").textContent = "Veuillez actualiser la page dans quelques instants.";
+    console.error(error);
+  }
+}
+
+initializeStore();
