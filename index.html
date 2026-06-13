@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="DieguemTech Store, votre boutique High-Tech, Gaming, IPTV, Smartphones et accessoires au meilleur prix.">
+  <meta name="theme-color" content="#f68b1e">
+  <title>DieguemTech Store | Votre univers High-Tech</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="topbar">
+    <div class="container topbar-inner">
+      <span>Livraison rapide partout au Sénégal</span>
+      <span>Support : <a href="tel:+221771234567">+221 77 123 45 67</a></span>
+    </div>
+  </div>
+
+  <header class="site-header">
+    <div class="container header-main">
+      <button class="icon-button menu-toggle" id="menuToggle" aria-label="Ouvrir le menu">
+        <svg><use href="#icon-menu"></use></svg>
+      </button>
+      <a class="logo" href="#accueil" aria-label="DieguemTech Store - Accueil">
+        <span class="logo-mark">D</span>
+        <span><strong>DieguemTech</strong><small>STORE</small></span>
+      </a>
+      <form class="search" id="searchForm">
+        <svg><use href="#icon-search"></use></svg>
+        <input id="searchInput" type="search" placeholder="Rechercher un produit, une catégorie..." aria-label="Rechercher">
+        <button type="submit">Rechercher</button>
+      </form>
+      <div class="header-actions">
+        <button class="header-action account-button">
+          <svg><use href="#icon-user"></use></svg>
+          <span><small>Bonjour !</small>Mon compte</span>
+        </button>
+        <button class="header-action" id="wishlistButton" aria-label="Ouvrir les favoris">
+          <span class="action-icon"><svg><use href="#icon-heart"></use></svg><b id="wishlistCount">0</b></span>
+          <span><small>Mes</small>Favoris</span>
+        </button>
+        <button class="header-action" id="cartButton" aria-label="Ouvrir le panier">
+          <span class="action-icon"><svg><use href="#icon-cart"></use></svg><b id="cartCount">0</b></span>
+          <span><small>Mon</small>Panier</span>
+        </button>
+      </div>
+    </div>
+    <nav class="main-nav" id="mainNav">
+      <div class="container nav-inner">
+        <a class="active" href="#accueil">Accueil</a>
+        <a href="#boutique">Boutique</a>
+        <a href="#boutique" data-filter="Smartphones">Smartphones</a>
+        <a href="#boutique" data-filter="Gaming">Gaming</a>
+        <a href="#boutique" data-filter="IPTV">IPTV</a>
+        <a href="#boutique" data-filter="Accessoires">Accessoires</a>
+        <a href="#promotions">Promotions <span class="sale-dot"></span></a>
+        <a href="#contact">Contact</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" id="accueil">
+      <img class="hero-image" src="assets/hero-tech.png" alt="">
+      <div class="container hero-content">
+        <span class="eyebrow light">La tech qui vous ressemble</span>
+        <h1>Votre univers<br><span>High-Tech</span> commence ici</h1>
+        <p>Découvrez les meilleurs produits technologiques, gaming et accessoires au meilleur rapport qualité-prix.</p>
+        <div class="hero-buttons">
+          <a class="button primary" href="#boutique">Acheter maintenant <svg><use href="#icon-arrow"></use></svg></a>
+          <a class="button secondary" href="#categories">Découvrir nos produits</a>
+        </div>
+        <div class="hero-proof">
+          <div class="avatars"><i>AM</i><i>FD</i><i>KS</i><i>+2k</i></div>
+          <div><span class="stars">★★★★★</span><small>Plus de 2 000 clients satisfaits</small></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="benefit-strip">
+      <div class="container benefit-grid">
+        <div><span class="benefit-icon"><svg><use href="#icon-truck"></use></svg></span><p><strong>Livraison rapide</strong><small>Partout au Sénégal</small></p></div>
+        <div><span class="benefit-icon"><svg><use href="#icon-shield"></use></svg></span><p><strong>Paiement sécurisé</strong><small>PayDunya & PayTech</small></p></div>
+        <div><span class="benefit-icon"><svg><use href="#icon-headset"></use></svg></span><p><strong>Support réactif</strong><small>7 jours sur 7</small></p></div>
+        <div><span class="benefit-icon"><svg><use href="#icon-refresh"></use></svg></span><p><strong>Satisfait ou remboursé</strong><small>Retour sous 7 jours</small></p></div>
+      </div>
+    </section>
+
+    <section class="section categories-section" id="categories">
+      <div class="container">
+        <div class="section-heading">
+          <div><span class="eyebrow">Explorez nos univers</span><h2>Nos catégories populaires</h2></div>
+          <a href="#boutique">Voir toutes les catégories <svg><use href="#icon-arrow"></use></svg></a>
+        </div>
+        <div class="categories-grid">
+          <button class="category-card" data-filter="Smartphones"><span>📱</span><strong>Smartphones</strong><small>24 produits</small></button>
+          <button class="category-card" data-filter="Gaming"><span>🎮</span><strong>Gaming</strong><small>18 produits</small></button>
+          <button class="category-card" data-filter="IPTV"><span>📺</span><strong>IPTV & TV Box</strong><small>12 produits</small></button>
+          <button class="category-card" data-filter="Audio"><span>🎧</span><strong>Audio & Écouteurs</strong><small>30 produits</small></button>
+          <button class="category-card" data-filter="Montres"><span>⌚</span><strong>Montres connectées</strong><small>16 produits</small></button>
+          <button class="category-card" data-filter="Informatique"><span>💻</span><strong>Informatique</strong><small>22 produits</small></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="section products-section" id="boutique">
+      <div class="container">
+        <div class="section-heading">
+          <div><span class="eyebrow">Les favoris de nos clients</span><h2>Produits populaires</h2></div>
+          <div class="product-tabs" id="productTabs">
+            <button class="active" data-filter="Tous">Tous</button>
+            <button data-filter="Smartphones">Smartphones</button>
+            <button data-filter="Gaming">Gaming</button>
+            <button data-filter="Accessoires">Accessoires</button>
+          </div>
+        </div>
+        <div class="products-grid" id="productsGrid"></div>
+        <div class="empty-state" id="emptyState">
+          <span>⌕</span><h3>Aucun produit trouvé</h3><p>Essayez une autre recherche ou consultez toutes nos catégories.</p>
+          <button class="button primary" id="resetSearch">Voir tous les produits</button>
+        </div>
+        <div class="center-action"><button class="button outline" id="showAllProducts">Voir tous les produits <svg><use href="#icon-arrow"></use></svg></button></div>
+      </div>
+    </section>
+
+    <section class="promo-section" id="promotions">
+      <div class="container promo-banner">
+        <div class="promo-copy">
+          <span class="eyebrow light">Offres spéciales</span>
+          <h2>La Tech Week<br>jusqu'à <em>-40%</em></h2>
+          <p>Profitez de prix exceptionnels sur une sélection de produits high-tech. Offre limitée.</p>
+          <a class="button white-button" href="#boutique">Profiter des offres <svg><use href="#icon-arrow"></use></svg></a>
+        </div>
+        <div class="promo-deal">
+          <span class="deal-badge">-35%</span>
+          <div class="deal-visual">🎮</div>
+          <small>Pack Gaming Pro</small>
+          <strong>89 900 FCFA</strong>
+          <del>138 500 FCFA</del>
+        </div>
+        <div class="countdown" id="countdown">
+          <p>Fin de l'offre dans</p>
+          <div><span><b id="days">02</b><small>Jours</small></span><i>:</i><span><b id="hours">14</b><small>Heures</small></span><i>:</i><span><b id="minutes">36</b><small>Min</small></span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section why-section">
+      <div class="container why-grid">
+        <div class="why-copy">
+          <span class="eyebrow">La qualité avant tout</span>
+          <h2>Pourquoi choisir<br>DieguemTech Store ?</h2>
+          <p>Nous mettons la technologie à votre portée avec une sélection rigoureuse, des prix justes et un accompagnement humain.</p>
+          <div class="why-stat"><strong>98%</strong><span>de clients<br>satisfaits</span></div>
+        </div>
+        <div class="why-cards">
+          <article><span><svg><use href="#icon-check"></use></svg></span><div><h3>Produits sélectionnés avec soin</h3><p>Chaque référence est testée pour vous garantir qualité et fiabilité.</p></div></article>
+          <article><span><svg><use href="#icon-lock"></use></svg></span><div><h3>Paiement 100% sécurisé</h3><p>Vos transactions sont protégées avec PayDunya et PayTech.</p></div></article>
+          <article><span><svg><use href="#icon-truck"></use></svg></span><div><h3>Livraison rapide</h3><p>Recevez votre commande dans les meilleurs délais, où que vous soyez.</p></div></article>
+          <article><span><svg><use href="#icon-headset"></use></svg></span><div><h3>Support client réactif</h3><p>Une équipe disponible pour répondre à toutes vos questions.</p></div></article>
+          <article><span><svg><use href="#icon-shield"></use></svg></span><div><h3>Garantie satisfaction</h3><p>Achetez sereinement avec notre garantie satisfait ou remboursé.</p></div></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section reviews-section">
+      <div class="container">
+        <div class="section-heading centered">
+          <div><span class="eyebrow">Ils nous font confiance</span><h2>Ce que disent nos clients</h2></div>
+        </div>
+        <div class="reviews-grid">
+          <article class="review-card"><span class="stars">★★★★★</span><p>“Commande reçue en moins de 24h. Le téléphone est impeccable et le service client vraiment disponible. Je recommande !”</p><div><i>AM</i><span><strong>Amadou M.</strong><small>Client vérifié</small></span><b>✓</b></div></article>
+          <article class="review-card featured"><span class="stars">★★★★★</span><p>“Ma TV Box fonctionne parfaitement. Installation simple et qualité d'image au top. Une boutique sérieuse et fiable.”</p><div><i>FD</i><span><strong>Fatou D.</strong><small>Cliente vérifiée</small></span><b>✓</b></div></article>
+          <article class="review-card"><span class="stars">★★★★★</span><p>“Très satisfait de mon setup gaming. Les prix sont corrects et la livraison était soignée. Je reviendrai sans hésiter.”</p><div><i>KS</i><span><strong>Khadim S.</strong><small>Client vérifié</small></span><b>✓</b></div></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="newsletter">
+      <div class="container newsletter-inner">
+        <div><span class="newsletter-icon">✦</span><span><strong>Ne ratez plus aucune bonne affaire</strong><small>Recevez nos nouveautés et offres exclusives.</small></span></div>
+        <form id="newsletterForm"><input type="email" placeholder="Votre adresse e-mail" required><button class="button primary">Je m'inscris</button></form>
+      </div>
+    </section>
+  </main>
+
+  <footer id="contact">
+    <div class="container footer-grid">
+      <div class="footer-brand">
+        <a class="logo inverse" href="#accueil"><span class="logo-mark">D</span><span><strong>DieguemTech</strong><small>STORE</small></span></a>
+        <p>Votre partenaire de confiance pour tous vos besoins High-Tech, Gaming, IPTV et accessoires électroniques.</p>
+        <div class="socials"><a href="#" aria-label="Facebook">f</a><a href="#" aria-label="Instagram">◎</a><a href="#" aria-label="TikTok">♪</a><a href="#" aria-label="WhatsApp">◉</a></div>
+      </div>
+      <div><h3>Boutique</h3><a href="#boutique">Smartphones</a><a href="#boutique">Gaming</a><a href="#boutique">IPTV & TV Box</a><a href="#boutique">Accessoires</a><a href="#promotions">Promotions</a></div>
+      <div><h3>Informations</h3><a href="#">À propos</a><a href="#contact">Contact</a><a href="#">Livraison & retours</a><a href="#">Conditions générales</a><a href="#">Politique de confidentialité</a></div>
+      <div><h3>Nous contacter</h3><p class="contact-line">📍 Dakar, Sénégal</p><p class="contact-line">☎ +221 77 123 45 67</p><p class="contact-line">✉ contact@dieguemtech.com</p><div class="payment-label">Paiement sécurisé</div><div class="payment-chips"><span>PayDunya</span><span>PAYTECH</span></div></div>
+    </div>
+    <div class="container footer-bottom"><span>© 2026 DieguemTech Store. Tous droits réservés.</span><span>Conçu avec passion à Dakar</span></div>
+  </footer>
+
+  <div class="overlay" id="overlay"></div>
+  <aside class="drawer" id="cartDrawer" aria-hidden="true">
+    <div class="drawer-header"><div><span class="eyebrow">Votre sélection</span><h2>Mon panier</h2></div><button class="close-drawer" aria-label="Fermer">×</button></div>
+    <div class="drawer-content" id="cartItems"></div>
+    <div class="drawer-footer" id="cartFooter">
+      <div class="subtotal"><span>Sous-total</span><strong id="cartTotal">0 FCFA</strong></div>
+      <small>Livraison calculée à l'étape suivante</small>
+      <button class="button primary full" id="checkoutButton">Passer la commande <svg><use href="#icon-arrow"></use></svg></button>
+      <div class="drawer-payments"><span>PayDunya</span><span>PayTech</span><span>🔒 Sécurisé</span></div>
+    </div>
+  </aside>
+  <aside class="drawer" id="wishlistDrawer" aria-hidden="true">
+    <div class="drawer-header"><div><span class="eyebrow">À garder sous la main</span><h2>Mes favoris</h2></div><button class="close-drawer" aria-label="Fermer">×</button></div>
+    <div class="drawer-content" id="wishlistItems"></div>
+  </aside>
+
+  <div class="modal" id="checkoutModal" aria-hidden="true">
+    <button class="modal-close" aria-label="Fermer">×</button>
+    <span class="eyebrow">Commande sécurisée</span><h2>Finaliser ma commande</h2>
+    <div class="checkout-summary"><span>Total à payer</span><strong id="checkoutTotal">0 FCFA</strong></div>
+    <label>Nom complet<input type="text" placeholder="Votre nom"></label>
+    <label>Téléphone<input type="tel" placeholder="+221 77 000 00 00"></label>
+    <label>Adresse de livraison<input type="text" placeholder="Ville, quartier, adresse"></label>
+    <p class="payment-title">Choisissez votre moyen de paiement</p>
+    <div class="payment-options"><button class="selected" data-payment="PayDunya">PayDunya <small>Orange Money · Wave</small></button><button data-payment="PayTech">PAYTECH <small>Mobile Money · Carte</small></button></div>
+    <button class="button primary full" id="payButton">Payer maintenant</button>
+    <p class="demo-note">Démonstration : aucune transaction réelle ne sera effectuée.</p>
+  </div>
+
+  <div class="toast" id="toast"><span>✓</span><p><strong>Produit ajouté</strong><small>Votre panier a été mis à jour.</small></p></div>
+
+  <svg class="svg-sprite" aria-hidden="true">
+    <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+    <symbol id="icon-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="icon-heart" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></symbol>
+    <symbol id="icon-cart" viewBox="0 0 24 24"><circle cx="9" cy="20" r="1"/><circle cx="19" cy="20" r="1"/><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.6L21 8H6"/></symbol>
+    <symbol id="icon-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="icon-truck" viewBox="0 0 24 24"><path d="M3 6h11v11H3zM14 10h4l3 3v4h-7z"/><circle cx="7" cy="19" r="2"/><circle cx="18" cy="19" r="2"/></symbol>
+    <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="icon-headset" viewBox="0 0 24 24"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><path d="M4 14h3v6H5a1 1 0 0 1-1-1zM20 14h-3v6h2a1 1 0 0 0 1-1z"/></symbol>
+    <symbol id="icon-refresh" viewBox="0 0 24 24"><path d="M20 7h-5V2M4 17h5v5"/><path d="M5.5 9a8 8 0 0 1 13-3L20 7M4 17l1.5 1a8 8 0 0 0 13-3"/></symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="icon-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="icon-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+  </svg>
+  <script src="app.js"></script>
+</body>
+</html>
