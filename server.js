@@ -76,6 +76,35 @@ app.post("/api/orders", async (request, response, next) => {
     const order = database.hasDatabase
       ? await database.createOrder(orderInput)
       : await createLocalOrder(orderInput);
+    if (paymentProvider === "PayTech") {
+
+  const paytechResponse = await axios.post(
+    "https://paytech.sn/api/payment/request-payment",
+    {
+      item_name: "Commande DieguemTech",
+      item_price: order.total,
+      currency: "XOF",
+      ref_command: order.id,
+      command_name: `Commande ${order.id}`,
+      env: process.env.PAYTECH_MODE || "test",
+      success_url: "https://dieguemtech-store.onrender.com/payment-success",
+      cancel_url: "https://dieguemtech-store.onrender.com/payment-cancel",
+      ipn_url: "https://dieguemtech-store.onrender.com/api/paytech/ipn"
+    },
+    {
+      headers: {
+        API_KEY: process.env.PAYTECH_API_KEY,
+        API_SECRET: process.env.PAYTECH_API_SECRET
+      }
+    }
+  );
+
+  return response.status(201).json({
+    orderId: order.id,
+    redirect_url: paytechResponse.data.redirect_url,
+    success: 1
+  });
+}
     response.status(201).json({
       orderId: order.id,
       total: order.total,
