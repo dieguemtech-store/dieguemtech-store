@@ -174,9 +174,27 @@ $("#payButton").addEventListener("click", async () => {
       })
     });
     const result = await response.json();
-    if (!response.ok) throw new Error(result.error || "La commande n'a pas pu être créée.");
-    cart=[];persist();renderCart();closeAll();fields.forEach(f => f.value="");
-    showToast(`Commande ${result.orderId}`,`Commande créée. Paiement ${provider} en attente.`);
+
+if (!response.ok) {
+  throw new Error(result.error || "The order could not be created.");
+}
+
+// Si PayTech retourne une URL de paiement
+if (provider === "PayTech" && result.redirect_url) {
+  window.location.href = result.redirect_url;
+  return;
+}
+
+cart = [];
+persist();
+renderCart();
+closeAll();
+fields.forEach(f => f.value = "");
+
+showToast(
+  `Commande ${result.orderId}`,
+  `Commande créée. Paiement ${provider} en attente.`
+);
   } catch (error) {
     showToast("Commande impossible",error.message);
   } finally {
