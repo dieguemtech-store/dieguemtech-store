@@ -136,67 +136,7 @@ app.get("/api/paytech/test", (req, res) => {
     mode: process.env.PAYTECH_MODE
   });
 });
-app.get("/api/paytech/payment-test", async (req, res) => {
-  try {
-    const response = await axios.post(
-      "https://paytech.sn/api/payment/request-payment",
-      {
-        item_name: "Test DieguemTech",
-        item_price: 100,
-        currency: "XOF",
-        ref_command: "TEST-" + Date.now(),
-        command_name: "Test Paiement",
-        env: "prod",
-        success_url: "https://dieguemtech-store.onrender.com/payment-success",
-        cancel_url: "https://dieguemtech-store.onrender.com/payment-cancel",
-        ipn_url: "https://dieguemtech-store.onrender.com/api/paytech/ipn"
-      },
-      {
-        headers: {
-          API_KEY: PAYTECH_API_KEY,
-          API_SECRET: PAYTECH_API_SECRET
-        }
-      }
-    );
 
-    res.json(response.data);
-
-  } catch (error) {
-    res.status(500).json(
-      error.response?.data || { error: error.message }
-    );
-  }
-});
-
-Ensuite :
-
-Sauvegarde server.js
-Commit sur GitHub
-Attends le redéploiement Render
-Ouvre :
-https://dieguemtech-store.onrender.com/api/paytech/payment-test
-
-Puis envoie-moi exactement ce qui s'affiche.
-
-Si PayTech répond avec une URL de paiement (redirect_url, redirectUrl, redirect_to, etc.), alors l'intégration est pratiquement terminée et nous pourrons connecter le bouton "Payer maintenant" de DieguemTech Store au vrai paiement PayTech. 🚀
-
-je l'ajoute où ?
-
-Ajoute cette nouvelle route juste après la route /api/paytech/test que tu viens de créer, et avant :
-
-app.use(express.static(__dirname, {
-
-Tu auras donc :
-
-app.get("/api/paytech/test", (req, res) => {
-  res.json({
-    key: !!PAYTECH_API_KEY,
-    secret: !!PAYTECH_API_SECRET,
-    mode: process.env.PAYTECH_MODE
-  });
-});
-
-// AJOUTE ICI
 app.get("/api/paytech/payment-test", async (req, res) => {
   try {
     const response = await axios.post(
