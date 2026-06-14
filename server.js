@@ -2,6 +2,7 @@ const express = require("express");
 const path = require("node:path");
 const fs = require("node:fs/promises");
 const crypto = require("node:crypto");
+const axios = require("axios");
 const localProducts = require("./data/products");
 const database = require("./db");
 
