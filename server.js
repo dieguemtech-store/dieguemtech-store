@@ -129,6 +129,17 @@ app.post("/api/paytech/ipn", (req, res) => {
   console.log("Notification PayTech :", req.body);
   res.status(200).send("OK");
 });
+app.get("/api/paytech/test", (req, res) => {
+  res.json({
+    key: !!PAYTECH_API_KEY,
+    secret: !!PAYTECH_API_SECRET,
+    mode: process.env.PAYTECH_MODE
+  });
+});
+
+app.use(express.static(__dirname, {
+  extensions: ["html"]
+}));
 app.use(express.static(__dirname, {
   extensions: ["html"],
   index: "index.html"
