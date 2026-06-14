@@ -18,10 +18,10 @@ const ordersFile = path.join(__dirname, "data", "orders.json");
 app.disable("x-powered-by");
 app.use(express.json({ limit: "100kb" }));
 
-app.get("/api/health", (request, response) => {
-  response.json({
+app.get("/api/health", (req, res) => {
+  res.json({
     status: "ok",
-    service: "dieguemtech-store",
+    service: "DieguemTech Store",
     database: database.hasDatabase ? "postgresql" : "local"
   });
 });
