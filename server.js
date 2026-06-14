@@ -118,6 +118,7 @@ app.post("/api/paytech/create", async (req, res) => {
     res.json(response.data);
   } catch (error) {
     console.error(error.response?.data || error.message);
+
     res.status(500).json({
       error: "Erreur PayTech"
     });
