@@ -2,11 +2,12 @@ const axios = require("axios");
 
 const PAYTECH_API_KEY = process.env.PAYTECH_API_KEY;
 const PAYTECH_API_SECRET = process.env.PAYTECH_API_SECRET;
+
 const express = require("express");
 const path = require("node:path");
 const fs = require("node:fs/promises");
 const crypto = require("node:crypto");
-const axios = require("axios");
+
 const localProducts = require("./data/products");
 const database = require("./db");
 
@@ -86,7 +87,47 @@ app.post("/api/orders", async (request, response, next) => {
     next(error);
   }
 });
+app.post("/api/paytech/create", async (req, res) => {
+  try {
+    const { amount, orderId } = req.body;
 
+    const response = await axios.post(
+      "https://paytech.sn/api/payment/request-payment",
+      {
+        item_name: "Commande DieguemTech",
+        item_price: amount,
+        currency: "XOF",
+        ref_command: orderId,
+        command_name: `Commande ${orderId}`,
+        env: "prod",
+        success_url:
+          "https://dieguemtech-store.onrender.com/payment-success",
+        cancel_url:
+          "https://dieguemtech-store.onrender.com/payment-cancel",
+        ipn_url:
+          "https://dieguemtech-store.onrender.com/api/paytech/ipn"
+      },
+      {
+        headers: {
+          API_KEY: PAYTECH_API_KEY,
+          API_SECRET: PAYTECH_API_SECRET
+        }
+      }
+    );
+
+    res.json(response.data);
+  } catch (error) {
+    console.error(error.response?.data || error.message);
+    res.status(500).json({
+      error: "Erreur PayTech"
+    });
+  }
+});
+
+app.post("/api/paytech/ipn", (req, res) => {
+  console.log("Notification PayTech :", req.body);
+  res.status(200).send("OK");
+});
 app.use(express.static(__dirname, {
   extensions: ["html"],
   index: "index.html"
