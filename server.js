@@ -129,7 +129,7 @@ app.post("/api/paytech/ipn", (req, res) => {
   console.log("Notification PayTech :", req.body);
   res.status(200).send("OK");
 });
-app.get("/api/paytech/prod", (req, res) => {
+app.get("/api/paytech/test", (req, res) => {
   res.json({
     key: !!PAYTECH_API_KEY,
     secret: !!PAYTECH_API_SECRET,
@@ -137,17 +137,17 @@ app.get("/api/paytech/prod", (req, res) => {
   });
 });
 
-app.get("/api/paytech/payment-prod", async (req, res) => {
+app.get("/api/paytech/payment-test", async (req, res) => {
   try {
     const response = await axios.post(
       "https://paytech.sn/api/payment/request-payment",
       {
-        item_name: "prod DieguemTech",
+        item_name: "test DieguemTech",
         item_price: 100,
         currency: "XOF",
-        ref_command: "PROD-" + Date.now(),
-        command_name: "PROD Paiement",
-        env: "prod",
+        ref_command: "TEST-" + Date.now(),
+        command_name: "TEST Paiement",
+        env: "test",
         success_url: "https://dieguemtech-store.onrender.com/payment-success",
         cancel_url: "https://dieguemtech-store.onrender.com/payment-cancel",
         ipn_url: "https://dieguemtech-store.onrender.com/api/paytech/ipn"
