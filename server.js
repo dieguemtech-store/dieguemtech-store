@@ -1,3 +1,7 @@
+const axios = require("axios");
+
+const PAYTECH_API_KEY = process.env.PAYTECH_API_KEY;
+const PAYTECH_API_SECRET = process.env.PAYTECH_API_SECRET;
 const express = require("express");
 const path = require("node:path");
 const fs = require("node:fs/promises");
