@@ -37,11 +37,11 @@ app.get("/api/products", async (request, response, next) => {
   }
 });
 
-app.get("/api/products/:id", async (request, response, next) => {
+app.get("/api/products/:id", async (req, res, next) => {
   try {
-    const product = await database.getProduct(Number(request.params.id));
-    if (!product) return response.status(404).json({ error: "Produit introuvable." });
-    response.json(product);
+    const product = await database.getProduct(Number(req.params.id));
+    if (!product) return res.status(404).json({ error: "Produit introuvable." });
+    res.json(product);
   } catch (error) {
     next(error);
   }
