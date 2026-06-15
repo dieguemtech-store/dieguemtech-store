@@ -6,3 +6,24 @@
 @media(max-width:1000px){.account-button{display:none}.header-main{gap:18px}.header-actions{gap:18px}.nav-inner{gap:26px}.categories-grid{grid-template-columns:repeat(3,1fr)}.products-grid{grid-template-columns:repeat(3,1fr)}.promo-banner{grid-template-columns:1fr 1fr;padding:45px}.countdown{display:none}.why-grid{gap:40px}.footer-grid{grid-template-columns:1.3fr 1fr 1fr;gap:35px}.footer-grid>div:last-child{grid-column:2}.benefit-grid>div{padding:0 12px}}
 @media(max-width:760px){.container{width:min(100% - 28px,1180px)}.topbar{display:none}.header-main{height:70px}.menu-toggle{display:grid;place-items:center;border:0;background:none}.logo-mark{width:37px;height:37px}.logo strong{font-size:15px}.logo small{font-size:7px}.search{position:absolute;top:70px;left:14px;right:14px;max-width:none;background:#fff;margin:0;height:43px;z-index:2}.search button{display:none}.header-main{padding-bottom:0}.header-action>span:last-child{display:none}.header-actions{margin-left:auto}.header-action svg{width:21px}.main-nav{position:absolute;top:113px;left:0;right:0;background:#fff;box-shadow:0 15px 30px rgba(0,0,0,.12);transform:translateY(-10px);opacity:0;visibility:hidden;transition:.25s}.main-nav.open{transform:none;opacity:1;visibility:visible}.nav-inner{height:auto;display:flex;flex-direction:column;align-items:stretch;gap:0;padding:8px 20px 15px}.nav-inner a{padding:11px 4px}.nav-inner a.active:after{display:none}.hero{margin-top:43px;min-height:570px}.hero:after{background:linear-gradient(90deg,rgba(16,16,17,.95),rgba(16,16,17,.65))}.hero-image{object-position:65% center;opacity:.68}.hero-content{padding-top:65px}.hero h1{font-size:43px}.hero p{font-size:14px;max-width:420px}.hero-buttons{flex-direction:column;align-items:flex-start}.hero-buttons .button{width:230px}.benefit-grid{grid-template-columns:1fr 1fr;gap:0}.benefit-grid>div{border-bottom:1px solid var(--line);padding:17px 7px}.benefit-grid>div:nth-child(2){border-right:0}.section{padding:60px 0}.section-heading{align-items:flex-start;gap:18px}.section-heading h2{font-size:27px}.section-heading>a{display:none}.categories-grid{grid-template-columns:repeat(2,1fr)}.category-card{min-height:145px}.products-grid{grid-template-columns:repeat(2,1fr);gap:12px}.product-tabs{display:none}.product-visual{height:180px}.promo-banner{grid-template-columns:1fr;padding:38px 28px}.promo-copy h2{font-size:34px}.promo-deal{display:none}.why-grid{grid-template-columns:1fr}.why-copy h2{font-size:34px}.reviews-grid{grid-template-columns:1fr}.review-card.featured{transform:none}.newsletter-inner{flex-direction:column;gap:22px;align-items:stretch}.newsletter-inner form{width:100%}.footer-grid{grid-template-columns:1fr 1fr}.footer-brand{grid-column:span 2}.footer-grid>div:last-child{grid-column:auto}.footer-bottom{height:auto;padding:18px 0;flex-direction:column;gap:5px}.drawer{width:100%}}
 @media(max-width:480px){.logo>span:last-child{display:none}.header-actions{gap:15px}.hero h1{font-size:38px}.hero-proof{margin-top:27px}.benefit-grid{grid-template-columns:1fr}.benefit-grid>div{border-right:0}.categories-grid{gap:10px}.category-card{min-height:135px}.category-card span{font-size:36px}.products-grid{grid-template-columns:1fr 1fr}.product-visual{height:150px}.product-emoji{font-size:65px}.product-info{padding:12px}.product-info h3{font-size:12px}.product-bottom{align-items:flex-end}.price strong{font-size:12px}.promo-section{padding-bottom:60px}.why-cards{grid-template-columns:1fr}.why-cards article:last-child{grid-column:auto}.newsletter-inner form{height:auto;flex-direction:column;background:transparent;border:0;gap:8px}.newsletter-inner input{width:100%;height:45px;background:#fff;border:1px solid #eee;border-radius:7px}.newsletter-inner .button{width:100%;border-radius:7px}.footer-grid{grid-template-columns:1fr}.footer-brand{grid-column:auto}.footer-grid>div:last-child{grid-column:auto}.modal{padding:27px 20px}.payment-options{grid-template-columns:1fr}.toast{left:15px;right:15px;bottom:15px}}
+.whatsapp-float{
+    position:fixed;
+    width:60px;
+    height:60px;
+    bottom:20px;
+    right:20px;
+    background:#25D366;
+    color:#fff;
+    border-radius:50%;
+    text-align:center;
+    font-size:30px;
+    line-height:60px;
+    text-decoration:none;
+    box-shadow:0 4px 10px rgba(0,0,0,.3);
+    z-index:9999;
+}
+
+.whatsapp-float:hover{
+    transform:scale(1.1);
+    transition:.3s;
+}
