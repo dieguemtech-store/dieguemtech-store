@@ -12,5 +12,4 @@ module.exports = [
   { id: 11, name: "iPhone 15 Pro Max", category: "Smartphones", price: 799000, oldPrice: 849000, emoji: "📱", rating: 4.9, reviews: 61, badge: "-6%", stock: 5 },
   { id: 12, name: "Enceinte Bluetooth 360", category: "Audio", price: 27500, oldPrice: 35000, emoji: "🔊", rating: 4.7, reviews: 84, badge: "-21%", stock: 19 },
   { id: 13, Name: "Android TV Stick 4K - Smart TV & IPTV", Category: "IPTV", Price: 25000, oldPrice: 30000, emoji: "📺", rating: 4.9, reviews: 25, badge: "-17%", stock: 10 },
-
-  ];
+},
