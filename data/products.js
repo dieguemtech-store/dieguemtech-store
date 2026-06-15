@@ -10,5 +10,6 @@ module.exports = [
   { id: 9, name: "Support Smartphone Magnétique", category: "Accessoires", price: 12500, oldPrice: null, emoji: "🧲", rating: 4.5, reviews: 54, badge: "Nouveau", stock: 25 },
   { id: 10, name: "Clavier Mécanique RGB", category: "Gaming", price: 38500, oldPrice: 45000, emoji: "⌨️", rating: 4.8, reviews: 46, badge: "-14%", stock: 14 },
   { id: 11, name: "iPhone 15 Pro Max", category: "Smartphones", price: 799000, oldPrice: 849000, emoji: "📱", rating: 4.9, reviews: 61, badge: "-6%", stock: 5 },
-  { id: 12, name: "Enceinte Bluetooth 360", category: "Audio", price: 27500, oldPrice: 35000, emoji: "🔊", rating: 4.7, reviews: 84, badge: "-21%", stock: 19 }
+  { id: 12, name: "Enceinte Bluetooth 360", category: "Audio", price: 27500, oldPrice: 35000, emoji: "🔊", rating: 4.7, reviews: 84, badge: "-21%", stock: 19 },
+  { id: 13, name: "Android TV Stick 4K - Smart TV & IPTV", category: "IPTV", price: 25000, oldPrice: 30000, emodji: "📺", rating: 4.9, reviews: 25, badge: "-17%", image: "/Actifs/Android TV Stick 4K - Smart TV & IPTV.jpg", description: "Transformez votre téléviseur en Smart TV Android avec Netflix, YouTube, IPTV, Google Play et des milliers d'applications. Installation rapide et utilisation simple." }
 ];
