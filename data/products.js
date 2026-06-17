@@ -12,6 +12,6 @@ module.exports = [
   { id: 11, name: "iPhone 15 Pro Max", category: "Smartphones", price: 799000, oldPrice: 849000, emoji: "📱", rating: 4.9, reviews: 61, badge: "-6%", stock: 5 },
   { id: 12, name: "Enceinte Bluetooth 360", category: "Audio", price: 27500, oldPrice: 35000, emoji: "🔊", rating: 4.7, reviews: 84, badge: "-21%", stock: 19 },
   { id: 13, name: "Android TV Stick 4K - Smart TV & IPTV" , category: "IPTV" , price: 25000, emoji: "📺", rating: 4.9 , reviews: 25, badge: "-17%", stock:19 },
-  { id: 14, name: "T-WOLF RGB Gaming Keyboard & Mouse Combo", category: "Gaming", price: 20000, oldPrice: 25000, emoji: "⌨️", rating: 4.8, reviews: 36, badge: "-20%", stock:10, image: "/Actifs/t-wolf-rgb-gaming-combo.png", description: "Ensemble clavier et souris gaming T-WOLF avec rétroéclairage RGB multicolore, 105 touches, souris haute précision DPI réglable et connexion USB Plug & Play. Compatible Windows et MacOS." }
+  { id: 14, name: "T-WOLF RGB Gaming Keyboard & Mouse Combo", category: "Gaming", price: 20000, oldPrice: 25000, emoji: "⌨️", rating: 4.8, reviews: 36, badge: "-20%", stock:10, image: "/Assets/t-wolf-rgb-gaming-combo.png", description: "Ensemble clavier et souris gaming T-WOLF avec rétroéclairage RGB multicolore, 105 touches, souris haute précision DPI réglable et connexion USB Plug & Play. Compatible Windows et MacOS." }
   
 ];
