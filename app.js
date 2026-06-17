@@ -18,10 +18,9 @@ function productCard(product){
       <button class="wishlist-toggle ${liked ? "active" : ""}" data-wishlist="${product.id}" aria-label="Ajouter aux favoris">
         <svg><use href="#icon-heart"></use></svg>
       </button>
-      ${product.image
-  ? `<img src="${product.image}" alt="${product.name}" class="product-image">`
-  : `<span class="product-emoji">${product.emoji}</span>`
-}
+     <img class="product-image"
+     src="${product.image}"
+     alt="${product.name}">
     </div>
     <div class="product-info">
       <span class="product-category">${product.category}</span>
