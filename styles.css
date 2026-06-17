@@ -27,3 +27,17 @@
     transform:scale(1.1);
     transition:.3s;
 }
+.product-image{
+  width:100%;
+  height:180px;
+  object-fit:contain;
+  display:block;
+  margin:auto;
+}
+
+.product-visual{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:15px;
+}
