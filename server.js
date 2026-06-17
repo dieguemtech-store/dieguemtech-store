@@ -16,7 +16,9 @@ const port = process.env.PORT || 3000;
 const ordersFile = path.join(__dirname, "data", "orders.json");
 
 app.disable("x-powered-by");
+
 app.use(express.json({ limit: "100kb" }));
+app.use("/Actifs", express.static(path.join(__dirname, "Actifs")));
 
 app.get("/api/health", (req, res) => {
   res.json({
