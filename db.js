@@ -85,16 +85,14 @@ await pool.query(`
       product.rating,
       product.reviews,
       product.badge,
-      product.stock,
-      product.image,
-      product.description
+      product.stock
     );
     return `(${Array.from({ length: 10 }, (_, item) => `$${offset + item + 1}`).join(",")})`;
   });
 
   await pool.query(`
     INSERT INTO products (
-      id, name, category, price, old_price, emoji, rating, reviews, badge, stock
+      id, name, category, price, old_price, emoji, rating, reviews, badge, stock, image, description
     ) VALUES ${placeholders.join(",")}
     ON CONFLICT (id) DO NOTHING
   `, values);
