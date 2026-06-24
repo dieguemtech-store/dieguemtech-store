@@ -74,7 +74,9 @@ async function initializeDatabase() {
       product.rating,
       product.reviews,
       product.badge,
-      product.stock
+      product.stock,
+      product.image,
+      product.description
     );
     return `(${Array.from({ length: 10 }, (_, item) => `$${offset + item + 1}`).join(",")})`;
   });
@@ -123,7 +125,7 @@ async function getProduct(id, client = pool) {
   const result = await client.query(`
     SELECT
       id, name, category, price, old_price AS "oldPrice", emoji,
-      rating::FLOAT, reviews, badge, stock
+      rating::FLOAT, reviews, badge, stock, image, description
     FROM products
     WHERE id = $1 AND active = TRUE
   `, [id]);
