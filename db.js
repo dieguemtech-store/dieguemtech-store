@@ -85,7 +85,9 @@ await pool.query(`
       product.rating,
       product.reviews,
       product.badge,
-      product.stock
+      product.stock,
+      product.image,
+      product.description
     );
     return `(${Array.from({ length: 10 }, (_, item) => `$${offset + item + 1}`).join(",")})`;
   });
