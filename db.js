@@ -74,9 +74,7 @@ async function initializeDatabase() {
       product.rating,
       product.reviews,
       product.badge,
-      product.stock,
-      product.image,
-      product.description
+      product.stock
     );
     return `(${Array.from({ length: 10 }, (_, item) => `$${offset + item + 1}`).join(",")})`;
   });
