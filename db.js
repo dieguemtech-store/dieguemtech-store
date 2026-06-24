@@ -28,10 +28,21 @@ async function initializeDatabase() {
       reviews INTEGER NOT NULL DEFAULT 0,
       badge TEXT NOT NULL DEFAULT '',
       stock INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
+      image TEXT,
+      description TEXT,
       active BOOLEAN NOT NULL DEFAULT TRUE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    await pool.query(`
+  ALTER TABLE products
+  ADD COLUMN IF NOT EXISTS image TEXT;
+`);
+
+await pool.query(`
+  ALTER TABLE products
+  ADD COLUMN IF NOT EXISTS description TEXT;
+`);
 
     CREATE TABLE IF NOT EXISTS orders (
       id TEXT PRIMARY KEY,
@@ -74,7 +85,9 @@ async function initializeDatabase() {
       product.rating,
       product.reviews,
       product.badge,
-      product.stock
+      product.stock,
+      product.image,
+      product.description
     );
     return `(${Array.from({ length: 10 }, (_, item) => `$${offset + item + 1}`).join(",")})`;
   });
