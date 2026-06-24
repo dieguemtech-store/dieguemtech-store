@@ -123,7 +123,7 @@ async function getProducts({ category = "", search = "" } = {}) {
   const result = await pool.query(`
     SELECT
       id, name, category, price, old_price AS "oldPrice", emoji,
-      rating::FLOAT, reviews, badge, stock
+      rating::FLOAT, reviews, badge, stock, image, description
     FROM products
     WHERE ${conditions.join(" AND ")}
     ORDER BY id
