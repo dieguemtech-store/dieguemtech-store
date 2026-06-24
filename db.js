@@ -74,7 +74,7 @@ await pool.query(`
 
   const values = [];
   const placeholders = seedProducts.map((product, index) => {
-    const offset = index * 10;
+    const offset = index * 12;
     values.push(
       product.id,
       product.name,
@@ -89,7 +89,7 @@ await pool.query(`
       product.image,
       product.description
     );
-    return `(${Array.from({ length: 10 }, (_, item) => `$${offset + item + 1}`).join(",")})`;
+    return `(${Array.from({ length: 12 }, (_, item) => `$${offset + item + 1}`).join(",")})`;
   });
 
   await pool.query(`
