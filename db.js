@@ -34,25 +34,6 @@ async function initializeDatabase() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
-    console.log("Ajout de la colonne image...");
-    
-    await pool.query(`
-  ALTER TABLE products
-  ADD COLUMN IF NOT EXISTS image TEXT;
-`);
-
-console.log("Colonne image créée.");
-
-console.log("Ajout de la colonne description...");
-
-
-
-await pool.query(`
-  ALTER TABLE products
-  ADD COLUMN IF NOT EXISTS description TEXT;
-`);
-
-console.log("Colonne description créée.");
 
     CREATE TABLE IF NOT EXISTS orders (
       id TEXT PRIMARY KEY,
@@ -96,8 +77,8 @@ console.log("Colonne description créée.");
       product.reviews,
       product.badge,
       product.stock,
-      product.image,
-      product.description
+      product.image || null,
+      product.description || null
     );
     return `(${Array.from({ length: 12 }, (_, item) => `$${offset + item + 1}`).join(",")})`;
   });
@@ -107,17 +88,18 @@ console.log("Colonne description créée.");
       id, name, category, price, old_price, emoji, rating, reviews, badge, stock, image, description
     ) VALUES ${placeholders.join(",")}
     ON CONFLICT (id) DO UPDATE SET
-    name = EXCLUDED.name,
-    category = EXCLUDED.category,
-    price = EXCLUDED.price,
-    old_price = EXCLUDED.old_price,
-    emoji = EXCLUDED.emoji,
-    rating = EXCLUDED.rating,
-    reviews = EXCLUDED.reviews,
-    badge = EXCLUDED.badge,
-    stock = EXCLUDED.stock,
-    image = EXCLUDED.image,
-    description = EXCLUDED.description
+      name = EXCLUDED.name,
+      category = EXCLUDED.category,
+      price = EXCLUDED.price,
+      old_price = EXCLUDED.old_price,
+      emoji = EXCLUDED.emoji,
+      rating = EXCLUDED.rating,
+      reviews = EXCLUDED.reviews,
+      badge = EXCLUDED.badge,
+      stock = EXCLUDED.stock,
+      image = EXCLUDED.image,
+      description = EXCLUDED.description,
+      updated_at = NOW()
   `, values);
 }
 
