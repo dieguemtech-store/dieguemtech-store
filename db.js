@@ -34,15 +34,25 @@ async function initializeDatabase() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    console.log("Ajout de la colonne image...");
+    
     await pool.query(`
   ALTER TABLE products
   ADD COLUMN IF NOT EXISTS image TEXT;
 `);
 
+console.log("Colonne image créée.");
+
+console.log("Ajout de la colonne description...");
+
+
+
 await pool.query(`
   ALTER TABLE products
   ADD COLUMN IF NOT EXISTS description TEXT;
 `);
+
+console.log("Colonne description créée.");
 
     CREATE TABLE IF NOT EXISTS orders (
       id TEXT PRIMARY KEY,
