@@ -57,11 +57,15 @@ app.post("/api/orders", async (request, response, next) => {
 
     const preparedItems = [];
     for (const item of items) {
+      const id = Number(item.id);
       const quantity = Number(item.quantity);
+      if (!Number.isInteger(id) || id < 1) {
+        return response.status(400).json({ error: "Produit invalide dans le panier." });
+      }
       if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10) {
         return response.status(400).json({ error: "Quantité invalide." });
       }
-      preparedItems.push({ id: Number(item.id), quantity });
+      preparedItems.push({ id, quantity });
     }
 
     const orderInput = {
