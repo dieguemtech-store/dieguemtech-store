@@ -63,6 +63,12 @@ async function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
   `);
 
+  await pool.query(`
+    ALTER TABLE products
+      ADD COLUMN IF NOT EXISTS image TEXT,
+      ADD COLUMN IF NOT EXISTS description TEXT;
+  `);
+
   const values = [];
   const placeholders = seedProducts.map((product, index) => {
     const offset = index * 12;
