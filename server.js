@@ -1,12 +1,8 @@
 const axios = require("axios");
-
-const PAYTECH_API_KEY = process.env.PAYTECH_API_KEY;
-const PAYTECH_API_SECRET = process.env.PAYTECH_API_SECRET;
-
-const express = require("express");
-const path = require("node:path");
-const fs = require("node:fs/promises");
 const crypto = require("node:crypto");
+const fs = require("node:fs/promises");
+const path = require("node:path");
+const express = require("express");
 
 const localProducts = require("./data/products");
 const database = require("./db");
@@ -16,34 +12,39 @@ const port = process.env.PORT || 3000;
 const ordersFile = path.join(__dirname, "data", "orders.json");
 
 app.disable("x-powered-by");
-
 app.use(express.json({ limit: "100kb" }));
-app.use("/Assets", express.static(path.join(__dirname, "Assets")));
 
-app.get("/api/health", (req, res) => {
-  res.json({
+app.get("/api/health", (request, response) => {
+  response.json({
     status: "ok",
     service: "DieguemTech Store",
     database: database.hasDatabase ? "postgresql" : "local"
   });
 });
 
+app.get("/api/paytech/status", (request, response) => {
+  response.json({
+    configured: hasPayTechConfig(),
+    mode: getPayTechMode()
+  });
+});
+
 app.get("/api/products", async (request, response, next) => {
   try {
-  const category = String(request.query.category || "").toLowerCase();
-  const search = String(request.query.search || "").trim().toLowerCase();
-  const result = await database.getProducts({ category, search });
-  response.json(result);
+    const category = String(request.query.category || "").toLowerCase();
+    const search = String(request.query.search || "").trim().toLowerCase();
+    const result = await database.getProducts({ category, search });
+    response.json(result);
   } catch (error) {
     next(error);
   }
 });
 
-app.get("/api/products/:id", async (req, res, next) => {
+app.get("/api/products/:id", async (request, response, next) => {
   try {
-    const product = await database.getProduct(Number(req.params.id));
-    if (!product) return res.status(404).json({ error: "Produit introuvable." });
-    res.json(product);
+    const product = await database.getProduct(Number(request.params.id));
+    if (!product) return response.status(404).json({ error: "Produit introuvable." });
+    response.json(product);
   } catch (error) {
     next(error);
   }
@@ -55,6 +56,12 @@ app.post("/api/orders", async (request, response, next) => {
     const validationError = validateOrder(customer, items, paymentProvider);
     if (validationError) return response.status(400).json({ error: validationError });
 
+    if (paymentProvider === "PayTech" && !hasPayTechConfig()) {
+      return response.status(503).json({
+        error: "PayTech n'est pas encore configure. Ajoutez PAYTECH_API_KEY et PAYTECH_API_SECRET dans Render."
+      });
+    }
+
     const preparedItems = [];
     for (const item of items) {
       const id = Number(item.id);
@@ -63,7 +70,7 @@ app.post("/api/orders", async (request, response, next) => {
         return response.status(400).json({ error: "Produit invalide dans le panier." });
       }
       if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10) {
-        return response.status(400).json({ error: "Quantité invalide." });
+        return response.status(400).json({ error: "Quantite invalide." });
       }
       preparedItems.push({ id, quantity });
     }
@@ -82,35 +89,19 @@ app.post("/api/orders", async (request, response, next) => {
     const order = database.hasDatabase
       ? await database.createOrder(orderInput)
       : await createLocalOrder(orderInput);
+
     if (paymentProvider === "PayTech") {
-
-  const paytechResponse = await axios.post(
-    "https://paytech.sn/api/payment/request-payment",
-    {
-      item_name: "Commande DieguemTech",
-      item_price: order.total,
-      currency: "XOF",
-      ref_command: order.id,
-      command_name: `Commande ${order.id}`,
-      env: process.env.PAYTECH_MODE || "test",
-      success_url: "https://dieguemtech-store.onrender.com/payment-success",
-      cancel_url: "https://dieguemtech-store.onrender.com/payment-cancel",
-      ipn_url: "https://dieguemtech-store.onrender.com/api/paytech/ipn"
-    },
-    {
-      headers: {
-        API_KEY: process.env.PAYTECH_API_KEY,
-        API_SECRET: process.env.PAYTECH_API_SECRET
-      }
+      const payment = await createPayTechPayment(order, request);
+      return response.status(201).json({
+        orderId: order.id,
+        total: order.total,
+        currency: order.currency,
+        paymentProvider: order.paymentProvider,
+        paymentStatus: "pending",
+        redirect_url: payment.redirectUrl
+      });
     }
-  );
 
-  return response.status(201).json({
-    orderId: order.id,
-    redirect_url: paytechResponse.data.redirect_url,
-    success: 1
-  });
-}
     response.status(201).json({
       orderId: order.id,
       total: order.total,
@@ -122,101 +113,40 @@ app.post("/api/orders", async (request, response, next) => {
     next(error);
   }
 });
-app.post("/api/paytech/create", async (req, res) => {
-  try {
-    const { amount, orderId } = req.body;
 
-    const response = await axios.post(
-      "https://paytech.sn/api/payment/request-payment",
-      {
-        item_name: "Commande DieguemTech",
-        item_price: amount,
-        currency: "XOF",
-        ref_command: orderId,
-        command_name: `Commande ${orderId}`,
-        env: "prod",
-        success_url:
-          "https://dieguemtech-store.onrender.com/payment-success",
-        cancel_url:
-          "https://dieguemtech-store.onrender.com/payment-cancel",
-        ipn_url:
-          "https://dieguemtech-store.onrender.com/api/paytech/ipn"
-      },
-      {
-        headers: {
-          API_KEY: PAYTECH_API_KEY,
-          API_SECRET: PAYTECH_API_SECRET
-        }
-      }
-    );
-
-    res.json(response.data);
-  } catch (error) {
-    console.error(error.response?.data || error.message);
-
-    res.status(500).json({
-      error: "Erreur PayTech"
-    });
-  }
-});
-
-app.post("/api/paytech/ipn", (req, res) => {
-  console.log("Notification PayTech :", req.body);
-  res.status(200).send("OK");
-});
-app.get("/api/paytech/test", (req, res) => {
-  res.json({
-    key: !!PAYTECH_API_KEY,
-    secret: !!PAYTECH_API_SECRET,
-    mode: process.env.PAYTECH_MODE
+app.post("/api/paytech/ipn", (request, response) => {
+  console.log("Notification PayTech:", {
+    type_event: request.body?.type_event,
+    ref_command: request.body?.ref_command,
+    payment_method: request.body?.payment_method,
+    item_price: request.body?.item_price
   });
+  response.status(200).send("OK");
 });
 
-app.get("/api/paytech/payment-test", async (req, res) => {
-  try {
-    const response = await axios.post(
-      "https://paytech.sn/api/payment/request-payment",
-      {
-        item_name: "test DieguemTech",
-        item_price: 100,
-        currency: "XOF",
-        ref_command: "TEST-" + Date.now(),
-        command_name: "TEST Paiement",
-        env: "test",
-        success_url: "https://dieguemtech-store.onrender.com/payment-success",
-        cancel_url: "https://dieguemtech-store.onrender.com/payment-cancel",
-        ipn_url: "https://dieguemtech-store.onrender.com/api/paytech/ipn"
-      },
-      {
-        headers: {
-          API_KEY: PAYTECH_API_KEY,
-          API_SECRET: PAYTECH_API_SECRET
-        }
-      }
-    );
-
-    res.json(response.data);
-  } catch (error) {
-    res.status(500).json(
-      error.response?.data || { error: error.message }
-    );
-  }
+app.get("/payment-success", (request, response) => {
+  response.send(renderPaymentPage(
+    "Paiement en cours de confirmation",
+    "Merci pour votre commande. Nous avons recu le retour PayTech et votre paiement sera confirme automatiquement.",
+    "success"
+  ));
 });
 
-app.use(express.static(__dirname, {
-  extensions: ["html"]
-}));
+app.get("/payment-cancel", (request, response) => {
+  response.send(renderPaymentPage(
+    "Paiement annule",
+    "Votre paiement n'a pas ete finalise. Vous pouvez revenir a la boutique et reessayer.",
+    "cancel"
+  ));
+});
 
-app.use(express.static(__dirname, {
-  extensions: ["html"]
-}));
 app.use(express.static(__dirname, {
   extensions: ["html"],
   index: "index.html"
 }));
 
 app.use((error, request, response, next) => {
-  console.error(error);
+  console.error(error.response?.data || error);
   response.status(error.status || 500).json({
     error: error.status ? error.message : "Une erreur interne est survenue."
   });
@@ -224,7 +154,7 @@ app.use((error, request, response, next) => {
 
 function validateOrder(customer, items, paymentProvider) {
   if (!customer || !customer.name?.trim() || !customer.phone?.trim() || !customer.address?.trim()) {
-    return "Les coordonnées de livraison sont incomplètes.";
+    return "Les coordonnees de livraison sont incompletes.";
   }
   if (!Array.isArray(items) || items.length === 0 || items.length > 30) {
     return "Le panier est vide ou invalide.";
@@ -233,6 +163,62 @@ function validateOrder(customer, items, paymentProvider) {
     return "Moyen de paiement invalide.";
   }
   return null;
+}
+
+function hasPayTechConfig() {
+  return Boolean(process.env.PAYTECH_API_KEY && process.env.PAYTECH_API_SECRET);
+}
+
+function getPayTechMode() {
+  return process.env.PAYTECH_MODE || "test";
+}
+
+function getBaseUrl(request) {
+  return (process.env.APP_URL || `${request.protocol}://${request.get("host")}`).replace(/\/$/, "");
+}
+
+async function createPayTechPayment(order, request) {
+  const baseUrl = getBaseUrl(request);
+  const payload = {
+    item_name: "Commande DieguemTech",
+    item_price: order.total,
+    currency: "XOF",
+    ref_command: order.id,
+    command_name: `Commande ${order.id}`,
+    env: getPayTechMode(),
+    success_url: `${baseUrl}/payment-success`,
+    cancel_url: `${baseUrl}/payment-cancel`,
+    ipn_url: `${baseUrl}/api/paytech/ipn`
+  };
+
+  try {
+    const paytechResponse = await axios.post(
+      "https://paytech.sn/api/payment/request-payment",
+      payload,
+      {
+        headers: {
+          API_KEY: process.env.PAYTECH_API_KEY,
+          API_SECRET: process.env.PAYTECH_API_SECRET
+        },
+        timeout: 15000
+      }
+    );
+
+    const data = paytechResponse.data || {};
+    const redirectUrl = data.redirect_url || data.payment_url || data.url;
+    if (!redirectUrl) {
+      const error = new Error("PayTech n'a pas renvoye de lien de paiement.");
+      error.status = 502;
+      throw error;
+    }
+    return { redirectUrl };
+  } catch (error) {
+    if (error.status) throw error;
+    const paymentError = new Error("PayTech est indisponible ou a refuse la demande de paiement.");
+    paymentError.status = 502;
+    paymentError.cause = error;
+    throw paymentError;
+  }
 }
 
 async function saveOrder(order) {
@@ -279,6 +265,34 @@ async function createLocalOrder(orderInput) {
   };
   await saveOrder(order);
   return order;
+}
+
+function renderPaymentPage(title, message, status) {
+  const color = status === "success" ? "#16a66a" : "#f68b1e";
+  return `<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${title} - DieguemTech Store</title>
+  <style>
+    body{margin:0;font-family:Arial,sans-serif;background:#f7f7f7;color:#313133;display:grid;min-height:100vh;place-items:center}
+    main{width:min(520px,calc(100% - 32px));background:#fff;border-radius:18px;padding:34px;box-shadow:0 18px 45px rgba(0,0,0,.08);text-align:center}
+    .mark{width:64px;height:64px;border-radius:50%;background:${color};color:#fff;display:grid;place-items:center;margin:0 auto 18px;font-size:30px;font-weight:800}
+    h1{font-size:28px;margin:0 0 12px}
+    p{color:#666;line-height:1.7;margin:0 0 24px}
+    a{display:inline-flex;background:#f68b1e;color:#fff;text-decoration:none;padding:13px 20px;border-radius:8px;font-weight:700}
+  </style>
+</head>
+<body>
+  <main>
+    <div class="mark">${status === "success" ? "✓" : "!"}</div>
+    <h1>${title}</h1>
+    <p>${message}</p>
+    <a href="/">Retour a la boutique</a>
+  </main>
+</body>
+</html>`;
 }
 
 if (require.main === module) {
