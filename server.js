@@ -170,7 +170,10 @@ function hasPayTechConfig() {
 }
 
 function getPayTechMode() {
-  return process.env.PAYTECH_MODE || "test";
+  const mode = String(process.env.PAYTECH_MODE || "test").trim().toLowerCase();
+  if (["prod", "production", "live"].includes(mode)) return "prod";
+  if (["test", "sandbox", "testing"].includes(mode)) return "test";
+  return "test";
 }
 
 function getBaseUrl(request) {
