@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Admin - DieguemTech Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <main class="admin-shell">
+    <section class="login-card" id="loginCard">
+      <div class="brand"><span>D</span><div><strong>DieguemTech</strong><small>Admin Store</small></div></div>
+      <h1>Connexion admin</h1>
+      <p>Entrez le mot de passe admin configure dans Render.</p>
+      <form id="loginForm">
+        <label>Mot de passe
+          <input type="password" id="adminPassword" placeholder="ADMIN_PASSWORD" autocomplete="current-password" required>
+        </label>
+        <button type="submit">Se connecter</button>
+      </form>
+      <p class="message" id="loginMessage"></p>
+    </section>
+
+    <section class="dashboard" id="dashboard" hidden>
+      <header class="dashboard-header">
+        <div>
+          <span class="eyebrow">Tableau admin</span>
+          <h1>Commandes DieguemTech</h1>
+        </div>
+        <div class="header-actions">
+          <button id="refreshOrders">Actualiser</button>
+          <button id="logoutButton" class="ghost">Deconnexion</button>
+        </div>
+      </header>
+
+      <div class="stats-grid">
+        <article><span>Total commandes</span><strong id="totalOrders">0</strong></article>
+        <article><span>En attente</span><strong id="pendingOrders">0</strong></article>
+        <article><span>Payees</span><strong id="paidOrders">0</strong></article>
+        <article><span>Chiffre d'affaires</span><strong id="totalRevenue">0 FCFA</strong></article>
+      </div>
+
+      <div class="toolbar">
+        <input type="search" id="orderSearch" placeholder="Rechercher client, telephone, commande...">
+        <select id="statusFilter">
+          <option value="">Tous les statuts</option>
+          <option value="pending">En attente</option>
+          <option value="paid">Payee</option>
+          <option value="preparing">En preparation</option>
+          <option value="shipped">Expediee</option>
+          <option value="delivered">Livree</option>
+          <option value="cancelled">Annulee</option>
+        </select>
+      </div>
+
+      <div class="orders-list" id="ordersList"></div>
+      <p class="empty" id="emptyOrders" hidden>Aucune commande trouvee.</p>
+    </section>
+  </main>
+  <script src="admin.js"></script>
+</body>
+</html>

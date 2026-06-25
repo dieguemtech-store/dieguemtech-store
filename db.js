@@ -228,6 +228,90 @@ async function createOrder(orderInput) {
   }
 }
 
+async function getOrders() {
+  if (!pool) return getLocalOrders();
+
+  const result = await pool.query(`
+    SELECT
+      o.id,
+      o.customer_name AS "customerName",
+      o.customer_phone AS "customerPhone",
+      o.delivery_address AS "deliveryAddress",
+      o.total,
+      o.currency,
+      o.payment_provider AS "paymentProvider",
+      o.payment_status AS "paymentStatus",
+      o.order_status AS "orderStatus",
+      o.created_at AS "createdAt",
+      COALESCE(
+        json_agg(
+          json_build_object(
+            'productId', oi.product_id,
+            'name', oi.product_name,
+            'unitPrice', oi.unit_price,
+            'quantity', oi.quantity,
+            'lineTotal', oi.line_total
+          )
+          ORDER BY oi.id
+        ) FILTER (WHERE oi.id IS NOT NULL),
+        '[]'
+      ) AS items
+    FROM orders o
+    LEFT JOIN order_items oi ON oi.order_id = o.id
+    GROUP BY o.id
+    ORDER BY o.created_at DESC
+  `);
+  return result.rows;
+}
+
+async function updateOrderStatus(id, { orderStatus, paymentStatus }) {
+  if (!pool) return updateLocalOrderStatus(id, { orderStatus, paymentStatus });
+
+  const result = await pool.query(`
+    UPDATE orders
+    SET
+      order_status = COALESCE($2, order_status),
+      payment_status = COALESCE($3, payment_status)
+    WHERE id = $1
+    RETURNING
+      id,
+      customer_name AS "customerName",
+      customer_phone AS "customerPhone",
+      delivery_address AS "deliveryAddress",
+      total,
+      currency,
+      payment_provider AS "paymentProvider",
+      payment_status AS "paymentStatus",
+      order_status AS "orderStatus",
+      created_at AS "createdAt"
+  `, [id, orderStatus || null, paymentStatus || null]);
+  return result.rows[0] || null;
+}
+
+async function getLocalOrders() {
+  try {
+    const orders = JSON.parse(await require("node:fs/promises").readFile(require("node:path").join(__dirname, "data", "orders.json"), "utf8"));
+    return orders.slice().reverse();
+  } catch (error) {
+    if (error.code === "ENOENT") return [];
+    throw error;
+  }
+}
+
+async function updateLocalOrderStatus(id, { orderStatus, paymentStatus }) {
+  const fs = require("node:fs/promises");
+  const path = require("node:path");
+  const file = path.join(__dirname, "data", "orders.json");
+  const orders = await getLocalOrders();
+  const normalized = orders.slice().reverse();
+  const order = normalized.find(entry => entry.id === id);
+  if (!order) return null;
+  if (orderStatus) order.orderStatus = orderStatus;
+  if (paymentStatus) order.paymentStatus = paymentStatus;
+  await fs.writeFile(file, JSON.stringify(normalized, null, 2));
+  return order;
+}
+
 function orderError(message, status) {
   const error = new Error(message);
   error.status = status;
@@ -239,5 +323,7 @@ module.exports = {
   initializeDatabase,
   getProducts,
   getProduct,
-  createOrder
+  createOrder,
+  getOrders,
+  updateOrderStatus
 };

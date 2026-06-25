@@ -30,6 +30,42 @@ app.get("/api/paytech/status", (request, response) => {
   });
 });
 
+app.post("/api/admin/login", (request, response) => {
+  const { password } = request.body || {};
+  if (!getAdminPassword()) {
+    return response.status(503).json({ error: "ADMIN_PASSWORD n'est pas configure dans Render." });
+  }
+  if (password !== getAdminPassword()) {
+    return response.status(401).json({ error: "Mot de passe admin invalide." });
+  }
+  response.json({ token: getAdminPassword() });
+});
+
+app.get("/api/admin/orders", requireAdmin, async (request, response, next) => {
+  try {
+    response.json(await database.getOrders());
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.patch("/api/admin/orders/:id", requireAdmin, async (request, response, next) => {
+  try {
+    const { orderStatus, paymentStatus } = request.body || {};
+    if (orderStatus && !getOrderStatuses().includes(orderStatus)) {
+      return response.status(400).json({ error: "Statut de commande invalide." });
+    }
+    if (paymentStatus && !getPaymentStatuses().includes(paymentStatus)) {
+      return response.status(400).json({ error: "Statut de paiement invalide." });
+    }
+    const order = await database.updateOrderStatus(request.params.id, { orderStatus, paymentStatus });
+    if (!order) return response.status(404).json({ error: "Commande introuvable." });
+    response.json(order);
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.get("/api/products", async (request, response, next) => {
   try {
     const category = String(request.query.category || "").toLowerCase();
@@ -164,6 +200,29 @@ function validateOrder(customer, items, paymentProvider) {
     return "Moyen de paiement invalide.";
   }
   return null;
+}
+
+function getAdminPassword() {
+  return process.env.ADMIN_PASSWORD || "";
+}
+
+function requireAdmin(request, response, next) {
+  const token = String(request.get("authorization") || "").replace(/^Bearer\s+/i, "");
+  if (!getAdminPassword()) {
+    return response.status(503).json({ error: "ADMIN_PASSWORD n'est pas configure dans Render." });
+  }
+  if (token !== getAdminPassword()) {
+    return response.status(401).json({ error: "Acces admin refuse." });
+  }
+  next();
+}
+
+function getOrderStatuses() {
+  return ["pending", "paid", "preparing", "shipped", "delivered", "cancelled"];
+}
+
+function getPaymentStatuses() {
+  return ["pending", "paid", "failed", "refunded"];
 }
 
 function hasPayTechConfig() {
