@@ -216,12 +216,30 @@ async function createPayTechPayment(order, request) {
     }
     return { redirectUrl };
   } catch (error) {
-    if (error.status) throw error;
-    const paymentError = new Error("PayTech est indisponible ou a refuse la demande de paiement.");
+    if (error.status && !error.isAxiosError) throw error;
+    const details = getPayTechErrorDetails(error);
+    const paymentError = new Error(`PayTech a refuse la demande de paiement.${details ? ` Detail: ${details}` : ""}`);
     paymentError.status = 502;
     paymentError.cause = error;
     throw paymentError;
   }
+}
+
+function getPayTechErrorDetails(error) {
+  const data = error.response?.data;
+  if (!data) return error.message;
+  if (typeof data === "string") return data.slice(0, 250);
+  const candidates = [
+    data.message,
+    data.error,
+    data.errors,
+    data.detail,
+    data.response_text
+  ].filter(Boolean);
+  if (candidates.length) {
+    return candidates.map(item => typeof item === "string" ? item : JSON.stringify(item)).join(" | ").slice(0, 250);
+  }
+  return JSON.stringify(data).slice(0, 250);
 }
 
 async function saveOrder(order) {
