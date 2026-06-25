@@ -213,9 +213,9 @@ async function createPayTechPayment(order, request) {
     );
 
     const data = paytechResponse.data || {};
-    const redirectUrl = data.redirect_url || data.payment_url || data.url;
+    const redirectUrl = getPayTechRedirectUrl(data);
     if (!redirectUrl) {
-      const error = new Error("PayTech n'a pas renvoye de lien de paiement.");
+      const error = new Error(`PayTech n'a pas renvoye de lien de paiement. Reponse: ${JSON.stringify(data).slice(0, 250)}`);
       error.status = 502;
       throw error;
     }
@@ -228,6 +228,40 @@ async function createPayTechPayment(order, request) {
     paymentError.cause = error;
     throw paymentError;
   }
+}
+
+function getPayTechRedirectUrl(data) {
+  const directKeys = [
+    "redirect_url",
+    "redirectUrl",
+    "payment_url",
+    "paymentUrl",
+    "url",
+    "link"
+  ];
+  for (const key of directKeys) {
+    if (typeof data?.[key] === "string" && /^https?:\/\//.test(data[key])) {
+      return data[key];
+    }
+  }
+  const nested = findUrlInObject(data);
+  if (nested) return nested;
+  if (typeof data?.token === "string" && data.token.trim()) {
+    return `https://paytech.sn/payment/checkout/${encodeURIComponent(data.token.trim())}`;
+  }
+  return null;
+}
+
+function findUrlInObject(value) {
+  if (!value || typeof value !== "object") return null;
+  for (const item of Object.values(value)) {
+    if (typeof item === "string" && /^https?:\/\/.+paytech/i.test(item)) return item;
+    if (item && typeof item === "object") {
+      const nested = findUrlInObject(item);
+      if (nested) return nested;
+    }
+  }
+  return null;
 }
 
 function getPayTechErrorDetails(error) {
