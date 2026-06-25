@@ -96,7 +96,18 @@ await pool.query(`
     INSERT INTO products (
       id, name, category, price, old_price, emoji, rating, reviews, badge, stock, image, description
     ) VALUES ${placeholders.join(",")}
-    ON CONFLICT (id) DO NOTHING
+    ON CONFLICT (id) DO UPDATE SET
+    name = EXCLUDED.name,
+    category = EXCLUDED.category,
+    price = EXCLUDED.price,
+    old_price = EXCLUDED.old_price,
+    emoji = EXCLUDED.emoji,
+    rating = EXCLUDED.rating,
+    reviews = EXCLUDED.reviews,
+    badge = EXCLUDED.badge,
+    stock = EXCLUDED.stock,
+    image = EXCLUDED.image,
+    description = EXCLUDED.description
   `, values);
 }
 
