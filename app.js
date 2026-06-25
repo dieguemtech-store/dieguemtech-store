@@ -8,27 +8,45 @@ let visibleCount = 8;
 const $ = selector => document.querySelector(selector);
 const $$ = selector => document.querySelectorAll(selector);
 const formatPrice = value => `${new Intl.NumberFormat("fr-FR").format(value)} FCFA`;
+const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, character => ({
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#039;"
+}[character]));
+
+function getProductDescription(product){
+  return product.description || "Produit selectionne par DieguemTech Store pour offrir un bon rapport qualite-prix et une experience fiable au quotidien.";
+}
+
+function productVisual(product, className = "product-emoji"){
+  if (product.image) {
+    return `<img class="product-image" src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" loading="lazy">`;
+  }
+  return `<span class="${className}">${product.emoji}</span>`;
+}
 
 function productCard(product){
   const liked = wishlist.includes(product.id);
   const badgeClass = product.badge.includes("%") ? "discount-badge" : "new-badge";
-  return `<article class="product-card">
+  const description = getProductDescription(product);
+  return `<article class="product-card" data-product-detail="${product.id}" tabindex="0" role="button" aria-label="Voir ${escapeHtml(product.name)}">
     <div class="product-visual">
-      <span class="${badgeClass}">${product.badge}</span>
+      <span class="${badgeClass}">${escapeHtml(product.badge)}</span>
       <button class="wishlist-toggle ${liked ? "active" : ""}" data-wishlist="${product.id}" aria-label="Ajouter aux favoris">
         <svg><use href="#icon-heart"></use></svg>
       </button>
-     <img class="product-image"
-     src="${product.image}"
-     alt="${product.name}">
+      ${productVisual(product)}
     </div>
     <div class="product-info">
-      <span class="product-category">${product.category}</span>
-      <h3 title="${product.name}">${product.name}</h3>
+      <span class="product-category">${escapeHtml(product.category)}</span>
+      <h3 title="${escapeHtml(product.name)}">${escapeHtml(product.name)}</h3>
+      <p class="product-description">${escapeHtml(description)}</p>
       <div class="product-rating"><span class="stars">★★★★★</span> ${product.rating} (${product.reviews})</div>
       <div class="product-bottom">
         <span class="price"><strong>${formatPrice(product.price)}</strong>${product.oldPrice ? `<del>${formatPrice(product.oldPrice)}</del>` : ""}</span>
-        <button class="add-cart" data-cart="${product.id}" aria-label="Ajouter ${product.name} au panier"><svg><use href="#icon-cart"></use></svg></button>
+        <button class="add-cart" data-cart="${product.id}" aria-label="Ajouter ${escapeHtml(product.name)} au panier"><svg><use href="#icon-cart"></use></svg></button>
       </div>
     </div>
   </article>`;
@@ -36,7 +54,11 @@ function productCard(product){
 
 function renderProducts(search = ""){
   const query = search.trim().toLowerCase();
-  const filtered = products.filter(p => (activeFilter === "Tous" || p.category === activeFilter) && (!query || `${p.name} ${p.category}`.toLowerCase().includes(query)));
+  const filtered = products.filter(product => {
+    const matchesCategory = activeFilter === "Tous" || product.category === activeFilter;
+    const matchesSearch = !query || `${product.name} ${product.category} ${getProductDescription(product)}`.toLowerCase().includes(query);
+    return matchesCategory && matchesSearch;
+  });
   $("#productsGrid").innerHTML = filtered.slice(0, visibleCount).map(productCard).join("");
   $("#emptyState").style.display = filtered.length ? "none" : "block";
   $("#showAllProducts").style.display = filtered.length > visibleCount ? "inline-flex" : "none";
@@ -45,11 +67,11 @@ function renderProducts(search = ""){
 function persist(){
   localStorage.setItem("dt-cart", JSON.stringify(cart));
   localStorage.setItem("dt-wishlist", JSON.stringify(wishlist));
-  $("#cartCount").textContent = cart.reduce((sum,item) => sum + item.qty, 0);
+  $("#cartCount").textContent = cart.reduce((sum, item) => sum + item.qty, 0);
   $("#wishlistCount").textContent = wishlist.length;
 }
 
-function showToast(title = "Produit ajouté", text = "Votre panier a été mis à jour."){
+function showToast(title = "Produit ajoute", text = "Votre panier a ete mis a jour."){
   const toast = $("#toast");
   toast.querySelector("strong").textContent = title;
   toast.querySelector("small").textContent = text;
@@ -59,161 +81,289 @@ function showToast(title = "Produit ajouté", text = "Votre panier a été mis �
 }
 
 function addToCart(id){
+  const product = products.find(entry => entry.id === id);
+  if (!product) return;
   const item = cart.find(entry => entry.id === id);
-  item ? item.qty++ : cart.push({id,qty:1});
+  item ? item.qty++ : cart.push({ id, qty: 1 });
   persist();
   renderCart();
-  showToast();
+  showToast("Produit ajoute", `${product.name} est dans votre panier.`);
 }
 
 function toggleWishlist(id){
-  wishlist = wishlist.includes(id) ? wishlist.filter(item => item !== id) : [...wishlist,id];
+  wishlist = wishlist.includes(id) ? wishlist.filter(item => item !== id) : [...wishlist, id];
   persist();
   renderProducts($("#searchInput").value);
   renderWishlist();
-  showToast(wishlist.includes(id) ? "Ajouté aux favoris" : "Retiré des favoris", wishlist.includes(id) ? "Vous pourrez le retrouver facilement." : "Votre liste de souhaits a été mise à jour.");
+  showToast(
+    wishlist.includes(id) ? "Ajoute aux favoris" : "Retire des favoris",
+    wishlist.includes(id) ? "Vous pourrez le retrouver facilement." : "Votre liste de souhaits a ete mise a jour."
+  );
+}
+
+function cartItemVisual(product){
+  if (product.image) {
+    return `<img class="drawer-item-image" src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" loading="lazy">`;
+  }
+  return product.emoji;
 }
 
 function renderCart(){
   const container = $("#cartItems");
-  if(!cart.length){
-    container.innerHTML = `<div class="empty-drawer"><span>🛒</span><h3>Votre panier est vide</h3><p>Découvrez nos produits et trouvez votre prochain coup de cœur tech.</p></div>`;
+  if (!cart.length) {
+    container.innerHTML = `<div class="empty-drawer"><span>🛒</span><h3>Votre panier est vide</h3><p>Decouvrez nos produits et trouvez votre prochain coup de coeur tech.</p></div>`;
     $("#cartFooter").style.display = "none";
     return;
   }
   $("#cartFooter").style.display = "block";
   container.innerHTML = cart.map(entry => {
-    const p = products.find(product => product.id === entry.id);
-    return `<div class="drawer-item"><div class="drawer-item-visual">${p.emoji}</div><div><h4>${p.name}</h4><strong>${formatPrice(p.price)}</strong><div class="quantity"><button data-qty="${p.id}" data-delta="-1">−</button><span>${entry.qty}</span><button data-qty="${p.id}" data-delta="1">+</button></div></div><button class="remove-item" data-remove="${p.id}">×</button></div>`;
+    const product = products.find(item => item.id === entry.id);
+    if (!product) return "";
+    return `<div class="drawer-item">
+      <div class="drawer-item-visual">${cartItemVisual(product)}</div>
+      <div>
+        <h4>${escapeHtml(product.name)}</h4>
+        <strong>${formatPrice(product.price)}</strong>
+        <div class="quantity">
+          <button data-qty="${product.id}" data-delta="-1">−</button>
+          <span>${entry.qty}</span>
+          <button data-qty="${product.id}" data-delta="1">+</button>
+        </div>
+      </div>
+      <button class="remove-item" data-remove="${product.id}">×</button>
+    </div>`;
   }).join("");
-  const total = cart.reduce((sum,entry) => sum + products.find(p => p.id === entry.id).price * entry.qty,0);
+  const total = cart.reduce((sum, entry) => {
+    const product = products.find(item => item.id === entry.id);
+    return product ? sum + product.price * entry.qty : sum;
+  }, 0);
   $("#cartTotal").textContent = formatPrice(total);
   $("#checkoutTotal").textContent = formatPrice(total);
 }
 
 function renderWishlist(){
   const container = $("#wishlistItems");
-  if(!wishlist.length){
-    container.innerHTML = `<div class="empty-drawer"><span>♡</span><h3>Aucun favori pour le moment</h3><p>Cliquez sur le cœur d'un produit pour le garder sous la main.</p></div>`;
+  if (!wishlist.length) {
+    container.innerHTML = `<div class="empty-drawer"><span>♡</span><h3>Aucun favori pour le moment</h3><p>Cliquez sur le coeur d'un produit pour le garder sous la main.</p></div>`;
     return;
   }
   container.innerHTML = wishlist.map(id => {
-    const p = products.find(product => product.id === id);
-    return `<div class="drawer-item"><div class="drawer-item-visual">${p.emoji}</div><div><h4>${p.name}</h4><strong>${formatPrice(p.price)}</strong><br><button class="wishlist-add" data-cart="${p.id}">Ajouter au panier</button></div><button class="remove-item" data-wishlist="${p.id}">×</button></div>`;
+    const product = products.find(entry => entry.id === id);
+    if (!product) return "";
+    return `<div class="drawer-item">
+      <div class="drawer-item-visual">${cartItemVisual(product)}</div>
+      <div>
+        <h4>${escapeHtml(product.name)}</h4>
+        <strong>${formatPrice(product.price)}</strong><br>
+        <button class="wishlist-add" data-cart="${product.id}">Ajouter au panier</button>
+      </div>
+      <button class="remove-item" data-wishlist="${product.id}">×</button>
+    </div>`;
   }).join("");
 }
 
 function openDrawer(drawer){
   closeAll();
   drawer.classList.add("active");
-  drawer.setAttribute("aria-hidden","false");
+  drawer.setAttribute("aria-hidden", "false");
   $("#overlay").classList.add("active");
   document.body.classList.add("no-scroll");
 }
 
 function closeAll(){
-  $$(".drawer,.modal").forEach(el => {el.classList.remove("active");el.setAttribute("aria-hidden","true")});
+  $$(".drawer,.modal").forEach(element => {
+    element.classList.remove("active");
+    element.setAttribute("aria-hidden", "true");
+  });
   $("#overlay").classList.remove("active");
   document.body.classList.remove("no-scroll");
 }
 
-document.addEventListener("click", e => {
-  const cartButton = e.target.closest("[data-cart]");
-  const wishButton = e.target.closest("[data-wishlist]");
-  const qtyButton = e.target.closest("[data-qty]");
-  const removeButton = e.target.closest("[data-remove]");
-  const filterButton = e.target.closest("[data-filter]");
-  if(cartButton) addToCart(Number(cartButton.dataset.cart));
-  if(wishButton) toggleWishlist(Number(wishButton.dataset.wishlist));
-  if(qtyButton){
-    const entry = cart.find(item => item.id === Number(qtyButton.dataset.qty));
-    entry.qty += Number(qtyButton.dataset.delta);
-    if(entry.qty <= 0) cart = cart.filter(item => item.id !== entry.id);
-    persist(); renderCart();
+function openProductDetail(id){
+  const product = products.find(entry => entry.id === Number(id));
+  if (!product) return;
+  $("#productDetailContent").innerHTML = `
+    <div class="product-detail-visual">${productVisual(product, "product-detail-emoji")}</div>
+    <div class="product-detail-info">
+      <span class="eyebrow">${escapeHtml(product.category)}</span>
+      <h2>${escapeHtml(product.name)}</h2>
+      <div class="product-detail-rating"><span class="stars">★★★★★</span> ${product.rating} (${product.reviews} avis)</div>
+      <p>${escapeHtml(getProductDescription(product))}</p>
+      <div class="product-detail-meta">
+        <span>Stock disponible : <strong>${product.stock}</strong></span>
+        <span>Livraison rapide a Dakar</span>
+        <span>Paiement securise PayDunya / PayTech</span>
+      </div>
+      <div class="product-detail-bottom">
+        <span class="price"><strong>${formatPrice(product.price)}</strong>${product.oldPrice ? `<del>${formatPrice(product.oldPrice)}</del>` : ""}</span>
+        <button class="button primary" data-cart="${product.id}">Ajouter au panier</button>
+      </div>
+    </div>
+  `;
+  closeAll();
+  $("#productDetailModal").classList.add("active");
+  $("#productDetailModal").setAttribute("aria-hidden", "false");
+  $("#overlay").classList.add("active");
+  document.body.classList.add("no-scroll");
+}
+
+document.addEventListener("click", event => {
+  const cartButton = event.target.closest("[data-cart]");
+  const wishButton = event.target.closest("[data-wishlist]");
+  const qtyButton = event.target.closest("[data-qty]");
+  const removeButton = event.target.closest("[data-remove]");
+  const filterButton = event.target.closest("[data-filter]");
+  const detailCard = event.target.closest("[data-product-detail]");
+
+  if (cartButton) {
+    addToCart(Number(cartButton.dataset.cart));
+    return;
   }
-  if(removeButton){cart = cart.filter(item => item.id !== Number(removeButton.dataset.remove));persist();renderCart();}
-  if(filterButton){
+  if (wishButton) {
+    toggleWishlist(Number(wishButton.dataset.wishlist));
+    return;
+  }
+  if (qtyButton) {
+    const entry = cart.find(item => item.id === Number(qtyButton.dataset.qty));
+    if (!entry) return;
+    entry.qty += Number(qtyButton.dataset.delta);
+    if (entry.qty <= 0) cart = cart.filter(item => item.id !== entry.id);
+    persist();
+    renderCart();
+    return;
+  }
+  if (removeButton) {
+    cart = cart.filter(item => item.id !== Number(removeButton.dataset.remove));
+    wishlist = wishlist.filter(id => id !== Number(removeButton.dataset.wishlist));
+    persist();
+    renderCart();
+    renderWishlist();
+    renderProducts($("#searchInput").value);
+    return;
+  }
+  if (filterButton) {
     activeFilter = filterButton.dataset.filter;
     visibleCount = 12;
-    $$("#productTabs button").forEach(btn => btn.classList.toggle("active", btn.dataset.filter === activeFilter));
+    $$("#productTabs button").forEach(button => button.classList.toggle("active", button.dataset.filter === activeFilter));
     renderProducts();
-    if(filterButton.closest(".category-card") || filterButton.closest(".nav-inner")) setTimeout(() => $("#boutique").scrollIntoView(), 50);
+    if (filterButton.closest(".category-card") || filterButton.closest(".nav-inner")) {
+      setTimeout(() => $("#boutique").scrollIntoView(), 50);
+    }
     $("#mainNav").classList.remove("open");
+    return;
+  }
+  if (detailCard) openProductDetail(detailCard.dataset.productDetail);
+});
+
+document.addEventListener("keydown", event => {
+  const detailCard = event.target.closest?.("[data-product-detail]");
+  if (detailCard && (event.key === "Enter" || event.key === " ")) {
+    event.preventDefault();
+    openProductDetail(detailCard.dataset.productDetail);
   }
 });
 
-$("#searchForm").addEventListener("submit", e => {e.preventDefault();activeFilter="Tous";visibleCount=12;renderProducts($("#searchInput").value);$("#boutique").scrollIntoView();});
-$("#searchInput").addEventListener("input", e => {if(e.target.value.length > 1 || !e.target.value){activeFilter="Tous";renderProducts(e.target.value);}});
-$("#resetSearch").addEventListener("click", () => {$("#searchInput").value="";activeFilter="Tous";visibleCount=8;renderProducts();});
-$("#showAllProducts").addEventListener("click", () => {visibleCount=products.length;renderProducts($("#searchInput").value);});
-$("#cartButton").addEventListener("click", () => {renderCart();openDrawer($("#cartDrawer"));});
-$("#wishlistButton").addEventListener("click", () => {renderWishlist();openDrawer($("#wishlistDrawer"));});
+$("#searchForm").addEventListener("submit", event => {
+  event.preventDefault();
+  activeFilter = "Tous";
+  visibleCount = 12;
+  renderProducts($("#searchInput").value);
+  $("#boutique").scrollIntoView();
+});
+$("#searchInput").addEventListener("input", event => {
+  if (event.target.value.length > 1 || !event.target.value) {
+    activeFilter = "Tous";
+    renderProducts(event.target.value);
+  }
+});
+$("#resetSearch").addEventListener("click", () => {
+  $("#searchInput").value = "";
+  activeFilter = "Tous";
+  visibleCount = 8;
+  renderProducts();
+});
+$("#showAllProducts").addEventListener("click", () => {
+  visibleCount = products.length;
+  renderProducts($("#searchInput").value);
+});
+$("#cartButton").addEventListener("click", () => {
+  renderCart();
+  openDrawer($("#cartDrawer"));
+});
+$("#wishlistButton").addEventListener("click", () => {
+  renderWishlist();
+  openDrawer($("#wishlistDrawer"));
+});
 $("#overlay").addEventListener("click", closeAll);
-$$(".close-drawer,.modal-close").forEach(btn => btn.addEventListener("click", closeAll));
+$$(".close-drawer,.modal-close").forEach(button => button.addEventListener("click", closeAll));
 $("#menuToggle").addEventListener("click", () => $("#mainNav").classList.toggle("open"));
 
-$("#checkoutButton").addEventListener("click", () => {$("#cartDrawer").classList.remove("active");$("#checkoutModal").classList.add("active");$("#checkoutModal").setAttribute("aria-hidden","false");});
-$$(".payment-options button").forEach(btn => btn.addEventListener("click", () => {$$(".payment-options button").forEach(b => b.classList.remove("selected"));btn.classList.add("selected");}));
+$("#checkoutButton").addEventListener("click", () => {
+  $("#cartDrawer").classList.remove("active");
+  $("#checkoutModal").classList.add("active");
+  $("#checkoutModal").setAttribute("aria-hidden", "false");
+});
+$$(".payment-options button").forEach(button => button.addEventListener("click", () => {
+  $$(".payment-options button").forEach(item => item.classList.remove("selected"));
+  button.classList.add("selected");
+}));
 $("#payButton").addEventListener("click", async () => {
   const fields = $$("#checkoutModal input");
-  if([...fields].some(field => !field.value.trim())){showToast("Informations manquantes","Veuillez renseigner vos coordonnées de livraison.");return;}
+  if ([...fields].some(field => !field.value.trim())) {
+    showToast("Informations manquantes", "Veuillez renseigner vos coordonnees de livraison.");
+    return;
+  }
   const provider = $(".payment-options button.selected").dataset.payment;
   const payButton = $("#payButton");
   payButton.disabled = true;
-  payButton.textContent = "Création de la commande...";
+  payButton.textContent = "Creation de la commande...";
   try {
     const response = await fetch("/api/orders", {
       method: "POST",
-      headers: {"Content-Type": "application/json"},
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         customer: {
           name: fields[0].value,
           phone: fields[1].value,
           address: fields[2].value
         },
-        items: cart.map(item => ({id: item.id, quantity: item.qty})),
+        items: cart.map(item => ({ id: item.id, quantity: item.qty })),
         paymentProvider: provider
       })
     });
     const result = await response.json();
-
-if (!response.ok) {
-  throw new Error(result.error || "The order could not be created.");
-}
-
-// Si PayTech retourne une URL de paiement
-if (provider === "PayTech" && result.redirect_url) {
-  window.location.href = result.redirect_url;
-  return;
-}
-
-cart = [];
-persist();
-renderCart();
-closeAll();
-fields.forEach(f => f.value = "");
-
-showToast(
-  `Commande ${result.orderId}`,
-  `Commande créée. Paiement ${provider} en attente.`
-);
+    if (!response.ok) throw new Error(result.error || "La commande n'a pas pu etre creee.");
+    if (provider === "PayTech" && result.redirect_url) {
+      window.location.href = result.redirect_url;
+      return;
+    }
+    cart = [];
+    persist();
+    renderCart();
+    closeAll();
+    fields.forEach(field => field.value = "");
+    showToast(`Commande ${result.orderId}`, `Commande creee. Paiement ${provider} en attente.`);
   } catch (error) {
-    showToast("Commande impossible",error.message);
+    showToast("Commande impossible", error.message);
   } finally {
     payButton.disabled = false;
     payButton.textContent = "Payer maintenant";
   }
 });
 
-$("#newsletterForm").addEventListener("submit", e => {e.preventDefault();e.target.reset();showToast("Inscription réussie","Bienvenue dans la communauté DieguemTech !");});
+$("#newsletterForm").addEventListener("submit", event => {
+  event.preventDefault();
+  event.target.reset();
+  showToast("Inscription reussie", "Bienvenue dans la communaute DieguemTech !");
+});
 
-const deadline = Date.now() + (2*24*60*60*1000) + (14*60*60*1000);
+const deadline = Date.now() + (2 * 24 * 60 * 60 * 1000) + (14 * 60 * 60 * 1000);
 setInterval(() => {
-  const diff = Math.max(0,deadline-Date.now());
-  $("#days").textContent=String(Math.floor(diff/86400000)).padStart(2,"0");
-  $("#hours").textContent=String(Math.floor(diff%86400000/3600000)).padStart(2,"0");
-  $("#minutes").textContent=String(Math.floor(diff%3600000/60000)).padStart(2,"0");
-},1000);
+  const diff = Math.max(0, deadline - Date.now());
+  $("#days").textContent = String(Math.floor(diff / 86400000)).padStart(2, "0");
+  $("#hours").textContent = String(Math.floor(diff % 86400000 / 3600000)).padStart(2, "0");
+  $("#minutes").textContent = String(Math.floor(diff % 3600000 / 60000)).padStart(2, "0");
+}, 1000);
 
 async function initializeStore(){
   try {

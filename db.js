@@ -71,7 +71,7 @@ async function initializeDatabase() {
       product.name,
       product.category,
       product.price,
-      product.oldPrice,
+      product.oldPrice ?? null,
       product.emoji,
       product.rating,
       product.reviews,
