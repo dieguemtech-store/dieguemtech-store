@@ -12,6 +12,7 @@ const port = process.env.PORT || 3000;
 const ordersFile = path.join(__dirname, "data", "orders.json");
 
 app.disable("x-powered-by");
+app.set("trust proxy", 1);
 app.use(express.json({ limit: "100kb" }));
 
 app.get("/api/health", (request, response) => {
@@ -177,7 +178,11 @@ function getPayTechMode() {
 }
 
 function getBaseUrl(request) {
-  return (process.env.APP_URL || `${request.protocol}://${request.get("host")}`).replace(/\/$/, "");
+  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, "");
+  const host = request.get("host");
+  const forwardedProto = request.get("x-forwarded-proto");
+  const protocol = forwardedProto || request.protocol || "https";
+  return `${protocol}://${host}`.replace(/\/$/, "");
 }
 
 async function createPayTechPayment(order, request) {
