@@ -29,6 +29,7 @@ async function initializeDatabase() {
       badge TEXT NOT NULL DEFAULT '',
       stock INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
       image TEXT,
+      images JSONB NOT NULL DEFAULT '[]'::jsonb,
       description TEXT,
       active BOOLEAN NOT NULL DEFAULT TRUE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -66,13 +67,28 @@ async function initializeDatabase() {
   await pool.query(`
     ALTER TABLE products
       ADD COLUMN IF NOT EXISTS image TEXT,
+      ADD COLUMN IF NOT EXISTS images JSONB,
       ADD COLUMN IF NOT EXISTS description TEXT,
       ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE;
+
+    UPDATE products
+    SET images = '[]'::jsonb
+    WHERE images IS NULL;
+
+    ALTER TABLE products
+      ALTER COLUMN images SET DEFAULT '[]'::jsonb,
+      ALTER COLUMN images SET NOT NULL;
+
+    UPDATE products
+    SET images = jsonb_build_array(image)
+    WHERE image IS NOT NULL
+      AND image <> ''
+      AND images = '[]'::jsonb;
   `);
 
   const values = [];
   const placeholders = seedProducts.map((product, index) => {
-    const offset = index * 12;
+    const offset = index * 13;
     values.push(
       product.id,
       product.name,
@@ -85,14 +101,19 @@ async function initializeDatabase() {
       product.badge,
       product.stock,
       product.image || null,
+      JSON.stringify(normalizeImageList(product.images, product.image)),
       product.description || null
     );
-    return `(${Array.from({ length: 12 }, (_, item) => `$${offset + item + 1}`).join(",")})`;
+    const row = Array.from({ length: 13 }, (_, item) => {
+      const placeholder = `$${offset + item + 1}`;
+      return item === 11 ? `${placeholder}::jsonb` : placeholder;
+    });
+    return `(${row.join(",")})`;
   });
 
   await pool.query(`
     INSERT INTO products (
-      id, name, category, price, old_price, emoji, rating, reviews, badge, stock, image, description
+      id, name, category, price, old_price, emoji, rating, reviews, badge, stock, image, images, description
     ) VALUES ${placeholders.join(",")}
     ON CONFLICT (id) DO NOTHING
   `, values);
@@ -100,11 +121,11 @@ async function initializeDatabase() {
 
 async function getProducts({ category = "", search = "" } = {}) {
   if (!pool) {
-    return seedProducts.filter(product => {
+    return normalizeProductRows(seedProducts.filter(product => {
       const matchesCategory = !category || product.category.toLowerCase() === category.toLowerCase();
       const matchesSearch = !search || `${product.name} ${product.category}`.toLowerCase().includes(search.toLowerCase());
       return product.active !== false && matchesCategory && matchesSearch;
-    });
+    }));
   }
 
   const values = [];
@@ -121,37 +142,37 @@ async function getProducts({ category = "", search = "" } = {}) {
   const result = await pool.query(`
     SELECT
       id, name, category, price, old_price AS "oldPrice", emoji,
-      rating::FLOAT, reviews, badge, stock, image, description
+      rating::FLOAT, reviews, badge, stock, image, images, description
     FROM products
     WHERE ${conditions.join(" AND ")}
     ORDER BY id
   `, values);
-  return result.rows;
+  return normalizeProductRows(result.rows);
 }
 
 async function getProduct(id, client = pool) {
-  if (!pool) return seedProducts.find(product => product.id === Number(id) && product.active !== false);
+  if (!pool) return normalizeProductRow(seedProducts.find(product => product.id === Number(id) && product.active !== false));
   const result = await client.query(`
     SELECT
       id, name, category, price, old_price AS "oldPrice", emoji,
-      rating::FLOAT, reviews, badge, stock, image, description
+      rating::FLOAT, reviews, badge, stock, image, images, description
     FROM products
     WHERE id = $1 AND active = TRUE
   `, [id]);
-  return result.rows[0];
+  return normalizeProductRow(result.rows[0]);
 }
 
 async function getAdminProducts() {
-  if (!pool) return seedProducts.map(product => ({ ...product, active: product.active !== false }));
+  if (!pool) return normalizeProductRows(seedProducts.map(product => ({ ...product, active: product.active !== false })));
 
   const result = await pool.query(`
     SELECT
       id, name, category, price, old_price AS "oldPrice", emoji,
-      rating::FLOAT, reviews, badge, stock, image, description, active
+      rating::FLOAT, reviews, badge, stock, image, images, description, active
     FROM products
     ORDER BY id
   `);
-  return result.rows;
+  return normalizeProductRows(result.rows);
 }
 
 async function createProduct(input) {
@@ -172,15 +193,15 @@ async function createProduct(input) {
 
   const result = await pool.query(`
     INSERT INTO products (
-      id, name, category, price, old_price, emoji, rating, reviews, badge, stock, image, description, active
+      id, name, category, price, old_price, emoji, rating, reviews, badge, stock, image, images, description, active
     )
     VALUES (
       (SELECT COALESCE(MAX(id), 0) + 1 FROM products),
-      $1, $2, $3, $4, $5, 0, 0, $6, $7, $8, $9, $10
+      $1, $2, $3, $4, $5, 0, 0, $6, $7, $8, $9::jsonb, $10, $11
     )
     RETURNING
       id, name, category, price, old_price AS "oldPrice", emoji,
-      rating::FLOAT, reviews, badge, stock, image, description, active
+      rating::FLOAT, reviews, badge, stock, image, images, description, active
   `, [
     product.name,
     product.category,
@@ -190,10 +211,11 @@ async function createProduct(input) {
     product.badge,
     product.stock,
     product.image,
+    JSON.stringify(product.images),
     product.description,
     product.active
   ]);
-  return result.rows[0];
+  return normalizeProductRow(result.rows[0]);
 }
 
 async function updateProduct(id, input) {
@@ -218,13 +240,14 @@ async function updateProduct(id, input) {
       badge = $6,
       stock = $7,
       image = $8,
-      description = $9,
-      active = $10,
+      images = $9::jsonb,
+      description = $10,
+      active = $11,
       updated_at = NOW()
     WHERE id = $1
     RETURNING
       id, name, category, price, old_price AS "oldPrice", emoji,
-      rating::FLOAT, reviews, badge, stock, image, description, active
+      rating::FLOAT, reviews, badge, stock, image, images, description, active
   `, [
     productId,
     product.name,
@@ -234,10 +257,11 @@ async function updateProduct(id, input) {
     product.badge,
     product.stock,
     product.image,
+    JSON.stringify(product.images),
     product.description,
     product.active
   ]);
-  return result.rows[0] || null;
+  return normalizeProductRow(result.rows[0]) || null;
 }
 
 async function deactivateProduct(id) {
@@ -257,12 +281,13 @@ async function deactivateProduct(id) {
     WHERE id = $1
     RETURNING
       id, name, category, price, old_price AS "oldPrice", emoji,
-      rating::FLOAT, reviews, badge, stock, image, description, active
+      rating::FLOAT, reviews, badge, stock, image, images, description, active
   `, [productId]);
-  return result.rows[0] || null;
+  return normalizeProductRow(result.rows[0]) || null;
 }
 
 function normalizeProductInput(input) {
+  const images = normalizeImageList(input.images, input.image);
   return {
     name: String(input.name || "").trim(),
     category: String(input.category || "").trim(),
@@ -270,10 +295,40 @@ function normalizeProductInput(input) {
     oldPrice: input.oldPrice === null || input.oldPrice === "" || typeof input.oldPrice === "undefined" ? null : Number(input.oldPrice),
     badge: String(input.badge || "").trim(),
     stock: Number(input.stock),
-    image: input.image ? String(input.image).trim() : null,
+    image: images[0] || null,
+    images,
     description: input.description ? String(input.description).trim() : null,
     active: input.active !== false
   };
+}
+
+function normalizeImageList(images, primaryImage = "") {
+  const candidates = [];
+  if (primaryImage) candidates.push(primaryImage);
+  if (Array.isArray(images)) {
+    candidates.push(...images);
+  } else if (typeof images === "string") {
+    candidates.push(...images.split(/[\n,]/));
+  }
+  return [...new Set(
+    candidates
+      .map(image => String(image || "").trim())
+      .filter(Boolean)
+  )].slice(0, 8);
+}
+
+function normalizeProductRow(product) {
+  if (!product) return product;
+  const images = normalizeImageList(product.images, product.image);
+  return {
+    ...product,
+    image: images[0] || product.image || null,
+    images
+  };
+}
+
+function normalizeProductRows(products) {
+  return products.map(normalizeProductRow);
 }
 
 async function createOrder(orderInput) {

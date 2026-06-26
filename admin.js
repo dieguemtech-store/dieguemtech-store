@@ -121,6 +121,26 @@ function getFilteredProducts() {
   });
 }
 
+function getProductImages(product) {
+  const candidates = [];
+  if (product.image) candidates.push(product.image);
+  if (Array.isArray(product.images)) candidates.push(...product.images);
+  return [...new Set(
+    candidates
+      .map(image => String(image || "").trim())
+      .filter(Boolean)
+  )].slice(0, 8);
+}
+
+function parseImageLines(value) {
+  return [...new Set(
+    String(value || "")
+      .split(/[\n,]/)
+      .map(image => image.trim())
+      .filter(Boolean)
+  )].slice(0, 8);
+}
+
 function renderProducts() {
   const filtered = getFilteredProducts();
   $("#emptyProducts").hidden = filtered.length > 0;
@@ -129,11 +149,16 @@ function renderProducts() {
 
 function productCard(product) {
   const activeLabel = product.active === false ? "Inactif" : "Actif";
+  const images = getProductImages(product);
+  const mainImage = images[0];
   return `<article class="product-admin-card">
-    <div class="product-admin-visual">${product.image ? `<img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}">` : `<span>${product.emoji}</span>`}</div>
+    <div class="product-admin-visual">
+      ${mainImage ? `<img src="${escapeHtml(mainImage)}" alt="${escapeHtml(product.name)}">` : `<span>${product.emoji}</span>`}
+      ${images.length > 1 ? `<b class="image-count">${images.length}</b>` : ""}
+    </div>
     <div>
       <h3>${escapeHtml(product.name)}</h3>
-      <p>${escapeHtml(product.category)} · ${escapeHtml(product.badge || "Sans badge")}</p>
+      <p>${escapeHtml(product.category)} &middot; ${escapeHtml(product.badge || "Sans badge")} &middot; ${images.length} image${images.length > 1 ? "s" : ""}</p>
       <p class="muted">${escapeHtml(product.description || "Aucune description.")}</p>
     </div>
     <div class="product-admin-meta">
@@ -237,6 +262,7 @@ function openCreateProductModal() {
     oldPrice: "",
     stock: 0,
     image: "",
+    images: [],
     description: "",
     active: true
   });
@@ -245,6 +271,7 @@ function openCreateProductModal() {
 
 function renderProductForm(product) {
   const isNew = !product.id;
+  const images = getProductImages(product);
   $("#productForm").innerHTML = `<div class="product-form-head">
       <span class="eyebrow">${isNew ? "Nouveau produit" : `Produit #${product.id}`}</span>
       <h2>${isNew ? "Ajouter un produit" : "Modifier le produit"}</h2>
@@ -268,15 +295,16 @@ function renderProductForm(product) {
       <label>Stock
         <input name="stock" type="number" min="0" step="1" value="${product.stock}" required>
       </label>
-      <label>Image
-        <input name="image" value="${escapeHtml(product.image || "")}" placeholder="https://.../image.jpg ou /assets/produit.png">
-      </label>
     </div>
+    <label>Galerie images
+      <textarea name="images" rows="5" placeholder="Une URL par ligne. Exemple: https://site.com/photo.jpg">${escapeHtml(images.join("\n"))}</textarea>
+      <small class="field-help">La premiere image devient l'image principale. Tu peux ajouter jusqu'a 8 images par produit.</small>
+    </label>
     <div class="image-preview-card">
       <div class="image-preview" id="productImagePreview"></div>
       <div>
-        <strong>Apercu de l'image</strong>
-        <p>Colle une URL directe d'image. Exemple: https://site.com/photo.jpg</p>
+        <strong>Apercu des images</strong>
+        <p>Colle des liens directs publics. Les chemins internes comme /assets/produit.png fonctionnent aussi.</p>
         <small id="productImageHelp"></small>
       </div>
     </div>
@@ -291,7 +319,7 @@ function renderProductForm(product) {
       <button type="submit">${isNew ? "Ajouter le produit" : "Enregistrer"}</button>
       <button type="button" class="ghost" id="cancelProductEdit">Annuler</button>
     </div>`;
-  updateProductImagePreview(product.image || "");
+  updateProductImagePreview(images.join("\n"));
 }
 
 function closeProductModal() {
@@ -301,14 +329,14 @@ function closeProductModal() {
 function updateProductImagePreview(value) {
   const preview = $("#productImagePreview");
   const help = $("#productImageHelp");
-  const image = String(value || "").trim();
-  if (!image) {
-    preview.innerHTML = "<span>Image</span>";
+  const images = parseImageLines(value);
+  if (!images.length) {
+    preview.innerHTML = "<span>Images</span>";
     help.textContent = "Aucune image selectionnee.";
     return;
   }
-  preview.innerHTML = `<img src="${escapeHtml(image)}" alt="Apercu produit">`;
-  help.textContent = "Si l'image ne s'affiche pas ici, verifie que le lien est public et direct.";
+  preview.innerHTML = `${images.slice(0, 6).map((image, index) => `<img src="${escapeHtml(image)}" alt="Apercu image ${index + 1}">`).join("")}${images.length > 6 ? `<span class="preview-more">+${images.length - 6}</span>` : ""}`;
+  help.textContent = `${images.length} image${images.length > 1 ? "s" : ""}. La premiere sera affichee sur les cartes produit.`;
 }
 
 function receiptHtml(order, printable = true) {
@@ -387,6 +415,7 @@ async function updateStatus(id, payload) {
 async function saveProduct(form) {
   const formData = new FormData(form);
   const id = formData.get("id");
+  const images = parseImageLines(formData.get("images"));
   const payload = {
     name: formData.get("name"),
     category: formData.get("category"),
@@ -394,7 +423,8 @@ async function saveProduct(form) {
     price: Number(formData.get("price")),
     oldPrice: formData.get("oldPrice") ? Number(formData.get("oldPrice")) : null,
     stock: Number(formData.get("stock")),
-    image: formData.get("image"),
+    image: images[0] || "",
+    images,
     description: formData.get("description"),
     active: formData.get("active") === "on"
   };
@@ -463,7 +493,7 @@ $("#productForm").addEventListener("click", event => {
   if (event.target.id === "cancelProductEdit") closeProductModal();
 });
 $("#productForm").addEventListener("input", event => {
-  if (event.target.name === "image") updateProductImagePreview(event.target.value);
+  if (event.target.name === "images") updateProductImagePreview(event.target.value);
 });
 $("#productForm").addEventListener("submit", async event => {
   event.preventDefault();

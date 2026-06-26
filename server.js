@@ -284,7 +284,30 @@ function validateProductUpdate(product) {
   if (product.image && !String(product.image).startsWith("/") && !/^https?:\/\//.test(String(product.image))) {
     return "L'image doit etre une URL http(s) ou un chemin commencant par /.";
   }
+  const images = collectProductImages(product);
+  if (images.length > 8) return "Maximum 8 images par produit.";
+  const invalidImage = images.find(image => !isValidProductImage(image));
+  if (invalidImage) return "Chaque image doit etre une URL http(s) ou un chemin commencant par /.";
   return null;
+}
+
+function collectProductImages(product) {
+  const candidates = [];
+  if (product.image) candidates.push(product.image);
+  if (Array.isArray(product.images)) {
+    candidates.push(...product.images);
+  } else if (typeof product.images === "string") {
+    candidates.push(...product.images.split(/[\n,]/));
+  }
+  return [...new Set(
+    candidates
+      .map(image => String(image || "").trim())
+      .filter(Boolean)
+  )];
+}
+
+function isValidProductImage(image) {
+  return String(image).startsWith("/") || /^https?:\/\//.test(String(image));
 }
 
 function normalizePhone(value) {

@@ -36,9 +36,25 @@ function getProductDescription(product){
   return product.description || "Produit selectionne par DieguemTech Store pour offrir un bon rapport qualite-prix et une experience fiable au quotidien.";
 }
 
+function getProductImages(product){
+  const candidates = [];
+  if (product.image) candidates.push(product.image);
+  if (Array.isArray(product.images)) candidates.push(...product.images);
+  return [...new Set(
+    candidates
+      .map(image => String(image || "").trim())
+      .filter(Boolean)
+  )].slice(0, 8);
+}
+
+function getProductMainImage(product){
+  return getProductImages(product)[0] || "";
+}
+
 function productVisual(product, className = "product-emoji"){
-  if (product.image) {
-    return `<img class="product-image" src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" loading="lazy">`;
+  const image = getProductMainImage(product);
+  if (image) {
+    return `<img class="product-image" src="${escapeHtml(image)}" alt="${escapeHtml(product.name)}" loading="lazy">`;
   }
   return `<span class="${className}">${product.emoji}</span>`;
 }
@@ -118,8 +134,9 @@ function toggleWishlist(id){
 }
 
 function cartItemVisual(product){
-  if (product.image) {
-    return `<img class="drawer-item-image" src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" loading="lazy">`;
+  const image = getProductMainImage(product);
+  if (image) {
+    return `<img class="drawer-item-image" src="${escapeHtml(image)}" alt="${escapeHtml(product.name)}" loading="lazy">`;
   }
   return product.emoji;
 }
@@ -195,11 +212,30 @@ function closeAll(){
   document.body.classList.remove("no-scroll");
 }
 
+function productDetailVisual(product){
+  const images = getProductImages(product);
+  if (!images.length) {
+    return `<div class="product-detail-visual">${productVisual(product, "product-detail-emoji")}</div>`;
+  }
+  return `<div class="product-detail-visual">
+    <div class="product-detail-gallery">
+      <div class="product-detail-main">
+        <img class="product-image" id="productDetailMainImage" src="${escapeHtml(images[0])}" alt="${escapeHtml(product.name)}">
+      </div>
+      ${images.length > 1 ? `<div class="product-detail-thumbs" aria-label="Images du produit">
+        ${images.map((image, index) => `<button type="button" class="product-detail-thumb ${index === 0 ? "active" : ""}" data-detail-image="${escapeHtml(image)}" aria-label="Afficher image ${index + 1}">
+          <img src="${escapeHtml(image)}" alt="" loading="lazy">
+        </button>`).join("")}
+      </div>` : ""}
+    </div>
+  </div>`;
+}
+
 function openProductDetail(id){
   const product = products.find(entry => entry.id === Number(id));
   if (!product) return;
   $("#productDetailContent").innerHTML = `
-    <div class="product-detail-visual">${productVisual(product, "product-detail-emoji")}</div>
+    ${productDetailVisual(product)}
     <div class="product-detail-info">
       <span class="eyebrow">${escapeHtml(product.category)}</span>
       <h2>${escapeHtml(product.name)}</h2>
@@ -230,6 +266,14 @@ document.addEventListener("click", event => {
   const removeButton = event.target.closest("[data-remove]");
   const filterButton = event.target.closest("[data-filter]");
   const detailCard = event.target.closest("[data-product-detail]");
+  const detailImageButton = event.target.closest("[data-detail-image]");
+
+  if (detailImageButton) {
+    const mainImage = $("#productDetailMainImage");
+    if (mainImage) mainImage.src = detailImageButton.dataset.detailImage;
+    $$(".product-detail-thumb").forEach(button => button.classList.toggle("active", button === detailImageButton));
+    return;
+  }
 
   if (cartButton) {
     addToCart(Number(cartButton.dataset.cart));
