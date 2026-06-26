@@ -466,6 +466,81 @@ function getPublicBaseUrl(request) {
   return getBaseUrl(request);
 }
 
+function getLocalBusinessStructuredData(baseUrl) {
+  return {
+    "@type": "ElectronicsStore",
+    "@id": `${baseUrl}/#store`,
+    name: "DieguemTech Store",
+    alternateName: "DieguemTech",
+    url: `${baseUrl}/`,
+    logo: `${baseUrl}/assets/logo-mark.svg`,
+    image: `${baseUrl}/assets/hero-tech.png`,
+    description: "Boutique high-tech au Senegal specialisee en smartphones, gaming, IPTV, TV Box, accessoires, audio, informatique et electromenager.",
+    telephone: "+221772177176",
+    email: "contact@dieguemtech.com",
+    priceRange: "FCFA",
+    currenciesAccepted: "XOF",
+    paymentAccepted: "PayDunya, PayTech, Mobile Money, paiement mobile",
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: "Dakar",
+      addressRegion: "Dakar",
+      addressCountry: "SN"
+    },
+    areaServed: [
+      { "@type": "Country", name: "Senegal" },
+      { "@type": "AdministrativeArea", name: "Dakar" },
+      "Pikine",
+      "Guediawaye",
+      "Rufisque",
+      "Thies",
+      "Mbour"
+    ],
+    contactPoint: {
+      "@type": "ContactPoint",
+      telephone: "+221772177176",
+      contactType: "customer support",
+      areaServed: "SN",
+      availableLanguage: ["fr", "wo"]
+    },
+    knowsAbout: [
+      "Smartphones",
+      "Gaming",
+      "IPTV",
+      "TV Box",
+      "Accessoires electroniques",
+      "Audio",
+      "Informatique",
+      "Electromenager",
+      "Climatisation"
+    ],
+    sameAs: ["https://wa.me/221772177176"]
+  };
+}
+
+function renderLocalSeoMeta({ canonicalUrl = "", keywords = "" } = {}) {
+  return `${keywords ? `  <meta name="keywords" content="${escapeHtml(keywords)}">\n` : ""}  <meta name="language" content="fr-SN">
+  <meta name="geo.region" content="SN-DK">
+  <meta name="geo.placename" content="Dakar, Senegal">
+  <meta name="geo.position" content="14.7167;-17.4677">
+  <meta name="ICBM" content="14.7167, -17.4677">
+  ${canonicalUrl ? `<link rel="alternate" hreflang="fr-SN" href="${escapeHtml(canonicalUrl)}">\n  <link rel="alternate" hreflang="x-default" href="${escapeHtml(canonicalUrl)}">` : ""}`;
+}
+
+function getLocalSeoKeywords(items = []) {
+  return [
+    ...items,
+    "DieguemTech Store",
+    "boutique high-tech Senegal",
+    "smartphone Dakar",
+    "accessoires electroniques Senegal",
+    "gaming Dakar",
+    "IPTV Senegal",
+    "TV Box Dakar",
+    "livraison Dakar"
+  ].filter(Boolean).join(", ");
+}
+
 async function renderProductSeoRoute(request, response, next) {
   try {
     const product = await database.getProduct(Number(request.params.id));
@@ -591,8 +666,14 @@ function renderCategorySeoPage({
   const productsLabel = productCountLabel(visibleProducts.length);
   const subcategoryTitle = selectedSubcategory ? "Autres sous-categories" : "Sous-categories";
   const pageTitle = selectedSubcategory
-    ? `${selectedSubcategory.name} - ${displayCategory} | DieguemTech Store`
-    : `${displayCategory} | DieguemTech Store`;
+    ? `${selectedSubcategory.name} ${displayCategory} au Senegal | DieguemTech Store`
+    : `${displayCategory} au Senegal | DieguemTech Store`;
+  const localKeywords = getLocalSeoKeywords([
+    `${displayCategory} Senegal`,
+    `${displayCategory} Dakar`,
+    selectedSubcategory ? `${selectedSubcategory.name} Senegal` : "",
+    selectedSubcategory ? `${selectedSubcategory.name} Dakar` : ""
+  ]);
   const breadcrumbItems = [
     {
       "@type": "ListItem",
@@ -620,12 +701,14 @@ function renderCategorySeoPage({
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
+      getLocalBusinessStructuredData(baseUrl),
       {
         "@type": "BreadcrumbList",
         itemListElement: breadcrumbItems
       },
       {
         "@type": "CollectionPage",
+        "@id": `${canonicalUrl}#webpage`,
         name: currentTitle,
         description,
         url: canonicalUrl,
@@ -633,7 +716,11 @@ function renderCategorySeoPage({
           "@type": "WebSite",
           name: "DieguemTech Store",
           url: `${baseUrl}/`
-        }
+        },
+        publisher: {
+          "@id": `${baseUrl}/#store`
+        },
+        inLanguage: "fr-SN"
       },
       {
         "@type": "ItemList",
@@ -655,6 +742,7 @@ function renderCategorySeoPage({
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="index, follow">
   <meta name="description" content="${escapeHtml(description)}">
+${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="fr_SN">
@@ -756,7 +844,7 @@ function renderCategorySeoPage({
         <p>${escapeHtml(getCategoryDescription(category, selectedSubcategory?.name))}</p>
         <div class="category-hero-metrics">
           <span class="category-pill">${escapeHtml(productsLabel)}</span>
-          <span class="category-pill">Livraison rapide</span>
+          <span class="category-pill">Livraison Dakar & Senegal</span>
           <span class="category-pill">Support WhatsApp</span>
         </div>
       </div>
@@ -856,15 +944,22 @@ function renderProductSeoPage(product, baseUrl, relatedProducts = []) {
   const images = getProductImages(product).map(image => absoluteUrl(image, baseUrl));
   const mainImage = images[0] || `${baseUrl}/assets/hero-tech.png`;
   const fullDescription = getProductDescription(product);
-  const description = truncateText(fullDescription, 155);
+  const description = truncateText(`${product.name} au Senegal chez DieguemTech Store. Livraison a Dakar et autres zones selon confirmation. ${fullDescription}`, 155);
   const schemaDescription = truncateText(fullDescription, 500);
-  const title = `${product.name} | DieguemTech Store`;
+  const title = `${product.name} au Senegal | DieguemTech Store`;
   const availability = Number(product.stock) > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock";
   const isLongDescription = fullDescription.replace(/\s+/g, " ").trim().length > 330;
   const stockLabel = Number(product.stock) > 0 ? "En stock" : "Rupture temporaire";
   const discountLabel = getSeoDiscountLabel(product);
   const highlights = getSeoProductHighlights(product);
   const productSubcategory = getProductSubcategory(product);
+  const localKeywords = getLocalSeoKeywords([
+    `${product.name} Senegal`,
+    `${product.name} Dakar`,
+    `${product.category} Senegal`,
+    `${product.category} Dakar`,
+    productSubcategory ? `${productSubcategory} Senegal` : ""
+  ]);
   const productBreadcrumbItems = [
     {
       "@type": "ListItem",
@@ -897,6 +992,7 @@ function renderProductSeoPage(product, baseUrl, relatedProducts = []) {
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
+      getLocalBusinessStructuredData(baseUrl),
       {
         "@type": "BreadcrumbList",
         itemListElement: productBreadcrumbItems
@@ -920,11 +1016,12 @@ function renderProductSeoPage(product, baseUrl, relatedProducts = []) {
           price: Number(product.price || 0),
           availability,
           itemCondition: "https://schema.org/NewCondition",
+          areaServed: {
+            "@type": "Country",
+            name: "Senegal"
+          },
           seller: {
-            "@type": "Organization",
-            name: "DieguemTech Store",
-            url: `${baseUrl}/`,
-            logo: `${baseUrl}/assets/logo-mark.svg`
+            "@id": `${baseUrl}/#store`
           }
         },
         ...(Number(product.rating) > 0 && Number(product.reviews) > 0 ? {
@@ -945,6 +1042,7 @@ function renderProductSeoPage(product, baseUrl, relatedProducts = []) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="index, follow">
   <meta name="description" content="${escapeHtml(description)}">
+${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
   <meta property="og:type" content="product">
   <meta property="og:locale" content="fr_SN">
@@ -1068,7 +1166,7 @@ function renderProductSeoPage(product, baseUrl, relatedProducts = []) {
         </div>
         <div class="seo-meta">
           <span>Disponibilite : <strong>${escapeHtml(stockLabel)}</strong>${Number(product.stock) > 0 ? ` (${Number(product.stock)} disponible${Number(product.stock) > 1 ? "s" : ""})` : ""}</span>
-          <span>Livraison : Dakar et autres zones selon confirmation</span>
+          <span>Livraison : Dakar, Pikine, Guediawaye, Rufisque et autres zones selon confirmation</span>
           <span>Paiement : PayDunya / PayTech selon disponibilite</span>
           <span>Support : conseil avant achat et suivi apres commande</span>
         </div>
@@ -1092,7 +1190,7 @@ function renderProductSeoPage(product, baseUrl, relatedProducts = []) {
       <div class="seo-service-grid">
         <article><b>Produit selectionne</b><p>Nous privilegions des produits fiables, utiles et adaptes aux besoins high-tech du quotidien.</p></article>
         <article><b>Paiement securise</b><p>Paiement mobile et solutions locales selon la disponibilite des services actives.</p></article>
-        <article><b>Livraison rapide</b><p>Organisation de la livraison a Dakar et dans les autres zones apres confirmation.</p></article>
+        <article><b>Livraison rapide</b><p>Organisation de la livraison a Dakar, Pikine, Guediawaye, Rufisque et dans les autres zones apres confirmation.</p></article>
         <article><b>Support reactif</b><p>Assistance avant achat, confirmation du stock et suivi de commande par WhatsApp.</p></article>
       </div>
     </section>
@@ -1277,38 +1375,38 @@ function getCategoryDisplayName(category) {
 
 function getCategoryDescription(category, subcategory = "") {
   if (subcategory) {
-    return `Explorez notre selection ${subcategory} dans la categorie ${getCategoryDisplayName(category)}. Les produits sont presentes avec images, prix, descriptions et acces direct a leur page detaillee.`;
+    return `Explorez notre selection ${subcategory} dans la categorie ${getCategoryDisplayName(category)} au Senegal. Produits avec images, prix, descriptions, livraison a Dakar et acces direct a leur page detaillee.`;
   }
 
   const normalizedCategory = normalizeSearchText(category);
   if (normalizedCategory.includes("climatisation")) {
-    return "Retrouvez climatiseurs, ventilateurs, modeles rechargeables et rafraichisseurs d'air pour ameliorer le confort thermique a la maison, au bureau ou dans un espace de vie.";
+    return "Retrouvez au Senegal climatiseurs, ventilateurs, modeles rechargeables et rafraichisseurs d'air pour ameliorer le confort thermique a la maison, au bureau ou dans un espace de vie.";
   }
   if (normalizedCategory.includes("iptv")) {
-    return "Solutions IPTV et TV Box pour transformer votre televiseur en espace multimedia connecte.";
+    return "Solutions IPTV et TV Box au Senegal pour transformer votre televiseur en espace multimedia connecte, avec conseil et livraison a Dakar selon disponibilite.";
   }
   if ((normalizedCategory.includes("tv") && !normalizedCategory.includes("iptv")) || normalizedCategory.includes("home cinema")) {
-    return "Decouvrez nos televisions, projecteurs, barres de son, supports, cables et accessoires video pour creer une vraie experience multimedia a domicile.";
+    return "Decouvrez nos televisions, projecteurs, barres de son, supports, cables et accessoires video au Senegal pour creer une vraie experience multimedia a domicile.";
   }
   if (normalizedCategory.includes("electromenager")) {
-    return "Equipez la maison avec des produits utiles pour la cuisine, le petit dejeuner, l'entretien, le linge et les besoins du quotidien.";
+    return "Equipez votre maison au Senegal avec des produits utiles pour la cuisine, le petit dejeuner, l'entretien, le linge et les besoins du quotidien.";
   }
   if (normalizedCategory.includes("informatique")) {
-    return "Selection informatique pour le bureau, les etudes, la connexion, le stockage et les peripheriques essentiels.";
+    return "Selection informatique au Senegal pour le bureau, les etudes, la connexion, le stockage et les peripheriques essentiels.";
   }
   if (normalizedCategory.includes("accessoires")) {
-    return "Accessoires pratiques pour smartphone, maison connectee, charge, securite et usages high-tech du quotidien.";
+    return "Accessoires pratiques au Senegal pour smartphone, maison connectee, charge, securite et usages high-tech du quotidien.";
   }
   if (normalizedCategory.includes("audio")) {
-    return "Ecouteurs, casques et enceintes pour appels, musique, videos et divertissement au quotidien.";
+    return "Ecouteurs, casques et enceintes disponibles au Senegal pour appels, musique, videos et divertissement au quotidien.";
   }
   if (normalizedCategory.includes("gaming")) {
-    return "Produits gaming pour ameliorer le confort, le son, les commandes et l'experience de jeu.";
+    return "Produits gaming au Senegal pour ameliorer le confort, le son, les commandes et l'experience de jeu.";
   }
   if (normalizedCategory.includes("smartphone")) {
-    return "Smartphones selectionnes pour les appels, internet, reseaux sociaux, photos et usages quotidiens.";
+    return "Smartphones au Senegal selectionnes pour les appels, internet, reseaux sociaux, photos et usages quotidiens.";
   }
-  return "Explorez les produits selectionnes par DieguemTech Store avec images, prix et fiches detaillees.";
+  return "Explorez les produits selectionnes par DieguemTech Store au Senegal avec images, prix et fiches detaillees.";
 }
 
 function productCountLabel(count) {
@@ -1372,7 +1470,8 @@ function getSeoProductHighlights(product) {
   const category = String(product.category || "").toLowerCase();
   const common = [
     "Produit verifie avant confirmation de la commande.",
-    "Conseil disponible pour choisir le bon modele selon votre besoin."
+    "Livraison disponible a Dakar et autres zones du Senegal selon confirmation.",
+    "Conseil WhatsApp disponible pour choisir le bon modele selon votre besoin."
   ];
 
   if (category.includes("smartphone")) {

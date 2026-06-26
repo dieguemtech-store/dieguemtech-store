@@ -1,7 +1,7 @@
 {
   "name": "DieguemTech Store",
   "short_name": "DieguemTech",
-  "description": "Boutique High-Tech, Gaming, IPTV, Smartphones et Accessoires.",
+  "description": "Boutique high-tech au Senegal : smartphones, gaming, IPTV, TV Box, accessoires et livraison a Dakar.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
