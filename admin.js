@@ -222,9 +222,31 @@ function closeOrderModal() {
 function openProductModal(id) {
   const product = products.find(item => item.id === Number(id));
   if (!product) return;
+  renderProductForm(product);
+  $("#productModal").hidden = false;
+}
+
+function openCreateProductModal() {
+  renderProductForm({
+    id: "",
+    name: "",
+    category: "",
+    badge: "",
+    price: "",
+    oldPrice: "",
+    stock: 0,
+    image: "",
+    description: "",
+    active: true
+  });
+  $("#productModal").hidden = false;
+}
+
+function renderProductForm(product) {
+  const isNew = !product.id;
   $("#productForm").innerHTML = `<div class="product-form-head">
-      <span class="eyebrow">Produit #${product.id}</span>
-      <h2>Modifier le produit</h2>
+      <span class="eyebrow">${isNew ? "Nouveau produit" : `Produit #${product.id}`}</span>
+      <h2>${isNew ? "Ajouter un produit" : "Modifier le produit"}</h2>
     </div>
     <label>Nom
       <input name="name" value="${escapeHtml(product.name)}" required>
@@ -257,10 +279,9 @@ function openProductModal(id) {
     </label>
     <input type="hidden" name="id" value="${product.id}">
     <div class="modal-actions">
-      <button type="submit">Enregistrer</button>
+      <button type="submit">${isNew ? "Ajouter le produit" : "Enregistrer"}</button>
       <button type="button" class="ghost" id="cancelProductEdit">Annuler</button>
     </div>`;
-  $("#productModal").hidden = false;
 }
 
 function closeProductModal() {
@@ -354,8 +375,8 @@ async function saveProduct(form) {
     description: formData.get("description"),
     active: formData.get("active") === "on"
   };
-  await api(`/api/admin/products/${encodeURIComponent(id)}`, {
-    method: "PATCH",
+  await api(id ? `/api/admin/products/${encodeURIComponent(id)}` : "/api/admin/products", {
+    method: id ? "PATCH" : "POST",
     body: JSON.stringify(payload)
   });
   closeProductModal();
@@ -378,6 +399,7 @@ $("#orderSearch").addEventListener("input", renderOrders);
 $("#statusFilter").addEventListener("change", renderOrders);
 $("#productSearch").addEventListener("input", renderProducts);
 $("#productCategoryFilter").addEventListener("change", renderProducts);
+$("#addProductButton").addEventListener("click", openCreateProductModal);
 
 document.addEventListener("change", async event => {
   const orderStatus = event.target.closest("[data-order-status]");

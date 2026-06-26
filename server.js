@@ -74,6 +74,18 @@ app.get("/api/admin/products", requireAdmin, async (request, response, next) => 
   }
 });
 
+app.post("/api/admin/products", requireAdmin, async (request, response, next) => {
+  try {
+    const validationError = validateProductUpdate(request.body || {});
+    if (validationError) return response.status(400).json({ error: validationError });
+
+    const product = await database.createProduct(request.body);
+    response.status(201).json(product);
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.patch("/api/admin/products/:id", requireAdmin, async (request, response, next) => {
   try {
     const validationError = validateProductUpdate(request.body || {});
@@ -226,11 +238,11 @@ function validateOrder(customer, items, paymentProvider) {
 function validateProductUpdate(product) {
   if (!product.name?.trim()) return "Le nom du produit est requis.";
   if (!product.category?.trim()) return "La categorie est requise.";
-  if (!Number.isInteger(Number(product.price)) || Number(product.price) < 0) return "Prix invalide.";
+  if (product.price === "" || typeof product.price === "undefined" || !Number.isInteger(Number(product.price)) || Number(product.price) < 0) return "Prix invalide.";
   if (product.oldPrice !== null && product.oldPrice !== "" && typeof product.oldPrice !== "undefined" && (!Number.isInteger(Number(product.oldPrice)) || Number(product.oldPrice) < 0)) {
     return "Ancien prix invalide.";
   }
-  if (!Number.isInteger(Number(product.stock)) || Number(product.stock) < 0) return "Stock invalide.";
+  if (product.stock === "" || typeof product.stock === "undefined" || !Number.isInteger(Number(product.stock)) || Number(product.stock) < 0) return "Stock invalide.";
   if (product.image && !String(product.image).startsWith("/") && !/^https?:\/\//.test(String(product.image))) {
     return "L'image doit etre une URL http(s) ou un chemin commencant par /.";
   }

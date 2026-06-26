@@ -154,6 +154,48 @@ async function getAdminProducts() {
   return result.rows;
 }
 
+async function createProduct(input) {
+  const product = normalizeProductInput(input);
+
+  if (!pool) {
+    const nextId = Math.max(0, ...seedProducts.map(entry => Number(entry.id) || 0)) + 1;
+    const created = {
+      id: nextId,
+      ...product,
+      emoji: "DT",
+      rating: 0,
+      reviews: 0
+    };
+    seedProducts.push(created);
+    return created;
+  }
+
+  const result = await pool.query(`
+    INSERT INTO products (
+      id, name, category, price, old_price, emoji, rating, reviews, badge, stock, image, description, active
+    )
+    VALUES (
+      (SELECT COALESCE(MAX(id), 0) + 1 FROM products),
+      $1, $2, $3, $4, $5, 0, 0, $6, $7, $8, $9, $10
+    )
+    RETURNING
+      id, name, category, price, old_price AS "oldPrice", emoji,
+      rating::FLOAT, reviews, badge, stock, image, description, active
+  `, [
+    product.name,
+    product.category,
+    product.price,
+    product.oldPrice,
+    "DT",
+    product.badge,
+    product.stock,
+    product.image,
+    product.description,
+    product.active
+  ]);
+  return result.rows[0];
+}
+
 async function updateProduct(id, input) {
   const productId = Number(id);
   if (!Number.isInteger(productId) || productId < 1) return null;
@@ -384,6 +426,7 @@ module.exports = {
   getProducts,
   getAdminProducts,
   getProduct,
+  createProduct,
   updateProduct,
   createOrder,
   getOrders,
