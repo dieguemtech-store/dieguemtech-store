@@ -458,7 +458,12 @@ function openModal(modal) {
 
 function showOrderSuccess(result, customerPhone, provider) {
   const orderId = result.orderId;
+  const notifications = result.notifications || {};
+  const customerNotified = notifications.customerEmail === "sent" || notifications.customerWhatsapp === "sent";
   $("#successOrderId").textContent = orderId;
+  $("#successNotificationInfo").textContent = customerNotified
+    ? "Une confirmation vient aussi de vous etre envoyee."
+    : "Le support confirmera votre commande par WhatsApp ou telephone.";
   $("#orderWhatsappLink").href = `https://wa.me/221772177176?text=${encodeURIComponent(`Bonjour DieguemTech Store, je viens de passer la commande ${orderId}.`)}`;
   $("#trackingForm").elements.orderId.value = orderId;
   $("#trackingForm").elements.phone.value = customerPhone;
@@ -577,6 +582,7 @@ $("#checkoutForm").addEventListener("submit", async event => {
         customer: {
           name: String(formData.get("customerName") || "").trim(),
           phone: customerPhone,
+          email: String(formData.get("customerEmail") || "").trim(),
           address: deliveryAddress
         },
         items: cart.map(item => ({ id: item.id, quantity: item.qty })),

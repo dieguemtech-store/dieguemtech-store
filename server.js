@@ -223,6 +223,7 @@ app.post("/api/orders", async (request, response, next) => {
       customer: {
         name: customer.name.trim(),
         phone: customer.phone.trim(),
+        email: normalizeEmail(customer.email),
         address: customer.address.trim()
       },
       items: preparedItems,
@@ -235,22 +236,26 @@ app.post("/api/orders", async (request, response, next) => {
 
     if (paymentProvider === "PayTech") {
       const payment = await createPayTechPayment(order, request);
+      const notifications = await notifyOrderCreated(order, request);
       return response.status(201).json({
         orderId: order.id,
         total: order.total,
         currency: order.currency,
         paymentProvider: order.paymentProvider,
         paymentStatus: "pending",
-        redirect_url: payment.redirectUrl
+        redirect_url: payment.redirectUrl,
+        notifications
       });
     }
 
+    const notifications = await notifyOrderCreated(order, request);
     response.status(201).json({
       orderId: order.id,
       total: order.total,
       currency: order.currency,
       paymentProvider: order.paymentProvider,
-      paymentStatus: "pending"
+      paymentStatus: "pending",
+      notifications
     });
   } catch (error) {
     next(error);
@@ -341,6 +346,9 @@ function validateOrder(customer, items, paymentProvider) {
   if (!customer || !customer.name?.trim() || !customer.phone?.trim() || !customer.address?.trim()) {
     return "Les coordonnees de livraison sont incompletes.";
   }
+  if (customer.email && !isValidEmail(customer.email)) {
+    return "Adresse email invalide.";
+  }
   if (!Array.isArray(items) || items.length === 0 || items.length > 30) {
     return "Le panier est vide ou invalide.";
   }
@@ -413,6 +421,14 @@ function normalizePhone(value) {
   const digits = String(value || "").replace(/\D/g, "");
   if (digits.startsWith("221")) return digits.slice(3);
   return digits.replace(/^0+/, "");
+}
+
+function normalizeEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
 }
 
 function getAdminPassword() {
@@ -1577,6 +1593,252 @@ function toJsonLdScript(value) {
   return JSON.stringify(value).replace(/</g, "\\u003c");
 }
 
+async function notifyOrderCreated(order, request) {
+  const notifications = {
+    adminEmail: "skipped",
+    customerEmail: "skipped",
+    adminWhatsapp: "skipped",
+    customerWhatsapp: "skipped"
+  };
+
+  const tasks = [
+    runNotification("adminEmail", async () => {
+      const adminEmail = process.env.ORDER_ADMIN_EMAIL || process.env.ADMIN_EMAIL || "";
+      if (!adminEmail) return "skipped";
+      return sendOrderEmail({
+        to: adminEmail,
+        subject: `Nouvelle commande ${order.id} - DieguemTech Store`,
+        text: buildAdminOrderText(order, request),
+        html: buildOrderEmailHtml(order, request, "admin")
+      });
+    }),
+    runNotification("customerEmail", async () => {
+      const customerEmail = order.customer?.email || order.customerEmail || "";
+      if (!customerEmail) return "skipped";
+      return sendOrderEmail({
+        to: customerEmail,
+        subject: `Votre commande ${order.id} - DieguemTech Store`,
+        text: buildCustomerOrderText(order, request),
+        html: buildOrderEmailHtml(order, request, "customer")
+      });
+    }),
+    runNotification("adminWhatsapp", async () => sendOrderWhatsApp({
+      to: process.env.ORDER_ADMIN_WHATSAPP || process.env.ADMIN_WHATSAPP || "",
+      text: buildAdminOrderText(order, request),
+      templateName: process.env.WHATSAPP_ADMIN_TEMPLATE_NAME,
+      templateParams: getAdminWhatsAppTemplateParams(order)
+    })),
+    runNotification("customerWhatsapp", async () => sendOrderWhatsApp({
+      to: order.customer?.phone || order.customerPhone || "",
+      text: buildCustomerOrderText(order, request),
+      templateName: process.env.WHATSAPP_CUSTOMER_TEMPLATE_NAME,
+      templateParams: getCustomerWhatsAppTemplateParams(order)
+    }))
+  ];
+
+  const results = await Promise.all(tasks);
+  for (const result of results) {
+    notifications[result.name] = result.status;
+  }
+  return notifications;
+}
+
+async function runNotification(name, task) {
+  try {
+    return { name, status: await task() };
+  } catch (error) {
+    console.error(`Notification ${name} impossible:`, getNotificationError(error));
+    return { name, status: "failed" };
+  }
+}
+
+async function sendOrderEmail({ to, subject, text, html }) {
+  if (!process.env.RESEND_API_KEY || !process.env.ORDER_EMAIL_FROM) return "skipped";
+  await axios.post("https://api.resend.com/emails", {
+    from: process.env.ORDER_EMAIL_FROM,
+    to: [to],
+    subject,
+    text,
+    html
+  }, {
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    timeout: 10000
+  });
+  return "sent";
+}
+
+async function sendOrderWhatsApp({ to, text, templateName, templateParams = [] }) {
+  if (!process.env.WHATSAPP_ACCESS_TOKEN || !process.env.WHATSAPP_PHONE_NUMBER_ID || !to) return "skipped";
+  const recipient = normalizeWhatsAppRecipient(to);
+  if (!recipient) return "skipped";
+
+  const payload = templateName
+    ? {
+        messaging_product: "whatsapp",
+        to: recipient,
+        type: "template",
+        template: {
+          name: templateName,
+          language: { code: process.env.WHATSAPP_TEMPLATE_LANGUAGE || "fr" },
+          components: [{
+            type: "body",
+            parameters: templateParams.map(value => ({ type: "text", text: String(value) }))
+          }]
+        }
+      }
+    : buildWhatsAppTextPayload(recipient, text);
+
+  if (!payload) return "skipped";
+
+  const apiUrl = process.env.WHATSAPP_API_URL
+    || `https://graph.facebook.com/${process.env.WHATSAPP_GRAPH_VERSION || "v25.0"}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
+
+  await axios.post(apiUrl, payload, {
+    headers: {
+      Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
+      "Content-Type": "application/json"
+    },
+    timeout: 10000
+  });
+  return "sent";
+}
+
+function buildWhatsAppTextPayload(to, text) {
+  if (String(process.env.WHATSAPP_SEND_TEXT || "").toLowerCase() !== "true") return null;
+  return {
+    messaging_product: "whatsapp",
+    to,
+    type: "text",
+    text: {
+      preview_url: false,
+      body: text
+    }
+  };
+}
+
+function buildAdminOrderText(order, request) {
+  const lines = [
+    `Nouvelle commande ${order.id}`,
+    `Client: ${getOrderCustomerName(order)}`,
+    `Telephone: ${getOrderCustomerPhone(order)}`,
+    getOrderCustomerEmail(order) ? `Email: ${getOrderCustomerEmail(order)}` : "",
+    `Adresse: ${getOrderAddress(order)}`,
+    `Total: ${formatSeoPrice(order.total)}`,
+    `Paiement: ${order.paymentProvider}`,
+    "",
+    "Articles:",
+    ...getOrderItems(order).map(item => `- ${item.name} x${item.quantity} = ${formatSeoPrice(item.lineTotal)}`),
+    "",
+    `Admin: ${getPublicBaseUrl(request)}/admin.html`
+  ].filter(line => line !== "");
+  return lines.join("\n");
+}
+
+function buildCustomerOrderText(order, request) {
+  return [
+    `Bonjour ${getOrderCustomerName(order)},`,
+    `Votre commande ${order.id} chez DieguemTech Store est bien enregistree.`,
+    `Total produits: ${formatSeoPrice(order.total)}.`,
+    "Notre equipe confirme le stock, la livraison et le paiement avant expedition.",
+    `Suivi: ${getPublicBaseUrl(request)}/#suivi`
+  ].join("\n");
+}
+
+function buildOrderEmailHtml(order, request, audience) {
+  const isAdmin = audience === "admin";
+  const title = isAdmin ? "Nouvelle commande recue" : "Votre commande est enregistree";
+  const intro = isAdmin
+    ? "Une nouvelle commande vient d'arriver sur DieguemTech Store."
+    : "Merci pour votre commande. Gardez ce numero pour le suivi et les echanges avec le support.";
+  const items = getOrderItems(order)
+    .map(item => `<tr><td>${escapeHtml(item.name)}</td><td>${Number(item.quantity)}</td><td>${escapeHtml(formatSeoPrice(item.lineTotal))}</td></tr>`)
+    .join("");
+  return `<!doctype html>
+<html lang="fr">
+<body style="margin:0;background:#f6f6f6;font-family:Arial,sans-serif;color:#313133">
+  <main style="max-width:680px;margin:0 auto;padding:24px">
+    <section style="background:#fff;border-radius:18px;padding:26px;border:1px solid #ececec">
+      <p style="margin:0 0 8px;color:#f68b1e;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px">DieguemTech Store</p>
+      <h1 style="margin:0 0 10px;font-size:26px;color:#1c1c1e">${escapeHtml(title)}</h1>
+      <p style="margin:0 0 22px;color:#666;line-height:1.6">${escapeHtml(intro)}</p>
+      <div style="background:#fff8f0;border:1px dashed rgba(246,139,30,.35);border-radius:14px;padding:16px;margin-bottom:18px">
+        <span style="display:block;color:#777;font-size:12px;text-transform:uppercase;font-weight:800">Numero de commande</span>
+        <strong style="font-size:24px;color:#f68b1e">${escapeHtml(order.id)}</strong>
+      </div>
+      <table style="width:100%;border-collapse:collapse;margin:18px 0;font-size:14px">
+        <tr><td style="padding:8px 0;color:#777">Client</td><td style="padding:8px 0;text-align:right;font-weight:700">${escapeHtml(getOrderCustomerName(order))}</td></tr>
+        <tr><td style="padding:8px 0;color:#777">Telephone</td><td style="padding:8px 0;text-align:right">${escapeHtml(getOrderCustomerPhone(order))}</td></tr>
+        ${getOrderCustomerEmail(order) ? `<tr><td style="padding:8px 0;color:#777">Email</td><td style="padding:8px 0;text-align:right">${escapeHtml(getOrderCustomerEmail(order))}</td></tr>` : ""}
+        <tr><td style="padding:8px 0;color:#777">Adresse</td><td style="padding:8px 0;text-align:right">${escapeHtml(getOrderAddress(order))}</td></tr>
+        <tr><td style="padding:8px 0;color:#777">Paiement</td><td style="padding:8px 0;text-align:right">${escapeHtml(order.paymentProvider)}</td></tr>
+      </table>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:#fafafa"><th style="text-align:left;padding:10px">Produit</th><th style="text-align:center;padding:10px">Qte</th><th style="text-align:right;padding:10px">Total</th></tr></thead>
+        <tbody>${items}</tbody>
+      </table>
+      <p style="text-align:right;font-size:20px;font-weight:800;color:#f68b1e;margin:18px 0 0">Total: ${escapeHtml(formatSeoPrice(order.total))}</p>
+      <p style="margin:22px 0 0;color:#777;font-size:12px;line-height:1.6">Suivi commande: ${escapeHtml(getPublicBaseUrl(request))}/#suivi</p>
+    </section>
+  </main>
+</body>
+</html>`;
+}
+
+function getAdminWhatsAppTemplateParams(order) {
+  return [
+    order.id,
+    getOrderCustomerName(order),
+    getOrderCustomerPhone(order),
+    formatSeoPrice(order.total)
+  ];
+}
+
+function getCustomerWhatsAppTemplateParams(order) {
+  return [
+    getOrderCustomerName(order),
+    order.id,
+    formatSeoPrice(order.total)
+  ];
+}
+
+function getOrderItems(order) {
+  return Array.isArray(order.items) ? order.items : [];
+}
+
+function getOrderCustomerName(order) {
+  return order.customer?.name || order.customerName || "";
+}
+
+function getOrderCustomerPhone(order) {
+  return order.customer?.phone || order.customerPhone || "";
+}
+
+function getOrderCustomerEmail(order) {
+  return order.customer?.email || order.customerEmail || "";
+}
+
+function getOrderAddress(order) {
+  return order.customer?.address || order.deliveryAddress || "";
+}
+
+function normalizeWhatsAppRecipient(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("221")) return digits;
+  if (digits.length === 9) return `221${digits}`;
+  return digits;
+}
+
+function getNotificationError(error) {
+  const data = error.response?.data;
+  if (!data) return error.message;
+  if (typeof data === "string") return data.slice(0, 250);
+  return JSON.stringify(data).slice(0, 250);
+}
+
 async function createPayTechPayment(order, request) {
   const baseUrl = getBaseUrl(request);
   const payload = {
@@ -1708,6 +1970,10 @@ async function createLocalOrder(orderInput) {
   }
   const order = {
     ...orderInput,
+    customerName: orderInput.customer.name,
+    customerPhone: orderInput.customer.phone,
+    customerEmail: orderInput.customer.email || "",
+    deliveryAddress: orderInput.customer.address,
     items: normalizedItems,
     total: normalizedItems.reduce((sum, item) => sum + item.lineTotal, 0),
     currency: "XOF",
@@ -1740,7 +2006,7 @@ function renderPaymentPage(title, message, status) {
 </head>
 <body>
   <main>
-    <div class="mark">${status === "success" ? "✓" : "!"}</div>
+    <div class="mark">${status === "success" ? "&#10003;" : "!"}</div>
     <h1>${title}</h1>
     <p>${message}</p>
     <a href="/">Retour a la boutique</a>

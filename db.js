@@ -44,6 +44,7 @@ async function initializeDatabase() {
       id TEXT PRIMARY KEY,
       customer_name TEXT NOT NULL,
       customer_phone TEXT NOT NULL,
+      customer_email TEXT,
       delivery_address TEXT NOT NULL,
       total INTEGER NOT NULL CHECK (total >= 0),
       currency CHAR(3) NOT NULL DEFAULT 'XOF',
@@ -79,6 +80,9 @@ async function initializeDatabase() {
   `);
 
   await pool.query(`
+    ALTER TABLE orders
+      ADD COLUMN IF NOT EXISTS customer_email TEXT;
+
     ALTER TABLE products
       ADD COLUMN IF NOT EXISTS subcategory TEXT NOT NULL DEFAULT '',
       ADD COLUMN IF NOT EXISTS image TEXT,
@@ -481,13 +485,14 @@ async function createOrder(orderInput) {
     const total = normalizedItems.reduce((sum, item) => sum + item.lineTotal, 0);
     await client.query(`
       INSERT INTO orders (
-        id, customer_name, customer_phone, delivery_address, total,
+        id, customer_name, customer_phone, customer_email, delivery_address, total,
         currency, payment_provider, payment_status, order_status
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
     `, [
       orderInput.id,
       orderInput.customer.name,
       orderInput.customer.phone,
+      orderInput.customer.email || null,
       orderInput.customer.address,
       total,
       "XOF",
@@ -533,6 +538,7 @@ async function getOrders() {
       o.id,
       o.customer_name AS "customerName",
       o.customer_phone AS "customerPhone",
+      o.customer_email AS "customerEmail",
       o.delivery_address AS "deliveryAddress",
       o.total,
       o.currency,
@@ -572,6 +578,7 @@ async function getOrder(id) {
       o.id,
       o.customer_name AS "customerName",
       o.customer_phone AS "customerPhone",
+      o.customer_email AS "customerEmail",
       o.delivery_address AS "deliveryAddress",
       o.total,
       o.currency,
@@ -613,6 +620,7 @@ async function updateOrderStatus(id, { orderStatus, paymentStatus }) {
       id,
       customer_name AS "customerName",
       customer_phone AS "customerPhone",
+      customer_email AS "customerEmail",
       delivery_address AS "deliveryAddress",
       total,
       currency,

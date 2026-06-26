@@ -536,6 +536,9 @@
               <label>Telephone WhatsApp
                 <input name="customerPhone" type="tel" placeholder="+221 77 217 71 76" autocomplete="tel" required>
               </label>
+              <label>Email <small>Optionnel</small>
+                <input name="customerEmail" type="email" placeholder="client@email.com" autocomplete="email">
+              </label>
             </div>
           </div>
           <div class="checkout-card">
@@ -610,11 +613,12 @@
     <div class="success-mark">✓</div>
     <span class="eyebrow">Commande enregistree</span>
     <h2>Votre commande est prise en compte</h2>
-    <p class="success-intro">Gardez ce numero. Notre equipe peut vous contacter pour confirmer le stock, la livraison et le paiement.</p>
+    <p class="success-intro">Gardez ce numero. Notre equipe peut vous contacter pour confirmer le stock, la livraison et le paiement. Si les notifications sont configurees, un message vous sera aussi envoye.</p>
     <div class="order-reference">
       <span>Numéro de commande</span>
       <strong id="successOrderId">DT-...</strong>
     </div>
+    <p class="success-notification" id="successNotificationInfo">Le support confirmera votre commande.</p>
     <div class="success-next-steps">
       <div><b>1</b><span>Confirmation du stock</span></div>
       <div><b>2</b><span>Validation paiement</span></div>

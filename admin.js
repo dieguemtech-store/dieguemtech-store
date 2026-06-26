@@ -92,7 +92,7 @@ function getFilteredOrders() {
   const query = $("#orderSearch").value.trim().toLowerCase();
   const status = $("#statusFilter").value;
   return orders.filter(order => {
-    const haystack = `${order.id} ${order.customerName} ${order.customerPhone} ${order.deliveryAddress}`.toLowerCase();
+    const haystack = `${order.id} ${order.customerName} ${order.customerPhone} ${order.customerEmail || ""} ${order.deliveryAddress}`.toLowerCase();
     const matchesSearch = !query || haystack.includes(query);
     const matchesStatus = !status || order.orderStatus === status;
     return matchesSearch && matchesStatus;
@@ -230,6 +230,7 @@ function orderCard(order) {
         <h3>Client</h3>
         <p><strong>${escapeHtml(order.customerName)}</strong></p>
         <p>${escapeHtml(order.customerPhone)}</p>
+        ${order.customerEmail ? `<p>${escapeHtml(order.customerEmail)}</p>` : ""}
         <p>${escapeHtml(order.deliveryAddress)}</p>
       </div>
       <div>
@@ -463,7 +464,7 @@ function receiptHtml(order, printable = true) {
     </div>
     <section class="receipt-section">
       <h3>Client</h3>
-      <p><strong>${escapeHtml(order.customerName)}</strong><br>${escapeHtml(order.customerPhone)}<br>${escapeHtml(order.deliveryAddress)}</p>
+      <p><strong>${escapeHtml(order.customerName)}</strong><br>${escapeHtml(order.customerPhone)}${order.customerEmail ? `<br>${escapeHtml(order.customerEmail)}` : ""}<br>${escapeHtml(order.deliveryAddress)}</p>
     </section>
     <section class="receipt-section">
       <h3>Produits</h3>
