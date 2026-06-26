@@ -45,7 +45,10 @@ async function initializeDatabase() {
       customer_name TEXT NOT NULL,
       customer_phone TEXT NOT NULL,
       customer_email TEXT,
+      delivery_zone TEXT,
       delivery_address TEXT NOT NULL,
+      subtotal INTEGER NOT NULL DEFAULT 0 CHECK (subtotal >= 0),
+      delivery_fee INTEGER NOT NULL DEFAULT 0 CHECK (delivery_fee >= 0),
       total INTEGER NOT NULL CHECK (total >= 0),
       currency CHAR(3) NOT NULL DEFAULT 'XOF',
       payment_provider TEXT NOT NULL,
@@ -81,7 +84,14 @@ async function initializeDatabase() {
 
   await pool.query(`
     ALTER TABLE orders
-      ADD COLUMN IF NOT EXISTS customer_email TEXT;
+      ADD COLUMN IF NOT EXISTS customer_email TEXT,
+      ADD COLUMN IF NOT EXISTS delivery_zone TEXT,
+      ADD COLUMN IF NOT EXISTS subtotal INTEGER NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS delivery_fee INTEGER NOT NULL DEFAULT 0;
+
+    UPDATE orders
+    SET subtotal = total
+    WHERE subtotal = 0;
 
     ALTER TABLE products
       ADD COLUMN IF NOT EXISTS subcategory TEXT NOT NULL DEFAULT '',
@@ -482,18 +492,23 @@ async function createOrder(orderInput) {
       });
     }
 
-    const total = normalizedItems.reduce((sum, item) => sum + item.lineTotal, 0);
+    const subtotal = normalizedItems.reduce((sum, item) => sum + item.lineTotal, 0);
+    const deliveryFee = Number(orderInput.deliveryFee || 0);
+    const total = subtotal + deliveryFee;
     await client.query(`
       INSERT INTO orders (
-        id, customer_name, customer_phone, customer_email, delivery_address, total,
+        id, customer_name, customer_phone, customer_email, delivery_zone, delivery_address, subtotal, delivery_fee, total,
         currency, payment_provider, payment_status, order_status
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
     `, [
       orderInput.id,
       orderInput.customer.name,
       orderInput.customer.phone,
       orderInput.customer.email || null,
+      orderInput.deliveryZone,
       orderInput.customer.address,
+      subtotal,
+      deliveryFee,
       total,
       "XOF",
       orderInput.paymentProvider,
@@ -521,7 +536,7 @@ async function createOrder(orderInput) {
     }
 
     await client.query("COMMIT");
-    return { ...orderInput, items: normalizedItems, total, currency: "XOF" };
+    return { ...orderInput, items: normalizedItems, subtotal, deliveryFee, total, currency: "XOF" };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
@@ -539,7 +554,10 @@ async function getOrders() {
       o.customer_name AS "customerName",
       o.customer_phone AS "customerPhone",
       o.customer_email AS "customerEmail",
+      o.delivery_zone AS "deliveryZone",
       o.delivery_address AS "deliveryAddress",
+      o.subtotal,
+      o.delivery_fee AS "deliveryFee",
       o.total,
       o.currency,
       o.payment_provider AS "paymentProvider",
@@ -579,7 +597,10 @@ async function getOrder(id) {
       o.customer_name AS "customerName",
       o.customer_phone AS "customerPhone",
       o.customer_email AS "customerEmail",
+      o.delivery_zone AS "deliveryZone",
       o.delivery_address AS "deliveryAddress",
+      o.subtotal,
+      o.delivery_fee AS "deliveryFee",
       o.total,
       o.currency,
       o.payment_provider AS "paymentProvider",
@@ -621,7 +642,10 @@ async function updateOrderStatus(id, { orderStatus, paymentStatus }) {
       customer_name AS "customerName",
       customer_phone AS "customerPhone",
       customer_email AS "customerEmail",
+      delivery_zone AS "deliveryZone",
       delivery_address AS "deliveryAddress",
+      subtotal,
+      delivery_fee AS "deliveryFee",
       total,
       currency,
       payment_provider AS "paymentProvider",

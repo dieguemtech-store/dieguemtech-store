@@ -21,6 +21,16 @@ const paymentStatuses = {
   refunded: "Rembourse"
 };
 
+const deliveryOptions = {
+  Dakar: { label: "Dakar", fee: 1500 },
+  Pikine: { label: "Pikine", fee: 2000 },
+  Guediawaye: { label: "Guediawaye", fee: 2000 },
+  Rufisque: { label: "Rufisque", fee: 2500 },
+  Thies: { label: "Thies", fee: 4000 },
+  Mbour: { label: "Mbour", fee: 4000 },
+  "Autre zone Senegal": { label: "Autre zone au Senegal", fee: 5000 }
+};
+
 const $ = selector => document.querySelector(selector);
 const $$ = selector => document.querySelectorAll(selector);
 const formatPrice = value => `${new Intl.NumberFormat("fr-FR").format(value)} FCFA`;
@@ -232,15 +242,29 @@ function getCartDetails(){
   };
 }
 
+function getDeliveryOption(zone){
+  return deliveryOptions[String(zone || "").trim()] || null;
+}
+
+function getSelectedDeliveryOption(){
+  const select = $("#checkoutForm select[name='deliveryZone']");
+  return getDeliveryOption(select?.value);
+}
+
 function renderCheckoutSummary(){
   const itemsBox = $("#checkoutItems");
   if (!itemsBox) return;
   const details = getCartDetails();
+  const delivery = getSelectedDeliveryOption();
+  const deliveryFee = delivery ? delivery.fee : 0;
+  const total = details.total + deliveryFee;
   const label = `${details.count} article${details.count > 1 ? "s" : ""}`;
   $("#checkoutItemCount").textContent = label;
   $("#checkoutSubtotal").textContent = formatPrice(details.total);
-  $("#checkoutGrandTotal").textContent = formatPrice(details.total);
-  if ($("#checkoutTotal")) $("#checkoutTotal").textContent = formatPrice(details.total);
+  $("#checkoutDeliveryLabel").textContent = delivery ? `Livraison ${delivery.label}` : "Livraison";
+  $("#checkoutDeliveryFee").textContent = delivery ? formatPrice(deliveryFee) : "Choisir zone";
+  $("#checkoutGrandTotal").textContent = formatPrice(total);
+  if ($("#checkoutTotal")) $("#checkoutTotal").textContent = formatPrice(total);
   itemsBox.innerHTML = details.items.length
     ? details.items.map(({ product, quantity, lineTotal }) => `<div class="checkout-item">
         <div class="checkout-item-visual">${cartItemVisual(product)}</div>
@@ -409,6 +433,8 @@ document.addEventListener("keydown", event => {
 
 function trackingHtml(order) {
   const items = Array.isArray(order.items) ? order.items : [];
+  const deliveryFee = Number(order.deliveryFee || 0);
+  const subtotal = Number(order.subtotal || 0) || Math.max(0, Number(order.total || 0) - deliveryFee);
   return `<div class="tracking-card">
     <div class="tracking-card-head">
       <div><span>Commande</span><strong>${escapeHtml(order.id)}</strong></div>
@@ -421,6 +447,8 @@ function trackingHtml(order) {
     </div>
     <div class="tracking-items">
       ${items.map(item => `<div><span>${escapeHtml(item.name)} x${item.quantity}</span><strong>${formatPrice(item.lineTotal)}</strong></div>`).join("") || "<p>Aucun article trouve.</p>"}
+      <div><span>Sous-total produits</span><strong>${formatPrice(subtotal)}</strong></div>
+      <div><span>Livraison ${escapeHtml(order.deliveryZone || "A confirmer")}</span><strong>${formatPrice(deliveryFee)}</strong></div>
     </div>
     <a class="button outline" href="https://wa.me/221772177176?text=${encodeURIComponent(`Bonjour DieguemTech Store, je souhaite avoir des informations sur ma commande ${order.id}.`)}" target="_blank" rel="noopener">Contacter le support</a>
   </div>`;
@@ -550,6 +578,7 @@ $$(".payment-options button").forEach(button => button.addEventListener("click",
   button.classList.add("selected");
   button.setAttribute("aria-pressed", "true");
 }));
+$("#checkoutForm select[name='deliveryZone']").addEventListener("change", renderCheckoutSummary);
 $("#checkoutForm").addEventListener("submit", async event => {
   event.preventDefault();
   const form = event.target;
@@ -565,9 +594,9 @@ $("#checkoutForm").addEventListener("submit", async event => {
   }
   const provider = $(".payment-options button.selected").dataset.payment;
   const customerPhone = String(formData.get("customerPhone") || "").trim();
+  const deliveryZone = String(formData.get("deliveryZone") || "").trim();
   const deliveryNote = String(formData.get("deliveryNote") || "").trim();
   const deliveryAddress = [
-    String(formData.get("deliveryZone") || "").trim(),
     String(formData.get("deliveryAddress") || "").trim(),
     deliveryNote ? `Instruction: ${deliveryNote}` : ""
   ].filter(Boolean).join(" - ");
@@ -583,7 +612,8 @@ $("#checkoutForm").addEventListener("submit", async event => {
           name: String(formData.get("customerName") || "").trim(),
           phone: customerPhone,
           email: String(formData.get("customerEmail") || "").trim(),
-          address: deliveryAddress
+          address: deliveryAddress,
+          deliveryZone
         },
         items: cart.map(item => ({ id: item.id, quantity: item.qty })),
         paymentProvider: provider
@@ -599,6 +629,7 @@ $("#checkoutForm").addEventListener("submit", async event => {
     persist();
     renderCart();
     form.reset();
+    renderCheckoutSummary();
     showOrderSuccess(result, customerPhone, provider);
   } catch (error) {
     showToast("Commande impossible", error.message);

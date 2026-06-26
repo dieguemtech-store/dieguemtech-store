@@ -43,6 +43,20 @@ function getRevenue(list) {
   return list.reduce((sum, order) => sum + Number(order.total || 0), 0);
 }
 
+function getOrderDeliveryFee(order) {
+  return Number(order.deliveryFee || 0);
+}
+
+function getOrderSubtotal(order) {
+  const subtotal = Number(order.subtotal || 0);
+  if (subtotal > 0) return subtotal;
+  return Math.max(0, Number(order.total || 0) - getOrderDeliveryFee(order));
+}
+
+function getOrderDeliveryZone(order) {
+  return order.deliveryZone || "A confirmer";
+}
+
 function isOrderToPrepare(order) {
   return order.paymentStatus === "paid" && !["shipped", "delivered", "cancelled"].includes(order.orderStatus);
 }
@@ -122,7 +136,7 @@ function getFilteredOrders() {
   const payment = $("#paymentFilter").value;
   const dateFilter = $("#dateFilter").value;
   return orders.filter(order => {
-    const haystack = `${order.id} ${order.customerName} ${order.customerPhone} ${order.customerEmail || ""} ${order.deliveryAddress} ${order.paymentProvider}`.toLowerCase();
+    const haystack = `${order.id} ${order.customerName} ${order.customerPhone} ${order.customerEmail || ""} ${getOrderDeliveryZone(order)} ${order.deliveryAddress} ${order.paymentProvider}`.toLowerCase();
     const matchesSearch = !query || haystack.includes(query);
     const matchesStatus = !status || order.orderStatus === status;
     const matchesPayment = !payment || order.paymentStatus === payment;
@@ -254,6 +268,8 @@ function productCard(product) {
 
 function orderCard(order) {
   const items = Array.isArray(order.items) ? order.items : [];
+  const subtotal = getOrderSubtotal(order);
+  const deliveryFee = getOrderDeliveryFee(order);
   return `<article class="order-card ${isOrderToPrepare(order) ? "needs-prep" : ""}">
     <div class="order-top">
       <div>
@@ -278,11 +294,14 @@ function orderCard(order) {
         <p><strong>${escapeHtml(order.customerName)}</strong></p>
         <p>${escapeHtml(order.customerPhone)}</p>
         ${order.customerEmail ? `<p>${escapeHtml(order.customerEmail)}</p>` : ""}
+        <p><strong>Zone:</strong> ${escapeHtml(getOrderDeliveryZone(order))}</p>
         <p>${escapeHtml(order.deliveryAddress)}</p>
       </div>
       <div>
         <h3>Produits</h3>
         <div class="items">${items.map(item => `<div class="item-line"><span>${escapeHtml(item.name)} x${item.quantity}</span><strong>${formatPrice(item.lineTotal)}</strong></div>`).join("") || "<p>Aucun detail produit.</p>"}</div>
+        <div class="item-line delivery-line"><span>Sous-total</span><strong>${formatPrice(subtotal)}</strong></div>
+        <div class="item-line delivery-line"><span>Livraison ${escapeHtml(getOrderDeliveryZone(order))}</span><strong>${formatPrice(deliveryFee)}</strong></div>
         <div class="order-total">${formatPrice(order.total)}</div>
         <p>${escapeHtml(order.paymentProvider)} &middot; ${escapeHtml(order.currency)}</p>
       </div>
@@ -359,7 +378,8 @@ function whatsappUrl(order) {
   const message = [
     `Bonjour ${order.customerName},`,
     `Votre commande ${order.id} chez DieguemTech Store est en statut: ${orderStatuses[order.orderStatus] || order.orderStatus}.`,
-    `Total: ${formatPrice(order.total)}.`,
+    `Livraison ${getOrderDeliveryZone(order)}: ${formatPrice(getOrderDeliveryFee(order))}.`,
+    `Total a payer: ${formatPrice(order.total)}.`,
     "Merci pour votre confiance."
   ].join(" ");
   const phone = String(order.customerPhone || "").replace(/\D/g, "");
@@ -544,7 +564,8 @@ async function uploadProductImages(fileList) {
 
 function receiptHtml(order, printable = true) {
   const items = Array.isArray(order.items) ? order.items : [];
-  const subtotal = items.reduce((sum, item) => sum + Number(item.lineTotal || 0), 0);
+  const subtotal = getOrderSubtotal(order);
+  const deliveryFee = getOrderDeliveryFee(order);
   return `<div class="${printable ? "receipt printable" : "receipt"}">
     <div class="receipt-head receipt-head-pro">
       <div class="receipt-logo"><img src="/assets/logo-mark.svg" alt="DieguemTech Store"></div>
@@ -568,7 +589,7 @@ function receiptHtml(order, printable = true) {
       </section>
       <section class="receipt-section">
         <h3>Client</h3>
-        <p><strong>${escapeHtml(order.customerName)}</strong><br>${escapeHtml(order.customerPhone)}${order.customerEmail ? `<br>${escapeHtml(order.customerEmail)}` : ""}<br>${escapeHtml(order.deliveryAddress)}</p>
+        <p><strong>${escapeHtml(order.customerName)}</strong><br>${escapeHtml(order.customerPhone)}${order.customerEmail ? `<br>${escapeHtml(order.customerEmail)}` : ""}<br>Zone: ${escapeHtml(getOrderDeliveryZone(order))}<br>${escapeHtml(order.deliveryAddress)}</p>
       </section>
     </div>
     <section class="receipt-section">
@@ -581,9 +602,9 @@ function receiptHtml(order, printable = true) {
       </table>
     </section>
     <div class="receipt-totals">
-      <div><span>Sous-total</span><strong>${formatPrice(subtotal || order.total)}</strong></div>
-      <div><span>Livraison</span><strong>A confirmer</strong></div>
-      <div class="receipt-total"><span>Total produits</span><strong>${formatPrice(order.total)}</strong></div>
+      <div><span>Sous-total produits</span><strong>${formatPrice(subtotal)}</strong></div>
+      <div><span>Livraison ${escapeHtml(getOrderDeliveryZone(order))}</span><strong>${formatPrice(deliveryFee)}</strong></div>
+      <div class="receipt-total"><span>Total a payer</span><strong>${formatPrice(order.total)}</strong></div>
     </div>
     <p class="receipt-note">Merci pour votre confiance. Cette facture confirme l'enregistrement de la commande. La livraison et le paiement final peuvent etre confirmes par le support.</p>
     ${printable ? "" : `<div class="modal-actions"><button type="button" data-print-order="${order.id}">Imprimer ce recu</button><a class="whatsapp-action" href="${whatsappUrl(order)}" target="_blank" rel="noopener">Envoyer WhatsApp</a></div>`}
@@ -617,14 +638,17 @@ function exportOrdersCsv() {
     return;
   }
   const rows = [
-    ["Commande", "Date", "Client", "Telephone", "Email", "Adresse", "Total", "Devise", "Paiement", "Statut paiement", "Statut commande", "Produits"],
+    ["Commande", "Date", "Client", "Telephone", "Email", "Zone livraison", "Adresse", "Sous-total", "Frais livraison", "Total", "Devise", "Paiement", "Statut paiement", "Statut commande", "Produits"],
     ...filtered.map(order => [
       order.id,
       formatDate(order.createdAt),
       order.customerName,
       order.customerPhone,
       order.customerEmail || "",
+      getOrderDeliveryZone(order),
       order.deliveryAddress,
+      getOrderSubtotal(order),
+      getOrderDeliveryFee(order),
       order.total,
       order.currency,
       order.paymentProvider,

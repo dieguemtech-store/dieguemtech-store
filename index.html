@@ -444,7 +444,7 @@
           </article>
           <article id="livraison">
             <h3>Livraison</h3>
-            <p>La livraison est disponible a Dakar, Pikine, Guediawaye, Rufisque, Thies, Mbour et dans les autres regions selon disponibilite. Le client est contacte apres validation de la commande pour confirmer l'adresse, le delai et les frais eventuels.</p>
+            <p>La livraison est disponible a Dakar et dans plusieurs zones du Senegal. Frais indicatifs: Dakar 1 500 FCFA, Pikine et Guediawaye 2 000 FCFA, Rufisque 2 500 FCFA, Thies et Mbour 4 000 FCFA, autres zones 5 000 FCFA minimum selon confirmation.</p>
           </article>
           <article id="zone-senegal">
             <h3>Zone de service au Senegal</h3>
@@ -501,7 +501,7 @@
     <div class="drawer-content" id="cartItems"></div>
     <div class="drawer-footer" id="cartFooter">
       <div class="subtotal"><span>Sous-total</span><strong id="cartTotal">0 FCFA</strong></div>
-      <small>Livraison calculée à l'étape suivante</small>
+      <small>Livraison a partir de 1 500 FCFA selon la zone</small>
       <button class="button primary full" id="checkoutButton">Passer la commande <svg><use href="#icon-arrow"></use></svg></button>
       <div class="drawer-payments"><span>PayDunya</span><span>PayTech</span><span>🔒 Sécurisé</span></div>
     </div>
@@ -550,13 +550,13 @@
               <label>Ville ou zone
                 <select name="deliveryZone" required>
                   <option value="">Choisir une zone</option>
-                  <option value="Dakar">Dakar</option>
-                  <option value="Pikine">Pikine</option>
-                  <option value="Guediawaye">Guediawaye</option>
-                  <option value="Rufisque">Rufisque</option>
-                  <option value="Thies">Thies</option>
-                  <option value="Mbour">Mbour</option>
-                  <option value="Autre zone Senegal">Autre zone au Senegal</option>
+                  <option value="Dakar">Dakar - 1 500 FCFA</option>
+                  <option value="Pikine">Pikine - 2 000 FCFA</option>
+                  <option value="Guediawaye">Guediawaye - 2 000 FCFA</option>
+                  <option value="Rufisque">Rufisque - 2 500 FCFA</option>
+                  <option value="Thies">Thies - 4 000 FCFA</option>
+                  <option value="Mbour">Mbour - 4 000 FCFA</option>
+                  <option value="Autre zone Senegal">Autre zone au Senegal - 5 000 FCFA</option>
                 </select>
               </label>
               <label>Quartier / adresse
@@ -590,8 +590,8 @@
           <div class="checkout-items" id="checkoutItems"></div>
           <div class="checkout-total-lines">
             <div><span>Sous-total</span><strong id="checkoutSubtotal">0 FCFA</strong></div>
-            <div><span>Livraison</span><strong>A confirmer</strong></div>
-            <div class="checkout-total"><span>Total produits</span><strong id="checkoutGrandTotal">0 FCFA</strong></div>
+            <div><span id="checkoutDeliveryLabel">Livraison</span><strong id="checkoutDeliveryFee">Choisir zone</strong></div>
+            <div class="checkout-total"><span>Total a payer</span><strong id="checkoutGrandTotal">0 FCFA</strong></div>
           </div>
         </div>
         <div class="checkout-help-card">

@@ -11,6 +11,15 @@ const database = require("./db");
 const app = express();
 const port = process.env.PORT || 3000;
 const ordersFile = path.join(__dirname, "data", "orders.json");
+const deliveryOptions = {
+  Dakar: { zone: "Dakar", label: "Dakar", fee: 1500 },
+  Pikine: { zone: "Pikine", label: "Pikine", fee: 2000 },
+  Guediawaye: { zone: "Guediawaye", label: "Guediawaye", fee: 2000 },
+  Rufisque: { zone: "Rufisque", label: "Rufisque", fee: 2500 },
+  Thies: { zone: "Thies", label: "Thies", fee: 4000 },
+  Mbour: { zone: "Mbour", label: "Mbour", fee: 4000 },
+  "Autre zone Senegal": { zone: "Autre zone Senegal", label: "Autre zone au Senegal", fee: 5000 }
+};
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -204,6 +213,7 @@ app.post("/api/orders", async (request, response, next) => {
         error: "PayTech n'est pas encore configure. Ajoutez PAYTECH_API_KEY et PAYTECH_API_SECRET dans Render."
       });
     }
+    const delivery = getDeliveryOption(customer.deliveryZone);
 
     const preparedItems = [];
     for (const item of items) {
@@ -226,6 +236,8 @@ app.post("/api/orders", async (request, response, next) => {
         email: normalizeEmail(customer.email),
         address: customer.address.trim()
       },
+      deliveryZone: delivery.zone,
+      deliveryFee: delivery.fee,
       items: preparedItems,
       paymentProvider
     };
@@ -243,6 +255,9 @@ app.post("/api/orders", async (request, response, next) => {
         currency: order.currency,
         paymentProvider: order.paymentProvider,
         paymentStatus: "pending",
+        subtotal: order.subtotal,
+        deliveryZone: order.deliveryZone,
+        deliveryFee: order.deliveryFee,
         redirect_url: payment.redirectUrl,
         notifications
       });
@@ -255,6 +270,9 @@ app.post("/api/orders", async (request, response, next) => {
       currency: order.currency,
       paymentProvider: order.paymentProvider,
       paymentStatus: "pending",
+      subtotal: order.subtotal,
+      deliveryZone: order.deliveryZone,
+      deliveryFee: order.deliveryFee,
       notifications
     });
   } catch (error) {
@@ -277,6 +295,9 @@ app.post("/api/orders/track", async (request, response, next) => {
 
     response.json({
       id: order.id,
+      subtotal: order.subtotal,
+      deliveryZone: order.deliveryZone,
+      deliveryFee: order.deliveryFee,
       total: order.total,
       currency: order.currency,
       paymentProvider: order.paymentProvider,
@@ -348,6 +369,9 @@ function validateOrder(customer, items, paymentProvider) {
   }
   if (customer.email && !isValidEmail(customer.email)) {
     return "Adresse email invalide.";
+  }
+  if (!getDeliveryOption(customer.deliveryZone)) {
+    return "Zone de livraison invalide.";
   }
   if (!Array.isArray(items) || items.length === 0 || items.length > 30) {
     return "Le panier est vide ou invalide.";
@@ -429,6 +453,10 @@ function normalizeEmail(value) {
 
 function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+}
+
+function getDeliveryOption(zone) {
+  return deliveryOptions[String(zone || "").trim()] || null;
 }
 
 function getAdminPassword() {
@@ -1725,8 +1753,11 @@ function buildAdminOrderText(order, request) {
     `Client: ${getOrderCustomerName(order)}`,
     `Telephone: ${getOrderCustomerPhone(order)}`,
     getOrderCustomerEmail(order) ? `Email: ${getOrderCustomerEmail(order)}` : "",
+    `Zone livraison: ${getOrderDeliveryZone(order)}`,
     `Adresse: ${getOrderAddress(order)}`,
-    `Total: ${formatSeoPrice(order.total)}`,
+    `Sous-total: ${formatSeoPrice(getOrderSubtotal(order))}`,
+    `Livraison: ${formatSeoPrice(getOrderDeliveryFee(order))}`,
+    `Total a payer: ${formatSeoPrice(order.total)}`,
     `Paiement: ${order.paymentProvider}`,
     "",
     "Articles:",
@@ -1741,7 +1772,9 @@ function buildCustomerOrderText(order, request) {
   return [
     `Bonjour ${getOrderCustomerName(order)},`,
     `Votre commande ${order.id} chez DieguemTech Store est bien enregistree.`,
-    `Total produits: ${formatSeoPrice(order.total)}.`,
+    `Sous-total produits: ${formatSeoPrice(getOrderSubtotal(order))}.`,
+    `Livraison ${getOrderDeliveryZone(order)}: ${formatSeoPrice(getOrderDeliveryFee(order))}.`,
+    `Total a payer: ${formatSeoPrice(order.total)}.`,
     "Notre equipe confirme le stock, la livraison et le paiement avant expedition.",
     `Suivi: ${getPublicBaseUrl(request)}/#suivi`
   ].join("\n");
@@ -1772,6 +1805,7 @@ function buildOrderEmailHtml(order, request, audience) {
         <tr><td style="padding:8px 0;color:#777">Client</td><td style="padding:8px 0;text-align:right;font-weight:700">${escapeHtml(getOrderCustomerName(order))}</td></tr>
         <tr><td style="padding:8px 0;color:#777">Telephone</td><td style="padding:8px 0;text-align:right">${escapeHtml(getOrderCustomerPhone(order))}</td></tr>
         ${getOrderCustomerEmail(order) ? `<tr><td style="padding:8px 0;color:#777">Email</td><td style="padding:8px 0;text-align:right">${escapeHtml(getOrderCustomerEmail(order))}</td></tr>` : ""}
+        <tr><td style="padding:8px 0;color:#777">Zone livraison</td><td style="padding:8px 0;text-align:right">${escapeHtml(getOrderDeliveryZone(order))}</td></tr>
         <tr><td style="padding:8px 0;color:#777">Adresse</td><td style="padding:8px 0;text-align:right">${escapeHtml(getOrderAddress(order))}</td></tr>
         <tr><td style="padding:8px 0;color:#777">Paiement</td><td style="padding:8px 0;text-align:right">${escapeHtml(order.paymentProvider)}</td></tr>
       </table>
@@ -1779,7 +1813,11 @@ function buildOrderEmailHtml(order, request, audience) {
         <thead><tr style="background:#fafafa"><th style="text-align:left;padding:10px">Produit</th><th style="text-align:center;padding:10px">Qte</th><th style="text-align:right;padding:10px">Total</th></tr></thead>
         <tbody>${items}</tbody>
       </table>
-      <p style="text-align:right;font-size:20px;font-weight:800;color:#f68b1e;margin:18px 0 0">Total: ${escapeHtml(formatSeoPrice(order.total))}</p>
+      <div style="margin:18px 0 0;margin-left:auto;max-width:300px;font-size:14px">
+        <p style="display:flex;justify-content:space-between;margin:6px 0;color:#666"><span>Sous-total</span><strong>${escapeHtml(formatSeoPrice(getOrderSubtotal(order)))}</strong></p>
+        <p style="display:flex;justify-content:space-between;margin:6px 0;color:#666"><span>Livraison</span><strong>${escapeHtml(formatSeoPrice(getOrderDeliveryFee(order)))}</strong></p>
+        <p style="display:flex;justify-content:space-between;margin:10px 0 0;padding-top:10px;border-top:1px solid #eee;font-size:20px;font-weight:800;color:#f68b1e"><span>Total</span><strong>${escapeHtml(formatSeoPrice(order.total))}</strong></p>
+      </div>
       <p style="margin:22px 0 0;color:#777;font-size:12px;line-height:1.6">Suivi commande: ${escapeHtml(getPublicBaseUrl(request))}/#suivi</p>
     </section>
   </main>
@@ -1822,6 +1860,20 @@ function getOrderCustomerEmail(order) {
 
 function getOrderAddress(order) {
   return order.customer?.address || order.deliveryAddress || "";
+}
+
+function getOrderDeliveryZone(order) {
+  return order.deliveryZone || order.delivery_zone || "A confirmer";
+}
+
+function getOrderDeliveryFee(order) {
+  return Number(order.deliveryFee || order.delivery_fee || 0);
+}
+
+function getOrderSubtotal(order) {
+  const subtotal = Number(order.subtotal || 0);
+  if (subtotal > 0) return subtotal;
+  return Math.max(0, Number(order.total || 0) - getOrderDeliveryFee(order));
 }
 
 function normalizeWhatsAppRecipient(value) {
@@ -1973,14 +2025,17 @@ async function createLocalOrder(orderInput) {
     customerName: orderInput.customer.name,
     customerPhone: orderInput.customer.phone,
     customerEmail: orderInput.customer.email || "",
+    deliveryZone: orderInput.deliveryZone,
     deliveryAddress: orderInput.customer.address,
     items: normalizedItems,
-    total: normalizedItems.reduce((sum, item) => sum + item.lineTotal, 0),
+    subtotal: normalizedItems.reduce((sum, item) => sum + item.lineTotal, 0),
+    deliveryFee: Number(orderInput.deliveryFee || 0),
     currency: "XOF",
     paymentStatus: "pending",
     orderStatus: "pending",
     createdAt: new Date().toISOString()
   };
+  order.total = order.subtotal + order.deliveryFee;
   await saveOrder(order);
   return order;
 }
