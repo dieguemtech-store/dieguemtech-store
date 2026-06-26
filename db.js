@@ -388,6 +388,45 @@ async function getOrders() {
   return result.rows;
 }
 
+async function getOrder(id) {
+  if (!pool) {
+    const orders = await getLocalOrders();
+    return orders.find(order => order.id === id) || null;
+  }
+
+  const result = await pool.query(`
+    SELECT
+      o.id,
+      o.customer_name AS "customerName",
+      o.customer_phone AS "customerPhone",
+      o.delivery_address AS "deliveryAddress",
+      o.total,
+      o.currency,
+      o.payment_provider AS "paymentProvider",
+      o.payment_status AS "paymentStatus",
+      o.order_status AS "orderStatus",
+      o.created_at AS "createdAt",
+      COALESCE(
+        json_agg(
+          json_build_object(
+            'productId', oi.product_id,
+            'name', oi.product_name,
+            'unitPrice', oi.unit_price,
+            'quantity', oi.quantity,
+            'lineTotal', oi.line_total
+          )
+          ORDER BY oi.id
+        ) FILTER (WHERE oi.id IS NOT NULL),
+        '[]'
+      ) AS items
+    FROM orders o
+    LEFT JOIN order_items oi ON oi.order_id = o.id
+    WHERE o.id = $1
+    GROUP BY o.id
+  `, [id]);
+  return result.rows[0] || null;
+}
+
 async function updateOrderStatus(id, { orderStatus, paymentStatus }) {
   if (!pool) return updateLocalOrderStatus(id, { orderStatus, paymentStatus });
 
@@ -453,5 +492,6 @@ module.exports = {
   deactivateProduct,
   createOrder,
   getOrders,
+  getOrder,
   updateOrderStatus
 };

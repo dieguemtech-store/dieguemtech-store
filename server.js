@@ -194,6 +194,34 @@ app.post("/api/orders", async (request, response, next) => {
   }
 });
 
+app.post("/api/orders/track", async (request, response, next) => {
+  try {
+    const orderId = String(request.body?.orderId || "").trim().toUpperCase();
+    const phone = String(request.body?.phone || "").trim();
+    if (!orderId || !phone) {
+      return response.status(400).json({ error: "Numero de commande et telephone requis." });
+    }
+
+    const order = await database.getOrder(orderId);
+    if (!order || normalizePhone(order.customerPhone) !== normalizePhone(phone)) {
+      return response.status(404).json({ error: "Commande introuvable avec ces informations." });
+    }
+
+    response.json({
+      id: order.id,
+      total: order.total,
+      currency: order.currency,
+      paymentProvider: order.paymentProvider,
+      paymentStatus: order.paymentStatus,
+      orderStatus: order.orderStatus,
+      createdAt: order.createdAt,
+      items: order.items || []
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.post("/api/paytech/ipn", (request, response) => {
   console.log("Notification PayTech:", {
     type_event: request.body?.type_event,
@@ -257,6 +285,12 @@ function validateProductUpdate(product) {
     return "L'image doit etre une URL http(s) ou un chemin commencant par /.";
   }
   return null;
+}
+
+function normalizePhone(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (digits.startsWith("221")) return digits.slice(3);
+  return digits.replace(/^0+/, "");
 }
 
 function getAdminPassword() {

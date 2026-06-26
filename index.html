@@ -89,6 +89,7 @@
         <a href="#boutique" data-filter="IPTV">IPTV</a>
         <a href="#boutique" data-filter="Accessoires">Accessoires</a>
         <a href="#promotions">Promotions <span class="sale-dot"></span></a>
+        <a href="#suivi">Suivi</a>
         <a href="#contact">Contact</a>
       </div>
     </nav>
@@ -208,6 +209,22 @@
           <article class="review-card featured"><span class="stars">â˜…â˜…â˜…â˜…â˜…</span><p>â€œMa TV Box fonctionne parfaitement. Installation simple et qualitÃ© d'image au top. Une boutique sÃ©rieuse et fiable.â€</p><div><i>FD</i><span><strong>Fatou D.</strong><small>Cliente vÃ©rifiÃ©e</small></span><b>âœ“</b></div></article>
           <article class="review-card"><span class="stars">â˜…â˜…â˜…â˜…â˜…</span><p>â€œTrÃ¨s satisfait de mon setup gaming. Les prix sont corrects et la livraison Ã©tait soignÃ©e. Je reviendrai sans hÃ©siter.â€</p><div><i>KS</i><span><strong>Khadim S.</strong><small>Client vÃ©rifiÃ©</small></span><b>âœ“</b></div></article>
         </div>
+      </div>
+    </section>
+
+    <section class="section tracking-section" id="suivi">
+      <div class="container tracking-panel">
+        <div>
+          <span class="eyebrow">Suivi commande</span>
+          <h2>Ou en est ma commande ?</h2>
+          <p>Entrez votre numero de commande et le telephone utilise lors de l'achat pour consulter le statut.</p>
+        </div>
+        <form id="trackingForm" class="tracking-form">
+          <label>Numero de commande<input type="text" name="orderId" placeholder="DT-..." required></label>
+          <label>Telephone<input type="tel" name="phone" placeholder="+221 77 000 00 00" required></label>
+          <button class="button primary" type="submit">Suivre ma commande</button>
+        </form>
+        <div class="tracking-result" id="trackingResult" hidden></div>
       </div>
     </section>
 

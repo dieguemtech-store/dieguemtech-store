@@ -5,6 +5,22 @@ let wishlist = JSON.parse(localStorage.getItem("dt-wishlist") || "[]");
 let activeFilter = "Tous";
 let visibleCount = 8;
 
+const orderStatuses = {
+  pending: "En attente",
+  paid: "Payee",
+  preparing: "En preparation",
+  shipped: "Expediee",
+  delivered: "Livree",
+  cancelled: "Annulee"
+};
+
+const paymentStatuses = {
+  pending: "En attente",
+  paid: "Paye",
+  failed: "Echoue",
+  refunded: "Rembourse"
+};
+
 const $ = selector => document.querySelector(selector);
 const $$ = selector => document.querySelectorAll(selector);
 const formatPrice = value => `${new Intl.NumberFormat("fr-FR").format(value)} FCFA`;
@@ -263,6 +279,47 @@ document.addEventListener("keydown", event => {
   }
 });
 
+function trackingHtml(order) {
+  const items = Array.isArray(order.items) ? order.items : [];
+  return `<div class="tracking-card">
+    <div class="tracking-card-head">
+      <div><span>Commande</span><strong>${escapeHtml(order.id)}</strong></div>
+      <div><span>Total</span><strong>${formatPrice(order.total)}</strong></div>
+    </div>
+    <div class="tracking-statuses">
+      <span class="tracking-badge">${orderStatuses[order.orderStatus] || escapeHtml(order.orderStatus)}</span>
+      <span class="tracking-badge payment">${paymentStatuses[order.paymentStatus] || escapeHtml(order.paymentStatus)}</span>
+      <span class="tracking-date">${new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(order.createdAt))}</span>
+    </div>
+    <div class="tracking-items">
+      ${items.map(item => `<div><span>${escapeHtml(item.name)} x${item.quantity}</span><strong>${formatPrice(item.lineTotal)}</strong></div>`).join("") || "<p>Aucun article trouve.</p>"}
+    </div>
+    <a class="button outline" href="https://wa.me/221772177176?text=${encodeURIComponent(`Bonjour DieguemTech Store, je souhaite avoir des informations sur ma commande ${order.id}.`)}" target="_blank" rel="noopener">Contacter le support</a>
+  </div>`;
+}
+
+async function trackOrder(form) {
+  const resultBox = $("#trackingResult");
+  resultBox.hidden = false;
+  resultBox.innerHTML = `<p class="tracking-message">Recherche de la commande...</p>`;
+  const formData = new FormData(form);
+  try {
+    const response = await fetch("/api/orders/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        orderId: formData.get("orderId"),
+        phone: formData.get("phone")
+      })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "Commande introuvable.");
+    resultBox.innerHTML = trackingHtml(result);
+  } catch (error) {
+    resultBox.innerHTML = `<p class="tracking-message error">${escapeHtml(error.message)}</p>`;
+  }
+}
+
 $("#searchForm").addEventListener("submit", event => {
   event.preventDefault();
   activeFilter = "Tous";
@@ -285,6 +342,10 @@ $("#resetSearch").addEventListener("click", () => {
 $("#showAllProducts").addEventListener("click", () => {
   visibleCount = products.length;
   renderProducts($("#searchInput").value);
+});
+$("#trackingForm").addEventListener("submit", event => {
+  event.preventDefault();
+  trackOrder(event.target);
 });
 $("#cartButton").addEventListener("click", () => {
   renderCart();
