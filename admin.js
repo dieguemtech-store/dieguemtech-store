@@ -201,7 +201,7 @@ function receiptHtml(order, printable = true) {
       </table>
     </section>
     <div class="receipt-total"><span>Total</span><strong>${formatPrice(order.total)}</strong></div>
-    <p class="receipt-note">Merci pour votre confiance. Support: +221 77 217 71 76</p>
+    <p class="receipt-note">Merci pour votre confiance. Support WhatsApp: +221772177176</p>
     ${printable ? "" : `<div class="modal-actions"><button type="button" data-print-order="${order.id}">Imprimer ce recu</button><a class="whatsapp-action" href="${whatsappUrl(order)}" target="_blank" rel="noopener">Envoyer WhatsApp</a></div>`}
   </div>`;
 }
