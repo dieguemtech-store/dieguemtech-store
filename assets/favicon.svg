@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">DieguemTech Store</title>
+  <rect x="9" y="8" width="46" height="46" rx="14" fill="#F68B1E" transform="skewX(-5) rotate(2 32 32)"/>
+  <path d="M23 20h11c8 0 14 5 14 12s-6 12-14 12H23V20Zm10 17c4 0 7-2 7-5s-3-5-7-5h-3v10h3Z" fill="#FFFFFF"/>
+  <path d="M18 17h-6m40 8h6M17 47h-6m41-7h6" fill="none" stroke="#313133" stroke-width="3" stroke-linecap="round"/>
+</svg>

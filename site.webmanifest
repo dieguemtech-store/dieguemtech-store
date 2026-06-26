@@ -1,0 +1,24 @@
+{
+  "name": "DieguemTech Store",
+  "short_name": "DieguemTech",
+  "description": "Boutique High-Tech, Gaming, IPTV, Smartphones et Accessoires.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#f68b1e",
+  "icons": [
+    {
+      "src": "/assets/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/logo-mark.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">DieguemTech Store</title>
+  <desc id="desc">Logo icon for DieguemTech Store.</desc>
+  <defs>
+    <linearGradient id="orange" x1="88" y1="80" x2="430" y2="438" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFAE55"/>
+      <stop offset=".52" stop-color="#F68B1E"/>
+      <stop offset="1" stop-color="#D96E0B"/>
+    </linearGradient>
+    <filter id="shadow" x="20" y="30" width="470" height="470" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="26" stdDeviation="24" flood-color="#1B1B1D" flood-opacity=".22"/>
+    </filter>
+  </defs>
+  <rect x="82" y="66" width="348" height="348" rx="92" fill="#313133" transform="skewX(-5) rotate(2 256 256)" filter="url(#shadow)"/>
+  <rect x="70" y="58" width="348" height="348" rx="92" fill="url(#orange)" transform="skewX(-5) rotate(2 256 256)"/>
+  <path d="M186 167h82c64 0 106 37 106 91s-42 91-106 91h-82V167Zm78 130c31 0 52-15 52-39s-21-39-52-39h-23v78h23Z" fill="#FFFFFF"/>
+  <path d="M169 137h-42m0 0v45m215-39h46m0 0v42M141 369H96m0 0v-45m276 35h44m0 0v-44" fill="none" stroke="#313133" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" opacity=".55"/>
+  <circle cx="127" cy="137" r="16" fill="#FFFFFF"/>
+  <circle cx="388" cy="143" r="16" fill="#FFFFFF"/>
+  <circle cx="96" cy="369" r="16" fill="#FFFFFF"/>
+  <circle cx="416" cy="359" r="16" fill="#FFFFFF"/>
+</svg>

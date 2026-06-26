@@ -477,7 +477,8 @@ function renderProductSeoPage(product, baseUrl) {
           seller: {
             "@type": "Organization",
             name: "DieguemTech Store",
-            url: `${baseUrl}/`
+            url: `${baseUrl}/`,
+            logo: `${baseUrl}/assets/logo-mark.svg`
           }
         },
         ...(Number(product.rating) > 0 && Number(product.reviews) > 0 ? {
@@ -514,6 +515,10 @@ function renderProductSeoPage(product, baseUrl) {
   <meta name="twitter:description" content="${escapeHtml(description)}">
   <meta name="twitter:image" content="${escapeHtml(mainImage)}">
   <meta name="theme-color" content="#f68b1e">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="shortcut icon" href="/assets/favicon.svg">
+  <link rel="apple-touch-icon" href="/assets/logo-mark.svg">
+  <link rel="manifest" href="/site.webmanifest">
   <title>${escapeHtml(title)}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -524,7 +529,7 @@ function renderProductSeoPage(product, baseUrl) {
     .seo-product-page{width:min(1120px,calc(100% - 34px));margin:0 auto;padding:28px 0 70px}
     .seo-top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px}
     .seo-logo{display:flex;align-items:center;gap:10px;font-weight:900;color:#313133}
-    .seo-logo span{width:42px;height:42px;border-radius:12px 5px 12px 5px;background:#f68b1e;color:#fff;display:grid;place-items:center;font:800 24px Manrope}
+    .seo-logo img{display:block;width:210px;height:auto}
     .seo-nav-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
     .seo-back-button{border:1px solid #e2e2e2;background:#fff;color:#313133;border-radius:9px;padding:11px 14px;font-weight:900;font-size:13px}
     .seo-back-button:hover{border-color:#f68b1e;color:#f68b1e}
@@ -552,7 +557,7 @@ function renderProductSeoPage(product, baseUrl) {
 <body>
   <main class="seo-product-page">
     <nav class="seo-top" aria-label="Navigation produit">
-      <a class="seo-logo" href="/"><span>D</span>DieguemTech Store</a>
+      <a class="seo-logo" href="/" aria-label="DieguemTech Store - Accueil"><img src="/assets/logo.svg" alt="DieguemTech Store" width="220" height="56"></a>
       <div class="seo-nav-actions">
         <button type="button" class="seo-back-button" onclick="if (window.history.length > 1) { window.history.back(); } else { window.location.href = '/#boutique'; }">Retour</button>
         <a href="/#boutique">Retour a la boutique</a>
@@ -593,7 +598,7 @@ function renderProductSeoPage(product, baseUrl) {
 
 function renderSeoNotFoundPage(baseUrl) {
   return `<!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Produit introuvable - DieguemTech Store</title></head>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><link rel="icon" type="image/svg+xml" href="/assets/favicon.svg"><title>Produit introuvable - DieguemTech Store</title></head>
 <body><main style="font-family:Arial,sans-serif;max-width:620px;margin:80px auto;padding:24px"><h1>Produit introuvable</h1><p>Ce produit n'est plus disponible ou a ete desactive.</p><a href="${escapeHtml(baseUrl)}/">Retour a la boutique</a></main></body></html>`;
 }
 
@@ -810,6 +815,8 @@ function renderPaymentPage(title, message, status) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${title} - DieguemTech Store</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="shortcut icon" href="/assets/favicon.svg">
   <style>
     body{margin:0;font-family:Arial,sans-serif;background:#f7f7f7;color:#313133;display:grid;min-height:100vh;place-items:center}
     main{width:min(520px,calc(100% - 32px));background:#fff;border-radius:18px;padding:34px;box-shadow:0 18px 45px rgba(0,0,0,.08);text-align:center}

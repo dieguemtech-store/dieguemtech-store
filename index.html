@@ -27,6 +27,10 @@
   <meta name="twitter:image" content="https://dieguemtechstore.com/assets/hero-tech.png">
   <link rel="canonical" href="https://dieguemtechstore.com/">
   <link rel="sitemap" type="application/xml" href="/sitemap.xml">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="shortcut icon" href="/assets/favicon.svg">
+  <link rel="apple-touch-icon" href="/assets/logo-mark.svg">
+  <link rel="manifest" href="/site.webmanifest">
   <meta name="theme-color" content="#f68b1e">
   <title>DieguemTech Store | High-Tech, Gaming, IPTV et Accessoires</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -42,6 +46,7 @@
           "@id": "https://dieguemtechstore.com/#store",
           "name": "DieguemTech Store",
           "url": "https://dieguemtechstore.com/",
+          "logo": "https://dieguemtechstore.com/assets/logo-mark.svg",
           "image": "https://dieguemtechstore.com/assets/hero-tech.png",
           "description": "Boutique High-Tech, Gaming, IPTV, Smartphones et accessoires electroniques au Senegal.",
           "telephone": "+221772177176",
@@ -148,8 +153,10 @@
         <svg><use href="#icon-menu"></use></svg>
       </button>
       <a class="logo" href="#accueil" aria-label="DieguemTech Store - Accueil">
-        <span class="logo-mark">D</span>
-        <span><strong>DieguemTech</strong><small>STORE</small></span>
+        <picture class="logo-picture">
+          <source media="(max-width: 480px)" srcset="/assets/logo-mark.svg">
+          <img class="logo-image" src="/assets/logo.svg" alt="DieguemTech Store" width="220" height="56">
+        </picture>
       </a>
       <form class="search" id="searchForm" action="/" method="get">
         <svg><use href="#icon-search"></use></svg>
@@ -400,7 +407,9 @@
   <footer id="contact">
     <div class="container footer-grid">
       <div class="footer-brand">
-        <a class="logo inverse" href="#accueil"><span class="logo-mark">D</span><span><strong>DieguemTech</strong><small>STORE</small></span></a>
+        <a class="logo inverse" href="#accueil" aria-label="DieguemTech Store - Accueil">
+          <img class="logo-image" src="/assets/logo-light.svg" alt="DieguemTech Store" width="220" height="56">
+        </a>
         <p>Votre partenaire de confiance pour tous vos besoins High-Tech, Gaming, IPTV et accessoires électroniques.</p>
         <div class="socials"><a href="#" aria-label="Facebook">f</a><a href="#" aria-label="Instagram">◎</a><a href="#" aria-label="TikTok">♪</a><a href="https://wa.me/221772177176" target="_blank" rel="noopener" aria-label="WhatsApp">◉</a></div>
       </div>
