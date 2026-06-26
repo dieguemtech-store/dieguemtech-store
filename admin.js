@@ -110,6 +110,11 @@ function orderCard(order) {
         <span class="badge ${order.paymentStatus}">${paymentStatuses[order.paymentStatus] || order.paymentStatus}</span>
       </div>
     </div>
+    <div class="order-actions">
+      <button type="button" data-view-order="${order.id}">Voir detail</button>
+      <button type="button" class="ghost" data-print-order="${order.id}">Imprimer recu</button>
+      <a class="whatsapp-action" href="${whatsappUrl(order)}" target="_blank" rel="noopener">WhatsApp client</a>
+    </div>
     <div class="order-body">
       <div>
         <h3>Client</h3>
@@ -137,6 +142,88 @@ function orderCard(order) {
       </div>
     </div>
   </article>`;
+}
+
+function findOrder(id) {
+  return orders.find(order => order.id === id);
+}
+
+function whatsappUrl(order) {
+  const message = [
+    `Bonjour ${order.customerName},`,
+    `Votre commande ${order.id} chez DieguemTech Store est en statut: ${orderStatuses[order.orderStatus] || order.orderStatus}.`,
+    `Total: ${formatPrice(order.total)}.`,
+    "Merci pour votre confiance."
+  ].join(" ");
+  const phone = String(order.customerPhone || "").replace(/\D/g, "");
+  const normalizedPhone = phone.startsWith("221") ? phone : `221${phone.replace(/^0+/, "")}`;
+  return `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(message)}`;
+}
+
+function openOrderModal(id) {
+  const order = findOrder(id);
+  if (!order) return;
+  $("#orderModalContent").innerHTML = receiptHtml(order, false);
+  $("#orderModal").hidden = false;
+}
+
+function closeOrderModal() {
+  $("#orderModal").hidden = true;
+}
+
+function receiptHtml(order, printable = true) {
+  const items = Array.isArray(order.items) ? order.items : [];
+  return `<div class="${printable ? "receipt printable" : "receipt"}">
+    <div class="receipt-head">
+      <div class="receipt-logo">D</div>
+      <div>
+        <h2>DieguemTech Store</h2>
+        <p>High-Tech · Gaming · IPTV · Accessoires</p>
+      </div>
+    </div>
+    <div class="receipt-meta">
+      <div><span>Commande</span><strong>${escapeHtml(order.id)}</strong></div>
+      <div><span>Date</span><strong>${formatDate(order.createdAt)}</strong></div>
+      <div><span>Paiement</span><strong>${paymentStatuses[order.paymentStatus] || order.paymentStatus}</strong></div>
+      <div><span>Statut</span><strong>${orderStatuses[order.orderStatus] || order.orderStatus}</strong></div>
+    </div>
+    <section class="receipt-section">
+      <h3>Client</h3>
+      <p><strong>${escapeHtml(order.customerName)}</strong><br>${escapeHtml(order.customerPhone)}<br>${escapeHtml(order.deliveryAddress)}</p>
+    </section>
+    <section class="receipt-section">
+      <h3>Produits</h3>
+      <table>
+        <thead><tr><th>Produit</th><th>Qté</th><th>Prix</th><th>Total</th></tr></thead>
+        <tbody>
+          ${items.map(item => `<tr><td>${escapeHtml(item.name)}</td><td>${item.quantity}</td><td>${formatPrice(item.unitPrice)}</td><td>${formatPrice(item.lineTotal)}</td></tr>`).join("")}
+        </tbody>
+      </table>
+    </section>
+    <div class="receipt-total"><span>Total</span><strong>${formatPrice(order.total)}</strong></div>
+    <p class="receipt-note">Merci pour votre confiance. Support: +221 77 217 71 76</p>
+    ${printable ? "" : `<div class="modal-actions"><button type="button" data-print-order="${order.id}">Imprimer ce recu</button><a class="whatsapp-action" href="${whatsappUrl(order)}" target="_blank" rel="noopener">Envoyer WhatsApp</a></div>`}
+  </div>`;
+}
+
+function printOrder(id) {
+  const order = findOrder(id);
+  if (!order) return;
+  const printWindow = window.open("", "_blank", "width=820,height=900");
+  if (!printWindow) return;
+  printWindow.document.write(`<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Recu ${escapeHtml(order.id)} - DieguemTech Store</title>
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body class="print-body">
+  ${receiptHtml(order)}
+  <script>window.addEventListener("load",()=>{window.print();});<\/script>
+</body>
+</html>`);
+  printWindow.document.close();
 }
 
 function escapeHtml(value) {
@@ -177,6 +264,18 @@ document.addEventListener("change", async event => {
   const paymentStatus = event.target.closest("[data-payment-status]");
   if (orderStatus) await updateStatus(orderStatus.dataset.orderStatus, { orderStatus: orderStatus.value });
   if (paymentStatus) await updateStatus(paymentStatus.dataset.paymentStatus, { paymentStatus: paymentStatus.value });
+});
+
+document.addEventListener("click", event => {
+  const viewButton = event.target.closest("[data-view-order]");
+  const printButton = event.target.closest("[data-print-order]");
+  if (viewButton) openOrderModal(viewButton.dataset.viewOrder);
+  if (printButton) printOrder(printButton.dataset.printOrder);
+});
+
+$("#closeOrderModal").addEventListener("click", closeOrderModal);
+$("#orderModal").addEventListener("click", event => {
+  if (event.target.id === "orderModal") closeOrderModal();
 });
 
 if (token) {
