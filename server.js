@@ -925,6 +925,14 @@ function getSeoProductHighlights(product) {
     ];
   }
 
+  if (category.includes("climatisation")) {
+    return [
+      "Produit adapte pour ameliorer le confort thermique a la maison, au bureau ou dans une piece de vie.",
+      "Conseil disponible pour verifier la puissance, la ventilation et l'usage adapte a votre espace.",
+      ...common
+    ];
+  }
+
   return [
     "Accessoire utile pour completer votre equipement high-tech.",
     "Bon rapport qualite-prix avec accompagnement avant achat.",
