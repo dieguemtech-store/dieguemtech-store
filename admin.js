@@ -30,13 +30,15 @@ function setMessage(text = "") {
 }
 
 async function api(path, options = {}) {
+  const isFormData = options.body instanceof FormData;
+  const headers = {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
+    ...(options.headers || {})
+  };
   const response = await fetch(path, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers || {})
-    }
+    headers
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || "Operation impossible.");
@@ -310,6 +312,16 @@ function renderProductForm(product) {
       <textarea name="images" rows="5" placeholder="Une image par ligne. Exemple: assets/nom-du-produit.png">${escapeHtml(images.join("\n"))}</textarea>
       <small class="field-help">Formats acceptes: assets/photo.png, /assets/photo.png ou une URL https. La premiere image devient l'image principale.</small>
     </label>
+    <div class="upload-card">
+      <label class="upload-drop">Televerser des images
+        <input id="productImageFiles" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple>
+      </label>
+      <div>
+        <strong>Ajout rapide</strong>
+        <p>Choisis une ou plusieurs images depuis ton ordinateur. Elles seront ajoutees automatiquement dans la galerie.</p>
+        <small id="productUploadStatus">JPG, PNG, WebP ou GIF. Maximum 5 Mo par image.</small>
+      </div>
+    </div>
     <div class="image-preview-card">
       <div class="image-preview" id="productImagePreview"></div>
       <div>
@@ -347,6 +359,47 @@ function updateProductImagePreview(value) {
   }
   preview.innerHTML = `${images.slice(0, 6).map((image, index) => `<img src="${escapeHtml(image)}" alt="Apercu image ${index + 1}">`).join("")}${images.length > 6 ? `<span class="preview-more">+${images.length - 6}</span>` : ""}`;
   help.textContent = `${images.length} image${images.length > 1 ? "s" : ""}. La premiere sera affichee sur les cartes produit.`;
+}
+
+function setProductUploadStatus(message, isError = false) {
+  const status = $("#productUploadStatus");
+  if (!status) return;
+  status.textContent = message;
+  status.classList.toggle("error", isError);
+}
+
+async function uploadProductImages(fileList) {
+  const files = [...fileList].filter(file => file.type.startsWith("image/"));
+  if (!files.length) {
+    setProductUploadStatus("Selectionnez au moins une image.", true);
+    return;
+  }
+
+  const textarea = $("#productForm textarea[name='images']");
+  const currentImages = parseImageLines(textarea.value);
+  const remainingSlots = 8 - currentImages.length;
+  if (remainingSlots <= 0) {
+    setProductUploadStatus("Maximum 8 images par produit.", true);
+    return;
+  }
+
+  const selectedFiles = files.slice(0, remainingSlots);
+  const formData = new FormData();
+  selectedFiles.forEach(file => formData.append("images", file));
+
+  setProductUploadStatus("Televersement en cours...");
+  const result = await api("/api/admin/uploads", {
+    method: "POST",
+    body: formData
+  });
+
+  const uploadedUrls = (result.uploads || []).map(upload => upload.url).filter(Boolean);
+  const nextImages = [...new Set([...currentImages, ...uploadedUrls])].slice(0, 8);
+  textarea.value = nextImages.join("\n");
+  updateProductImagePreview(textarea.value);
+
+  const ignored = files.length - selectedFiles.length;
+  setProductUploadStatus(`${uploadedUrls.length} image${uploadedUrls.length > 1 ? "s" : ""} ajoutee${uploadedUrls.length > 1 ? "s" : ""}.${ignored > 0 ? ` ${ignored} image${ignored > 1 ? "s" : ""} ignoree${ignored > 1 ? "s" : ""} car la limite est de 8.` : ""}`);
 }
 
 function receiptHtml(order, printable = true) {
@@ -504,6 +557,16 @@ $("#productForm").addEventListener("click", event => {
 });
 $("#productForm").addEventListener("input", event => {
   if (event.target.name === "images") updateProductImagePreview(event.target.value);
+});
+$("#productForm").addEventListener("change", async event => {
+  if (event.target.id !== "productImageFiles") return;
+  try {
+    await uploadProductImages(event.target.files);
+  } catch (error) {
+    setProductUploadStatus(error.message, true);
+  } finally {
+    event.target.value = "";
+  }
 });
 $("#productForm").addEventListener("submit", async event => {
   event.preventDefault();

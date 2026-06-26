@@ -3,6 +3,7 @@ const crypto = require("node:crypto");
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const express = require("express");
+const multer = require("multer");
 
 const localProducts = require("./data/products");
 const database = require("./db");
@@ -10,6 +11,19 @@ const database = require("./db");
 const app = express();
 const port = process.env.PORT || 3000;
 const ordersFile = path.join(__dirname, "data", "orders.json");
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+    files: 8
+  },
+  fileFilter: (request, file, callback) => {
+    if (isAllowedUploadMimeType(file.mimetype)) return callback(null, true);
+    const error = new Error("Format image non accepte. Utilisez JPG, PNG, WebP ou GIF.");
+    error.status = 400;
+    callback(error);
+  }
+});
 
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
@@ -109,6 +123,28 @@ app.delete("/api/admin/products/:id", requireAdmin, async (request, response, ne
   }
 });
 
+app.post("/api/admin/uploads", requireAdmin, upload.array("images", 8), async (request, response, next) => {
+  try {
+    const files = Array.isArray(request.files) ? request.files : [];
+    if (!files.length) return response.status(400).json({ error: "Selectionnez au moins une image." });
+
+    const uploads = [];
+    for (const file of files) {
+      uploads.push(await database.createProductUpload({
+        id: createProductUploadId(file),
+        filename: file.originalname || "image-produit",
+        mimeType: file.mimetype,
+        size: file.size,
+        data: file.buffer
+      }));
+    }
+
+    response.status(201).json({ uploads });
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.get("/api/products", async (request, response, next) => {
   try {
     const category = String(request.query.category || "").toLowerCase();
@@ -125,6 +161,19 @@ app.get("/api/products/:id", async (request, response, next) => {
     const product = await database.getProduct(Number(request.params.id));
     if (!product) return response.status(404).json({ error: "Produit introuvable." });
     response.json(product);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/api/uploads/:id", async (request, response, next) => {
+  try {
+    const uploadRecord = await database.getProductUpload(request.params.id);
+    if (!uploadRecord) return response.status(404).send("Image introuvable.");
+
+    response.set("Cache-Control", "public, max-age=31536000, immutable");
+    response.type(uploadRecord.mimeType);
+    response.send(uploadRecord.data);
   } catch (error) {
     next(error);
   }
@@ -275,6 +324,12 @@ app.use(express.static(__dirname, {
 
 app.use((error, request, response, next) => {
   console.error(error.response?.data || error);
+  if (error instanceof multer.MulterError) {
+    const message = error.code === "LIMIT_FILE_SIZE"
+      ? "Image trop lourde. Maximum 5 Mo par fichier."
+      : "Televersement impossible. Verifiez les images selectionnees.";
+    return response.status(400).json({ error: message });
+  }
   response.status(error.status || 500).json({
     error: error.status ? error.message : "Une erreur interne est survenue."
   });
@@ -325,6 +380,20 @@ function collectProductImages(product) {
 
 function isValidProductImage(image) {
   return String(image).startsWith("/") || /^https?:\/\//.test(String(image));
+}
+
+function isAllowedUploadMimeType(mimeType) {
+  return ["image/jpeg", "image/png", "image/webp", "image/gif"].includes(String(mimeType || "").toLowerCase());
+}
+
+function createProductUploadId(file) {
+  const extension = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+    "image/gif": ".gif"
+  }[String(file.mimetype || "").toLowerCase()] || "";
+  return `${crypto.randomUUID()}${extension}`;
 }
 
 function normalizeProductImagePath(image) {

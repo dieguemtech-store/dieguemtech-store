@@ -9,6 +9,7 @@ const pool = process.env.DATABASE_URL
         : false
     })
   : null;
+const localUploads = new Map();
 
 async function initializeDatabase() {
   if (!pool) {
@@ -59,9 +60,19 @@ async function initializeDatabase() {
       line_total INTEGER NOT NULL CHECK (line_total >= 0)
     );
 
+    CREATE TABLE IF NOT EXISTS product_uploads (
+      id TEXT PRIMARY KEY,
+      filename TEXT NOT NULL,
+      mime_type TEXT NOT NULL,
+      size INTEGER NOT NULL CHECK (size > 0),
+      data BYTEA NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
     CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
     CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
+    CREATE INDEX IF NOT EXISTS idx_product_uploads_created_at ON product_uploads(created_at DESC);
   `);
 
   await pool.query(`
@@ -284,6 +295,60 @@ async function deactivateProduct(id) {
       rating::FLOAT, reviews, badge, stock, image, images, description, active
   `, [productId]);
   return normalizeProductRow(result.rows[0]) || null;
+}
+
+async function createProductUpload(upload) {
+  const record = {
+    id: upload.id,
+    filename: String(upload.filename || "image-produit").trim() || "image-produit",
+    mimeType: upload.mimeType,
+    size: Number(upload.size || 0),
+    data: upload.data
+  };
+
+  if (!pool) {
+    localUploads.set(record.id, { ...record, createdAt: new Date().toISOString() });
+    return uploadPublicRecord(record);
+  }
+
+  const result = await pool.query(`
+    INSERT INTO product_uploads (id, filename, mime_type, size, data)
+    VALUES ($1, $2, $3, $4, $5)
+    RETURNING id, filename, mime_type AS "mimeType", size, created_at AS "createdAt"
+  `, [
+    record.id,
+    record.filename,
+    record.mimeType,
+    record.size,
+    record.data
+  ]);
+
+  return uploadPublicRecord(result.rows[0]);
+}
+
+async function getProductUpload(id) {
+  const uploadId = String(id || "").trim();
+  if (!uploadId) return null;
+
+  if (!pool) return localUploads.get(uploadId) || null;
+
+  const result = await pool.query(`
+    SELECT id, filename, mime_type AS "mimeType", size, data, created_at AS "createdAt"
+    FROM product_uploads
+    WHERE id = $1
+  `, [uploadId]);
+  return result.rows[0] || null;
+}
+
+function uploadPublicRecord(upload) {
+  return {
+    id: upload.id,
+    filename: upload.filename,
+    mimeType: upload.mimeType,
+    size: upload.size,
+    url: `/api/uploads/${upload.id}`,
+    createdAt: upload.createdAt
+  };
 }
 
 function normalizeProductInput(input) {
@@ -555,6 +620,8 @@ module.exports = {
   createProduct,
   updateProduct,
   deactivateProduct,
+  createProductUpload,
+  getProductUpload,
   createOrder,
   getOrders,
   getOrder,
