@@ -278,6 +278,10 @@ $("#orderModal").addEventListener("click", event => {
   if (event.target.id === "orderModal") closeOrderModal();
 });
 
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && !$("#orderModal").hidden) closeOrderModal();
+});
+
 if (token) {
   showDashboard();
   loadOrders().catch(() => logout());
