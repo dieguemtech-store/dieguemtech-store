@@ -66,6 +66,27 @@ app.patch("/api/admin/orders/:id", requireAdmin, async (request, response, next)
   }
 });
 
+app.get("/api/admin/products", requireAdmin, async (request, response, next) => {
+  try {
+    response.json(await database.getAdminProducts());
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.patch("/api/admin/products/:id", requireAdmin, async (request, response, next) => {
+  try {
+    const validationError = validateProductUpdate(request.body || {});
+    if (validationError) return response.status(400).json({ error: validationError });
+
+    const product = await database.updateProduct(request.params.id, request.body);
+    if (!product) return response.status(404).json({ error: "Produit introuvable." });
+    response.json(product);
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.get("/api/products", async (request, response, next) => {
   try {
     const category = String(request.query.category || "").toLowerCase();
@@ -198,6 +219,20 @@ function validateOrder(customer, items, paymentProvider) {
   }
   if (!["PayDunya", "PayTech"].includes(paymentProvider)) {
     return "Moyen de paiement invalide.";
+  }
+  return null;
+}
+
+function validateProductUpdate(product) {
+  if (!product.name?.trim()) return "Le nom du produit est requis.";
+  if (!product.category?.trim()) return "La categorie est requise.";
+  if (!Number.isInteger(Number(product.price)) || Number(product.price) < 0) return "Prix invalide.";
+  if (product.oldPrice !== null && product.oldPrice !== "" && typeof product.oldPrice !== "undefined" && (!Number.isInteger(Number(product.oldPrice)) || Number(product.oldPrice) < 0)) {
+    return "Ancien prix invalide.";
+  }
+  if (!Number.isInteger(Number(product.stock)) || Number(product.stock) < 0) return "Stock invalide.";
+  if (product.image && !String(product.image).startsWith("/") && !/^https?:\/\//.test(String(product.image))) {
+    return "L'image doit etre une URL http(s) ou un chemin commencant par /.";
   }
   return null;
 }

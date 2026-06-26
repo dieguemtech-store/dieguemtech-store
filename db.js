@@ -66,7 +66,8 @@ async function initializeDatabase() {
   await pool.query(`
     ALTER TABLE products
       ADD COLUMN IF NOT EXISTS image TEXT,
-      ADD COLUMN IF NOT EXISTS description TEXT;
+      ADD COLUMN IF NOT EXISTS description TEXT,
+      ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE;
   `);
 
   const values = [];
@@ -93,19 +94,7 @@ async function initializeDatabase() {
     INSERT INTO products (
       id, name, category, price, old_price, emoji, rating, reviews, badge, stock, image, description
     ) VALUES ${placeholders.join(",")}
-    ON CONFLICT (id) DO UPDATE SET
-      name = EXCLUDED.name,
-      category = EXCLUDED.category,
-      price = EXCLUDED.price,
-      old_price = EXCLUDED.old_price,
-      emoji = EXCLUDED.emoji,
-      rating = EXCLUDED.rating,
-      reviews = EXCLUDED.reviews,
-      badge = EXCLUDED.badge,
-      stock = EXCLUDED.stock,
-      image = EXCLUDED.image,
-      description = EXCLUDED.description,
-      updated_at = NOW()
+    ON CONFLICT (id) DO NOTHING
   `, values);
 }
 
@@ -150,6 +139,77 @@ async function getProduct(id, client = pool) {
     WHERE id = $1 AND active = TRUE
   `, [id]);
   return result.rows[0];
+}
+
+async function getAdminProducts() {
+  if (!pool) return seedProducts.map(product => ({ ...product, active: product.active !== false }));
+
+  const result = await pool.query(`
+    SELECT
+      id, name, category, price, old_price AS "oldPrice", emoji,
+      rating::FLOAT, reviews, badge, stock, image, description, active
+    FROM products
+    ORDER BY id
+  `);
+  return result.rows;
+}
+
+async function updateProduct(id, input) {
+  const productId = Number(id);
+  if (!Number.isInteger(productId) || productId < 1) return null;
+
+  if (!pool) {
+    const product = seedProducts.find(entry => entry.id === productId);
+    if (!product) return null;
+    Object.assign(product, normalizeProductInput(input));
+    return product;
+  }
+
+  const product = normalizeProductInput(input);
+  const result = await pool.query(`
+    UPDATE products
+    SET
+      name = $2,
+      category = $3,
+      price = $4,
+      old_price = $5,
+      badge = $6,
+      stock = $7,
+      image = $8,
+      description = $9,
+      active = $10,
+      updated_at = NOW()
+    WHERE id = $1
+    RETURNING
+      id, name, category, price, old_price AS "oldPrice", emoji,
+      rating::FLOAT, reviews, badge, stock, image, description, active
+  `, [
+    productId,
+    product.name,
+    product.category,
+    product.price,
+    product.oldPrice,
+    product.badge,
+    product.stock,
+    product.image,
+    product.description,
+    product.active
+  ]);
+  return result.rows[0] || null;
+}
+
+function normalizeProductInput(input) {
+  return {
+    name: String(input.name || "").trim(),
+    category: String(input.category || "").trim(),
+    price: Number(input.price),
+    oldPrice: input.oldPrice === null || input.oldPrice === "" || typeof input.oldPrice === "undefined" ? null : Number(input.oldPrice),
+    badge: String(input.badge || "").trim(),
+    stock: Number(input.stock),
+    image: input.image ? String(input.image).trim() : null,
+    description: input.description ? String(input.description).trim() : null,
+    active: input.active !== false
+  };
 }
 
 async function createOrder(orderInput) {
@@ -322,7 +382,9 @@ module.exports = {
   hasDatabase: Boolean(pool),
   initializeDatabase,
   getProducts,
+  getAdminProducts,
   getProduct,
+  updateProduct,
   createOrder,
   getOrders,
   updateOrderStatus

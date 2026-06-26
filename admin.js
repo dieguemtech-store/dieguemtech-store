@@ -15,6 +15,7 @@ const paymentStatuses = {
 };
 
 let orders = [];
+let products = [];
 let token = sessionStorage.getItem("dt-admin-token") || "";
 
 const $ = selector => document.querySelector(selector);
@@ -70,6 +71,12 @@ async function loadOrders() {
   renderOrders();
 }
 
+async function loadProducts() {
+  products = await api("/api/admin/products");
+  renderProductCategories();
+  renderProducts();
+}
+
 function renderStats(filtered) {
   $("#totalOrders").textContent = orders.length;
   $("#pendingOrders").textContent = orders.filter(order => order.orderStatus === "pending").length;
@@ -95,6 +102,47 @@ function renderOrders() {
   renderStats(filtered);
   $("#emptyOrders").hidden = filtered.length > 0;
   $("#ordersList").innerHTML = filtered.map(orderCard).join("");
+}
+
+function renderProductCategories() {
+  const select = $("#productCategoryFilter");
+  const current = select.value;
+  const categories = [...new Set(products.map(product => product.category))].sort();
+  select.innerHTML = `<option value="">Toutes categories</option>${categories.map(category => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join("")}`;
+  select.value = current;
+}
+
+function getFilteredProducts() {
+  const query = $("#productSearch").value.trim().toLowerCase();
+  const category = $("#productCategoryFilter").value;
+  return products.filter(product => {
+    const haystack = `${product.name} ${product.category} ${product.badge} ${product.description || ""}`.toLowerCase();
+    return (!query || haystack.includes(query)) && (!category || product.category === category);
+  });
+}
+
+function renderProducts() {
+  const filtered = getFilteredProducts();
+  $("#emptyProducts").hidden = filtered.length > 0;
+  $("#productsAdminList").innerHTML = filtered.map(productCard).join("");
+}
+
+function productCard(product) {
+  const activeLabel = product.active === false ? "Inactif" : "Actif";
+  return `<article class="product-admin-card">
+    <div class="product-admin-visual">${product.image ? `<img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}">` : `<span>${product.emoji}</span>`}</div>
+    <div>
+      <h3>${escapeHtml(product.name)}</h3>
+      <p>${escapeHtml(product.category)} · ${escapeHtml(product.badge || "Sans badge")}</p>
+      <p class="muted">${escapeHtml(product.description || "Aucune description.")}</p>
+    </div>
+    <div class="product-admin-meta">
+      <strong>${formatPrice(product.price)}</strong>
+      <span>Stock: ${product.stock}</span>
+      <span class="product-state ${product.active === false ? "inactive" : "active"}">${activeLabel}</span>
+      <button type="button" data-edit-product="${product.id}">Modifier</button>
+    </div>
+  </article>`;
 }
 
 function orderCard(order) {
@@ -171,6 +219,54 @@ function closeOrderModal() {
   $("#orderModal").hidden = true;
 }
 
+function openProductModal(id) {
+  const product = products.find(item => item.id === Number(id));
+  if (!product) return;
+  $("#productForm").innerHTML = `<div class="product-form-head">
+      <span class="eyebrow">Produit #${product.id}</span>
+      <h2>Modifier le produit</h2>
+    </div>
+    <label>Nom
+      <input name="name" value="${escapeHtml(product.name)}" required>
+    </label>
+    <div class="form-grid">
+      <label>Categorie
+        <input name="category" value="${escapeHtml(product.category)}" required>
+      </label>
+      <label>Badge
+        <input name="badge" value="${escapeHtml(product.badge || "")}" placeholder="-20%, Nouveau...">
+      </label>
+      <label>Prix
+        <input name="price" type="number" min="0" step="1" value="${product.price}" required>
+      </label>
+      <label>Ancien prix
+        <input name="oldPrice" type="number" min="0" step="1" value="${product.oldPrice ?? ""}">
+      </label>
+      <label>Stock
+        <input name="stock" type="number" min="0" step="1" value="${product.stock}" required>
+      </label>
+      <label>Image
+        <input name="image" value="${escapeHtml(product.image || "")}" placeholder="/assets/produit.png ou https://...">
+      </label>
+    </div>
+    <label>Description
+      <textarea name="description" rows="5" placeholder="Description commerciale du produit">${escapeHtml(product.description || "")}</textarea>
+    </label>
+    <label class="checkbox-row">
+      <input name="active" type="checkbox" ${product.active === false ? "" : "checked"}> Produit actif
+    </label>
+    <input type="hidden" name="id" value="${product.id}">
+    <div class="modal-actions">
+      <button type="submit">Enregistrer</button>
+      <button type="button" class="ghost" id="cancelProductEdit">Annuler</button>
+    </div>`;
+  $("#productModal").hidden = false;
+}
+
+function closeProductModal() {
+  $("#productModal").hidden = true;
+}
+
 function receiptHtml(order, printable = true) {
   const items = Array.isArray(order.items) ? order.items : [];
   return `<div class="${printable ? "receipt printable" : "receipt"}">
@@ -244,6 +340,28 @@ async function updateStatus(id, payload) {
   await loadOrders();
 }
 
+async function saveProduct(form) {
+  const formData = new FormData(form);
+  const id = formData.get("id");
+  const payload = {
+    name: formData.get("name"),
+    category: formData.get("category"),
+    badge: formData.get("badge"),
+    price: Number(formData.get("price")),
+    oldPrice: formData.get("oldPrice") ? Number(formData.get("oldPrice")) : null,
+    stock: Number(formData.get("stock")),
+    image: formData.get("image"),
+    description: formData.get("description"),
+    active: formData.get("active") === "on"
+  };
+  await api(`/api/admin/products/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+  closeProductModal();
+  await loadProducts();
+}
+
 $("#loginForm").addEventListener("submit", async event => {
   event.preventDefault();
   setMessage("");
@@ -258,6 +376,8 @@ $("#logoutButton").addEventListener("click", logout);
 $("#refreshOrders").addEventListener("click", loadOrders);
 $("#orderSearch").addEventListener("input", renderOrders);
 $("#statusFilter").addEventListener("change", renderOrders);
+$("#productSearch").addEventListener("input", renderProducts);
+$("#productCategoryFilter").addEventListener("change", renderProducts);
 
 document.addEventListener("change", async event => {
   const orderStatus = event.target.closest("[data-order-status]");
@@ -269,17 +389,41 @@ document.addEventListener("change", async event => {
 document.addEventListener("click", event => {
   const viewButton = event.target.closest("[data-view-order]");
   const printButton = event.target.closest("[data-print-order]");
+  const editProductButton = event.target.closest("[data-edit-product]");
   if (viewButton) openOrderModal(viewButton.dataset.viewOrder);
   if (printButton) printOrder(printButton.dataset.printOrder);
+  if (editProductButton) openProductModal(editProductButton.dataset.editProduct);
 });
 
 $("#closeOrderModal").addEventListener("click", closeOrderModal);
 $("#orderModal").addEventListener("click", event => {
   if (event.target.id === "orderModal") closeOrderModal();
 });
+$("#closeProductModal").addEventListener("click", closeProductModal);
+$("#productModal").addEventListener("click", event => {
+  if (event.target.id === "productModal") closeProductModal();
+});
+$("#productForm").addEventListener("click", event => {
+  if (event.target.id === "cancelProductEdit") closeProductModal();
+});
+$("#productForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  await saveProduct(event.target);
+});
+
+document.querySelectorAll("[data-admin-tab]").forEach(button => {
+  button.addEventListener("click", async () => {
+    document.querySelectorAll("[data-admin-tab]").forEach(tab => tab.classList.toggle("active", tab === button));
+    const showProducts = button.dataset.adminTab === "products";
+    $("#ordersPanel").hidden = showProducts;
+    $("#productsPanel").hidden = !showProducts;
+    if (showProducts && products.length === 0) await loadProducts();
+  });
+});
 
 document.addEventListener("keydown", event => {
   if (event.key === "Escape" && !$("#orderModal").hidden) closeOrderModal();
+  if (event.key === "Escape" && !$("#productModal").hidden) closeProductModal();
 });
 
 if (token) {
