@@ -5,4 +5,4 @@ Disallow: /admin.css
 Disallow: /admin.js
 Disallow: /api/
 
-Sitemap: https://dieguemtech-store.onrender.com/sitemap.xml
+Sitemap: https://dieguemtechstore.com/sitemap.xml
