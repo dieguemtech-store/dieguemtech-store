@@ -10,6 +10,7 @@ const pool = process.env.DATABASE_URL
     })
   : null;
 const localUploads = new Map();
+const legacyStarterProductIds = Array.from({ length: 14 }, (_, index) => index + 1);
 
 async function initializeDatabase() {
   if (!pool) {
@@ -128,6 +129,27 @@ async function initializeDatabase() {
     ) VALUES ${placeholders.join(",")}
     ON CONFLICT (id) DO NOTHING
   `, values);
+
+  await removeLegacyStarterProducts();
+}
+
+async function removeLegacyStarterProducts() {
+  await pool.query(`
+    DELETE FROM products p
+    WHERE p.id = ANY($1::int[])
+      AND NOT EXISTS (
+        SELECT 1
+        FROM order_items oi
+        WHERE oi.product_id = p.id
+      )
+  `, [legacyStarterProductIds]);
+
+  await pool.query(`
+    UPDATE products
+    SET active = FALSE, updated_at = NOW()
+    WHERE id = ANY($1::int[])
+      AND active = TRUE
+  `, [legacyStarterProductIds]);
 }
 
 async function getProducts({ category = "", search = "" } = {}) {
@@ -181,8 +203,9 @@ async function getAdminProducts() {
       id, name, category, price, old_price AS "oldPrice", emoji,
       rating::FLOAT, reviews, badge, stock, image, images, description, active
     FROM products
+    WHERE id <> ALL($1::int[])
     ORDER BY id
-  `);
+  `, [legacyStarterProductIds]);
   return normalizeProductRows(result.rows);
 }
 
