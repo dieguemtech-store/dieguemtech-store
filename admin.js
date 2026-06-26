@@ -268,8 +268,16 @@ function renderProductForm(product) {
         <input name="stock" type="number" min="0" step="1" value="${product.stock}" required>
       </label>
       <label>Image
-        <input name="image" value="${escapeHtml(product.image || "")}" placeholder="/assets/produit.png ou https://...">
+        <input name="image" value="${escapeHtml(product.image || "")}" placeholder="https://.../image.jpg ou /assets/produit.png">
       </label>
+    </div>
+    <div class="image-preview-card">
+      <div class="image-preview" id="productImagePreview"></div>
+      <div>
+        <strong>Apercu de l'image</strong>
+        <p>Colle une URL directe d'image. Exemple: https://site.com/photo.jpg</p>
+        <small id="productImageHelp"></small>
+      </div>
     </div>
     <label>Description
       <textarea name="description" rows="5" placeholder="Description commerciale du produit">${escapeHtml(product.description || "")}</textarea>
@@ -282,10 +290,24 @@ function renderProductForm(product) {
       <button type="submit">${isNew ? "Ajouter le produit" : "Enregistrer"}</button>
       <button type="button" class="ghost" id="cancelProductEdit">Annuler</button>
     </div>`;
+  updateProductImagePreview(product.image || "");
 }
 
 function closeProductModal() {
   $("#productModal").hidden = true;
+}
+
+function updateProductImagePreview(value) {
+  const preview = $("#productImagePreview");
+  const help = $("#productImageHelp");
+  const image = String(value || "").trim();
+  if (!image) {
+    preview.innerHTML = "<span>Image</span>";
+    help.textContent = "Aucune image selectionnee.";
+    return;
+  }
+  preview.innerHTML = `<img src="${escapeHtml(image)}" alt="Apercu produit">`;
+  help.textContent = "Si l'image ne s'affiche pas ici, verifie que le lien est public et direct.";
 }
 
 function receiptHtml(order, printable = true) {
@@ -427,6 +449,9 @@ $("#productModal").addEventListener("click", event => {
 });
 $("#productForm").addEventListener("click", event => {
   if (event.target.id === "cancelProductEdit") closeProductModal();
+});
+$("#productForm").addEventListener("input", event => {
+  if (event.target.name === "image") updateProductImagePreview(event.target.value);
 });
 $("#productForm").addEventListener("submit", async event => {
   event.preventDefault();
