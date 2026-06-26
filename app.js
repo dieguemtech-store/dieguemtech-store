@@ -182,6 +182,7 @@ function renderCart(){
   if (!cart.length) {
     container.innerHTML = `<div class="empty-drawer"><span>🛒</span><h3>Votre panier est vide</h3><p>Découvrez nos produits et trouvez votre prochain coup de cœur tech.</p></div>`;
     $("#cartFooter").style.display = "none";
+    renderCheckoutSummary();
     return;
   }
   $("#cartFooter").style.display = "block";
@@ -207,7 +208,49 @@ function renderCart(){
     return product ? sum + product.price * entry.qty : sum;
   }, 0);
   $("#cartTotal").textContent = formatPrice(total);
-  $("#checkoutTotal").textContent = formatPrice(total);
+  if ($("#checkoutTotal")) $("#checkoutTotal").textContent = formatPrice(total);
+  renderCheckoutSummary();
+}
+
+function getCartDetails(){
+  const items = cart
+    .map(entry => {
+      const product = products.find(item => item.id === entry.id);
+      if (!product) return null;
+      const quantity = Number(entry.qty || 0);
+      return {
+        product,
+        quantity,
+        lineTotal: Number(product.price || 0) * quantity
+      };
+    })
+    .filter(Boolean);
+  return {
+    items,
+    total: items.reduce((sum, item) => sum + item.lineTotal, 0),
+    count: items.reduce((sum, item) => sum + item.quantity, 0)
+  };
+}
+
+function renderCheckoutSummary(){
+  const itemsBox = $("#checkoutItems");
+  if (!itemsBox) return;
+  const details = getCartDetails();
+  const label = `${details.count} article${details.count > 1 ? "s" : ""}`;
+  $("#checkoutItemCount").textContent = label;
+  $("#checkoutSubtotal").textContent = formatPrice(details.total);
+  $("#checkoutGrandTotal").textContent = formatPrice(details.total);
+  if ($("#checkoutTotal")) $("#checkoutTotal").textContent = formatPrice(details.total);
+  itemsBox.innerHTML = details.items.length
+    ? details.items.map(({ product, quantity, lineTotal }) => `<div class="checkout-item">
+        <div class="checkout-item-visual">${cartItemVisual(product)}</div>
+        <div>
+          <strong>${escapeHtml(product.name)}</strong>
+          <span>${quantity} x ${formatPrice(product.price)}</span>
+        </div>
+        <b>${formatPrice(lineTotal)}</b>
+      </div>`).join("")
+    : `<p class="checkout-empty">Votre panier est vide.</p>`;
 }
 
 function renderWishlist(){
@@ -487,41 +530,61 @@ $$(".close-drawer,.modal-close").forEach(button => button.addEventListener("clic
 $("#menuToggle").addEventListener("click", () => $("#mainNav").classList.toggle("open"));
 
 $("#checkoutButton").addEventListener("click", () => {
-  $("#cartDrawer").classList.remove("active");
-  $("#checkoutModal").classList.add("active");
-  $("#checkoutModal").setAttribute("aria-hidden", "false");
+  if (!cart.length) {
+    showToast("Panier vide", "Ajoutez au moins un produit avant de commander.");
+    return;
+  }
+  renderCheckoutSummary();
+  openModal($("#checkoutModal"));
 });
 $$(".payment-options button").forEach(button => button.addEventListener("click", () => {
-  $$(".payment-options button").forEach(item => item.classList.remove("selected"));
+  $$(".payment-options button").forEach(item => {
+    item.classList.remove("selected");
+    item.setAttribute("aria-pressed", "false");
+  });
   button.classList.add("selected");
+  button.setAttribute("aria-pressed", "true");
 }));
-$("#payButton").addEventListener("click", async () => {
-  const fields = $$("#checkoutModal input");
-  if ([...fields].some(field => !field.value.trim())) {
-    showToast("Informations manquantes", "Veuillez renseigner vos coordonnees de livraison.");
+$("#checkoutForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const form = event.target;
+  const formData = new FormData(form);
+  const requiredFields = ["customerName", "customerPhone", "deliveryZone", "deliveryAddress"];
+  if (requiredFields.some(name => !String(formData.get(name) || "").trim())) {
+    showToast("Informations manquantes", "Veuillez renseigner vos coordonnees et la livraison.");
+    return;
+  }
+  if (!cart.length) {
+    showToast("Panier vide", "Votre panier ne contient aucun produit.");
     return;
   }
   const provider = $(".payment-options button.selected").dataset.payment;
-  const customerPhone = fields[1].value;
+  const customerPhone = String(formData.get("customerPhone") || "").trim();
+  const deliveryNote = String(formData.get("deliveryNote") || "").trim();
+  const deliveryAddress = [
+    String(formData.get("deliveryZone") || "").trim(),
+    String(formData.get("deliveryAddress") || "").trim(),
+    deliveryNote ? `Instruction: ${deliveryNote}` : ""
+  ].filter(Boolean).join(" - ");
   const payButton = $("#payButton");
   payButton.disabled = true;
-  payButton.textContent = "Création de la commande...";
+  payButton.textContent = "Creation de la commande...";
   try {
     const response = await fetch("/api/orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         customer: {
-          name: fields[0].value,
-          phone: fields[1].value,
-          address: fields[2].value
+          name: String(formData.get("customerName") || "").trim(),
+          phone: customerPhone,
+          address: deliveryAddress
         },
         items: cart.map(item => ({ id: item.id, quantity: item.qty })),
         paymentProvider: provider
       })
     });
     const result = await response.json();
-    if (!response.ok) throw new Error(result.error || "La commande n'a pas pu être créée.");
+    if (!response.ok) throw new Error(result.error || "La commande n'a pas pu etre creee.");
     if (provider === "PayTech" && result.redirect_url) {
       window.location.href = result.redirect_url;
       return;
@@ -529,13 +592,13 @@ $("#payButton").addEventListener("click", async () => {
     cart = [];
     persist();
     renderCart();
-    fields.forEach(field => field.value = "");
+    form.reset();
     showOrderSuccess(result, customerPhone, provider);
   } catch (error) {
     showToast("Commande impossible", error.message);
   } finally {
     payButton.disabled = false;
-    payButton.textContent = "Payer maintenant";
+    payButton.textContent = "Confirmer ma commande";
   }
 });
 

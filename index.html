@@ -511,27 +511,114 @@
     <div class="drawer-content" id="wishlistItems"></div>
   </aside>
 
-  <div class="modal" id="checkoutModal" aria-hidden="true">
+  <div class="modal checkout-modal" id="checkoutModal" aria-hidden="true">
     <button class="modal-close" aria-label="Fermer">×</button>
-    <span class="eyebrow">Commande sécurisée</span><h2>Finaliser ma commande</h2>
-    <div class="checkout-summary"><span>Total à payer</span><strong id="checkoutTotal">0 FCFA</strong></div>
-    <label>Nom complet<input type="text" placeholder="Votre nom"></label>
-    <label>Téléphone<input type="tel" placeholder="+221 77 000 00 00"></label>
-    <label>Adresse de livraison<input type="text" placeholder="Ville, quartier, adresse"></label>
-    <p class="payment-title">Choisissez votre moyen de paiement</p>
-    <div class="payment-options"><button class="selected" data-payment="PayDunya">PayDunya <small>Orange Money · Wave</small></button><button data-payment="PayTech">PAYTECH <small>Mobile Money · Carte</small></button></div>
-    <button class="button primary full" id="payButton">Payer maintenant</button>
-    <p class="demo-note">Démonstration : aucune transaction réelle ne sera effectuée.</p>
+    <div class="checkout-layout">
+      <section class="checkout-main">
+        <span class="eyebrow">Commande securisee</span>
+        <h2>Finaliser ma commande</h2>
+        <p class="checkout-intro">Renseignez vos informations. Notre equipe confirme la disponibilite, la livraison et le paiement avant expedition.</p>
+        <div class="checkout-steps" aria-label="Etapes de commande">
+          <span class="active">1. Panier</span>
+          <span class="active">2. Livraison</span>
+          <span>3. Confirmation</span>
+        </div>
+        <form id="checkoutForm" class="checkout-form">
+          <div class="checkout-card">
+            <div class="checkout-card-head">
+              <span>01</span>
+              <div><h3>Coordonnees client</h3><p>Utilisez un numero WhatsApp joignable pour la confirmation.</p></div>
+            </div>
+            <div class="checkout-form-grid">
+              <label>Nom complet
+                <input name="customerName" type="text" placeholder="Ex: Mamadou Mboup" autocomplete="name" required>
+              </label>
+              <label>Telephone WhatsApp
+                <input name="customerPhone" type="tel" placeholder="+221 77 217 71 76" autocomplete="tel" required>
+              </label>
+            </div>
+          </div>
+          <div class="checkout-card">
+            <div class="checkout-card-head">
+              <span>02</span>
+              <div><h3>Livraison</h3><p>Indiquez la zone et un repere simple pour faciliter la livraison.</p></div>
+            </div>
+            <div class="checkout-form-grid">
+              <label>Ville ou zone
+                <select name="deliveryZone" required>
+                  <option value="">Choisir une zone</option>
+                  <option value="Dakar">Dakar</option>
+                  <option value="Pikine">Pikine</option>
+                  <option value="Guediawaye">Guediawaye</option>
+                  <option value="Rufisque">Rufisque</option>
+                  <option value="Thies">Thies</option>
+                  <option value="Mbour">Mbour</option>
+                  <option value="Autre zone Senegal">Autre zone au Senegal</option>
+                </select>
+              </label>
+              <label>Quartier / adresse
+                <input name="deliveryAddress" type="text" placeholder="Quartier, rue, repere..." autocomplete="street-address" required>
+              </label>
+            </div>
+            <label>Instruction de livraison <small>Optionnel</small>
+              <textarea name="deliveryNote" rows="3" placeholder="Ex: appeler avant de venir, livraison apres 17h..."></textarea>
+            </label>
+          </div>
+          <div class="checkout-card">
+            <div class="checkout-card-head">
+              <span>03</span>
+              <div><h3>Moyen de paiement</h3><p>Choisissez le service a utiliser pour cette commande.</p></div>
+            </div>
+            <div class="payment-options">
+              <button class="selected" type="button" data-payment="PayDunya" aria-pressed="true">PayDunya <small>Orange Money · Wave</small></button>
+              <button type="button" data-payment="PayTech" aria-pressed="false">PayTech <small>Mobile Money · Carte</small></button>
+            </div>
+            <p class="checkout-security">Paiement securise. Si le paiement en ligne est indisponible, l'equipe vous contacte pour finaliser la commande.</p>
+          </div>
+          <button class="button primary full checkout-submit" id="payButton" type="submit">Confirmer ma commande</button>
+        </form>
+      </section>
+      <aside class="checkout-aside" aria-label="Resume de commande">
+        <div class="checkout-summary-panel">
+          <div class="checkout-summary-head">
+            <div><span class="eyebrow">Resume</span><h3>Votre panier</h3></div>
+            <strong id="checkoutItemCount">0 article</strong>
+          </div>
+          <div class="checkout-items" id="checkoutItems"></div>
+          <div class="checkout-total-lines">
+            <div><span>Sous-total</span><strong id="checkoutSubtotal">0 FCFA</strong></div>
+            <div><span>Livraison</span><strong>A confirmer</strong></div>
+            <div class="checkout-total"><span>Total produits</span><strong id="checkoutGrandTotal">0 FCFA</strong></div>
+          </div>
+        </div>
+        <div class="checkout-help-card">
+          <h3>Besoin d'aide ?</h3>
+          <p>Un conseiller peut confirmer le stock, la livraison et le meilleur moyen de paiement pour votre zone.</p>
+          <a href="https://wa.me/221772177176?text=Bonjour%20DieguemTech%20Store,%20j'ai%20besoin%20d'aide%20pour%20ma%20commande." target="_blank" rel="noopener">Contacter WhatsApp</a>
+        </div>
+        <div class="checkout-trust">
+          <span>Stock confirme avant expedition</span>
+          <span>Support WhatsApp reactif</span>
+          <span>Livraison Dakar et regions</span>
+        </div>
+      </aside>
+    </div>
   </div>
 
   <div class="modal order-success-modal" id="orderSuccessModal" aria-hidden="true">
     <button class="modal-close" aria-label="Fermer">×</button>
-    <span class="eyebrow">Commande enregistrée</span>
-    <h2>Merci pour votre commande</h2>
-    <p class="success-intro">Gardez ce numéro pour suivre votre commande ou contacter le support.</p>
+    <div class="success-mark">✓</div>
+    <span class="eyebrow">Commande enregistree</span>
+    <h2>Votre commande est prise en compte</h2>
+    <p class="success-intro">Gardez ce numero. Notre equipe peut vous contacter pour confirmer le stock, la livraison et le paiement.</p>
     <div class="order-reference">
       <span>Numéro de commande</span>
       <strong id="successOrderId">DT-...</strong>
+    </div>
+    <div class="success-next-steps">
+      <div><b>1</b><span>Confirmation du stock</span></div>
+      <div><b>2</b><span>Validation paiement</span></div>
+      <div><b>3</b><span>Livraison organisee</span></div>
     </div>
     <div class="modal-actions success-actions">
       <button class="button primary" type="button" id="copyOrderIdButton">Copier le numéro</button>
