@@ -36,6 +36,7 @@
           <h1>Commandes DieguemTech</h1>
         </div>
         <div class="header-actions">
+          <button id="exportOrders" class="ghost">Exporter CSV</button>
           <button id="refreshOrders">Actualiser</button>
           <button id="logoutButton" class="ghost">Deconnexion</button>
         </div>
@@ -49,8 +50,12 @@
       <section id="ordersPanel">
         <div class="stats-grid">
           <article><span>Total commandes</span><strong id="totalOrders">0</strong></article>
+          <article><span>Aujourd'hui</span><strong id="todayOrders">0</strong><small id="todayRevenue">0 FCFA encaisses</small></article>
           <article><span>En attente</span><strong id="pendingOrders">0</strong></article>
+          <article><span>A preparer</span><strong id="toPrepareOrders">0</strong></article>
           <article><span>Payees</span><strong id="paidOrders">0</strong></article>
+          <article><span>Livrees</span><strong id="deliveredOrders">0</strong></article>
+          <article><span>Panier moyen</span><strong id="averageBasket">0 FCFA</strong></article>
           <article><span>Chiffre d'affaires</span><strong id="totalRevenue">0 FCFA</strong></article>
         </div>
 
@@ -65,7 +70,21 @@
             <option value="delivered">Livree</option>
             <option value="cancelled">Annulee</option>
           </select>
+          <select id="paymentFilter">
+            <option value="">Tous paiements</option>
+            <option value="pending">Paiement en attente</option>
+            <option value="paid">Paiement paye</option>
+            <option value="failed">Paiement echoue</option>
+            <option value="refunded">Rembourse</option>
+          </select>
+          <select id="dateFilter">
+            <option value="">Toutes les dates</option>
+            <option value="today">Aujourd'hui</option>
+            <option value="7d">7 derniers jours</option>
+            <option value="30d">30 derniers jours</option>
+          </select>
         </div>
+        <p class="toolbar-summary" id="ordersFilterSummary"></p>
 
         <div class="orders-list" id="ordersList"></div>
         <p class="empty" id="emptyOrders" hidden>Aucune commande trouvee.</p>
@@ -97,13 +116,13 @@
 
   <div class="modal-backdrop" id="orderModal" hidden>
     <section class="order-modal">
-      <button class="modal-close" id="closeOrderModal" aria-label="Fermer">×</button>
+      <button class="modal-close" id="closeOrderModal" aria-label="Fermer">&times;</button>
       <div id="orderModalContent"></div>
     </section>
   </div>
   <div class="modal-backdrop" id="productModal" hidden>
     <section class="order-modal product-edit-modal">
-      <button class="modal-close" id="closeProductModal" aria-label="Fermer">×</button>
+      <button class="modal-close" id="closeProductModal" aria-label="Fermer">&times;</button>
       <form id="productForm"></form>
     </section>
   </div>
