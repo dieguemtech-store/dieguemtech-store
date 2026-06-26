@@ -885,6 +885,14 @@ function getSeoProductHighlights(product) {
     ];
   }
 
+  if (category.includes("tv") || category.includes("home cinema")) {
+    return [
+      "Selection adaptee aux films, series, sport, videos et installations multimedia.",
+      "Conseil disponible pour verifier la compatibilite avec votre TV, box, projecteur ou systeme audio.",
+      ...common
+    ];
+  }
+
   if (category.includes("audio")) {
     return [
       "Concu pour les appels, la musique, les videos et l'utilisation quotidienne.",
