@@ -73,9 +73,19 @@
 
       <section id="productsPanel" hidden>
         <div class="toolbar product-toolbar">
-          <input type="search" id="productSearch" placeholder="Rechercher produit, categorie...">
+          <input type="search" id="productSearch" placeholder="Rechercher produit, categorie, sous-categorie...">
           <select id="productCategoryFilter">
             <option value="">Toutes categories</option>
+          </select>
+          <select id="productStatusFilter">
+            <option value="">Tous statuts</option>
+            <option value="published">Publies</option>
+            <option value="hidden">Masques</option>
+          </select>
+          <select id="productFeaturedFilter">
+            <option value="">Tous produits</option>
+            <option value="featured">Mis en avant</option>
+            <option value="normal">Non mis en avant</option>
           </select>
           <button type="button" id="addProductButton">Ajouter un produit</button>
         </div>

@@ -64,6 +64,14 @@ function getProductMainImage(product){
   return getProductImages(product)[0] || "";
 }
 
+function getProductCategoryLabel(product){
+  return product.subcategory ? `${product.category} / ${product.subcategory}` : product.category;
+}
+
+function sortProductsForStore(list){
+  return [...list].sort((left, right) => Number(right.featured === true) - Number(left.featured === true) || Number(left.id || 0) - Number(right.id || 0));
+}
+
 function productVisual(product, className = "product-emoji"){
   const image = getProductMainImage(product);
   if (image) {
@@ -79,13 +87,14 @@ function productCard(product){
   return `<article class="product-card" data-product-page-card="${productUrl(product)}" tabindex="0" role="link" aria-label="Ouvrir la page de ${escapeHtml(product.name)}">
     <div class="product-visual">
       <span class="${badgeClass}">${escapeHtml(product.badge)}</span>
+      ${product.featured === true ? `<span class="featured-badge">Vedette</span>` : ""}
       <button class="wishlist-toggle ${liked ? "active" : ""}" data-wishlist="${product.id}" aria-label="Ajouter aux favoris">
         <svg><use href="#icon-heart"></use></svg>
       </button>
       ${productVisual(product)}
     </div>
     <div class="product-info">
-      <span class="product-category">${escapeHtml(product.category)}</span>
+      <span class="product-category">${escapeHtml(getProductCategoryLabel(product))}</span>
       <h3 title="${escapeHtml(product.name)}">${escapeHtml(product.name)}</h3>
       <p class="product-description">${escapeHtml(description)}</p>
       <div class="product-rating"><span class="stars">★★★★★</span> ${product.rating} (${product.reviews})</div>
@@ -104,10 +113,10 @@ function renderProducts(search = ""){
   const query = search.trim().toLowerCase();
   const filtered = products.filter(product => {
     const matchesCategory = activeFilter === "Tous" || product.category === activeFilter;
-    const matchesSearch = !query || `${product.name} ${product.category} ${getProductDescription(product)}`.toLowerCase().includes(query);
+    const matchesSearch = !query || `${product.name} ${product.category} ${product.subcategory || ""} ${getProductDescription(product)}`.toLowerCase().includes(query);
     return matchesCategory && matchesSearch;
   });
-  $("#productsGrid").innerHTML = filtered.slice(0, visibleCount).map(productCard).join("");
+  $("#productsGrid").innerHTML = sortProductsForStore(filtered).slice(0, visibleCount).map(productCard).join("");
   $("#emptyState").style.display = filtered.length ? "none" : "block";
   $("#showAllProducts").style.display = filtered.length > visibleCount ? "inline-flex" : "none";
 }
@@ -264,7 +273,7 @@ function openProductDetail(id){
   $("#productDetailContent").innerHTML = `
     ${productDetailVisual(product)}
     <div class="product-detail-info">
-      <span class="eyebrow">${escapeHtml(product.category)}</span>
+      <span class="eyebrow">${escapeHtml(getProductCategoryLabel(product))}</span>
       <h2>${escapeHtml(product.name)}</h2>
       <div class="product-detail-rating"><span class="stars">★★★★★</span> ${product.rating} (${product.reviews} avis)</div>
       <p>${escapeHtml(getProductDescription(product))}</p>
@@ -552,7 +561,7 @@ async function initializeStore(){
   try {
     const response = await fetch("/api/products");
     if (!response.ok) throw new Error("Catalogue indisponible.");
-    products = await response.json();
+    products = sortProductsForStore(await response.json());
     cart = cart.filter(item => products.some(product => product.id === item.id));
     wishlist = wishlist.filter(id => products.some(product => product.id === id));
     const initialSearch = getInitialSearch();

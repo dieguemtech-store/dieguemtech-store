@@ -30,9 +30,11 @@ async function initializeDatabase() {
       reviews INTEGER NOT NULL DEFAULT 0,
       badge TEXT NOT NULL DEFAULT '',
       stock INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
+      subcategory TEXT NOT NULL DEFAULT '',
       image TEXT,
       images JSONB NOT NULL DEFAULT '[]'::jsonb,
       description TEXT,
+      featured BOOLEAN NOT NULL DEFAULT FALSE,
       active BOOLEAN NOT NULL DEFAULT TRUE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -78,9 +80,11 @@ async function initializeDatabase() {
 
   await pool.query(`
     ALTER TABLE products
+      ADD COLUMN IF NOT EXISTS subcategory TEXT NOT NULL DEFAULT '',
       ADD COLUMN IF NOT EXISTS image TEXT,
       ADD COLUMN IF NOT EXISTS images JSONB,
       ADD COLUMN IF NOT EXISTS description TEXT,
+      ADD COLUMN IF NOT EXISTS featured BOOLEAN NOT NULL DEFAULT FALSE,
       ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE;
 
     UPDATE products
@@ -100,11 +104,12 @@ async function initializeDatabase() {
 
   const values = [];
   const placeholders = seedProducts.map((product, index) => {
-    const offset = index * 13;
+    const offset = index * 15;
     values.push(
       product.id,
       product.name,
       product.category,
+      product.subcategory || "",
       product.price,
       product.oldPrice ?? null,
       product.emoji,
@@ -114,18 +119,19 @@ async function initializeDatabase() {
       product.stock,
       product.image || null,
       JSON.stringify(normalizeImageList(product.images, product.image)),
-      product.description || null
+      product.description || null,
+      product.featured === true
     );
-    const row = Array.from({ length: 13 }, (_, item) => {
+    const row = Array.from({ length: 15 }, (_, item) => {
       const placeholder = `$${offset + item + 1}`;
-      return item === 11 ? `${placeholder}::jsonb` : placeholder;
+      return item === 12 ? `${placeholder}::jsonb` : placeholder;
     });
     return `(${row.join(",")})`;
   });
 
   await pool.query(`
     INSERT INTO products (
-      id, name, category, price, old_price, emoji, rating, reviews, badge, stock, image, images, description
+      id, name, category, subcategory, price, old_price, emoji, rating, reviews, badge, stock, image, images, description, featured
     ) VALUES ${placeholders.join(",")}
     ON CONFLICT (id) DO NOTHING
   `, values);
@@ -156,9 +162,9 @@ async function getProducts({ category = "", search = "" } = {}) {
   if (!pool) {
     return normalizeProductRows(seedProducts.filter(product => {
       const matchesCategory = !category || product.category.toLowerCase() === category.toLowerCase();
-      const matchesSearch = !search || `${product.name} ${product.category}`.toLowerCase().includes(search.toLowerCase());
+      const matchesSearch = !search || `${product.name} ${product.category} ${product.subcategory || ""} ${product.badge || ""} ${product.description || ""}`.toLowerCase().includes(search.toLowerCase());
       return product.active !== false && matchesCategory && matchesSearch;
-    }));
+    })).sort(sortProductsForDisplay);
   }
 
   const values = [];
@@ -169,16 +175,16 @@ async function getProducts({ category = "", search = "" } = {}) {
   }
   if (search) {
     values.push(`%${search}%`);
-    conditions.push(`(name ILIKE $${values.length} OR category ILIKE $${values.length})`);
+    conditions.push(`(name ILIKE $${values.length} OR category ILIKE $${values.length} OR subcategory ILIKE $${values.length} OR badge ILIKE $${values.length} OR description ILIKE $${values.length})`);
   }
 
   const result = await pool.query(`
     SELECT
-      id, name, category, price, old_price AS "oldPrice", emoji,
-      rating::FLOAT, reviews, badge, stock, image, images, description
+      id, name, category, subcategory, price, old_price AS "oldPrice", emoji,
+      rating::FLOAT, reviews, badge, stock, image, images, description, featured
     FROM products
     WHERE ${conditions.join(" AND ")}
-    ORDER BY id
+    ORDER BY featured DESC, id
   `, values);
   return normalizeProductRows(result.rows);
 }
@@ -187,8 +193,8 @@ async function getProduct(id, client = pool) {
   if (!pool) return normalizeProductRow(seedProducts.find(product => product.id === Number(id) && product.active !== false));
   const result = await client.query(`
     SELECT
-      id, name, category, price, old_price AS "oldPrice", emoji,
-      rating::FLOAT, reviews, badge, stock, image, images, description
+      id, name, category, subcategory, price, old_price AS "oldPrice", emoji,
+      rating::FLOAT, reviews, badge, stock, image, images, description, featured
     FROM products
     WHERE id = $1 AND active = TRUE
   `, [id]);
@@ -200,11 +206,11 @@ async function getAdminProducts() {
 
   const result = await pool.query(`
     SELECT
-      id, name, category, price, old_price AS "oldPrice", emoji,
-      rating::FLOAT, reviews, badge, stock, image, images, description, active
+      id, name, category, subcategory, price, old_price AS "oldPrice", emoji,
+      rating::FLOAT, reviews, badge, stock, image, images, description, featured, active
     FROM products
     WHERE id <> ALL($1::int[])
-    ORDER BY id
+    ORDER BY active DESC, featured DESC, id
   `, [legacyStarterProductIds]);
   return normalizeProductRows(result.rows);
 }
@@ -227,18 +233,19 @@ async function createProduct(input) {
 
   const result = await pool.query(`
     INSERT INTO products (
-      id, name, category, price, old_price, emoji, rating, reviews, badge, stock, image, images, description, active
+      id, name, category, subcategory, price, old_price, emoji, rating, reviews, badge, stock, image, images, description, featured, active
     )
     VALUES (
       (SELECT COALESCE(MAX(id), 0) + 1 FROM products),
-      $1, $2, $3, $4, $5, 0, 0, $6, $7, $8, $9::jsonb, $10, $11
+      $1, $2, $3, $4, $5, $6, 0, 0, $7, $8, $9, $10::jsonb, $11, $12, $13
     )
     RETURNING
-      id, name, category, price, old_price AS "oldPrice", emoji,
-      rating::FLOAT, reviews, badge, stock, image, images, description, active
+      id, name, category, subcategory, price, old_price AS "oldPrice", emoji,
+      rating::FLOAT, reviews, badge, stock, image, images, description, featured, active
   `, [
     product.name,
     product.category,
+    product.subcategory,
     product.price,
     product.oldPrice,
     "DT",
@@ -247,6 +254,7 @@ async function createProduct(input) {
     product.image,
     JSON.stringify(product.images),
     product.description,
+    product.featured,
     product.active
   ]);
   return normalizeProductRow(result.rows[0]);
@@ -269,23 +277,26 @@ async function updateProduct(id, input) {
     SET
       name = $2,
       category = $3,
-      price = $4,
-      old_price = $5,
-      badge = $6,
-      stock = $7,
-      image = $8,
-      images = $9::jsonb,
-      description = $10,
-      active = $11,
+      subcategory = $4,
+      price = $5,
+      old_price = $6,
+      badge = $7,
+      stock = $8,
+      image = $9,
+      images = $10::jsonb,
+      description = $11,
+      featured = $12,
+      active = $13,
       updated_at = NOW()
     WHERE id = $1
     RETURNING
-      id, name, category, price, old_price AS "oldPrice", emoji,
-      rating::FLOAT, reviews, badge, stock, image, images, description, active
+      id, name, category, subcategory, price, old_price AS "oldPrice", emoji,
+      rating::FLOAT, reviews, badge, stock, image, images, description, featured, active
   `, [
     productId,
     product.name,
     product.category,
+    product.subcategory,
     product.price,
     product.oldPrice,
     product.badge,
@@ -293,6 +304,7 @@ async function updateProduct(id, input) {
     product.image,
     JSON.stringify(product.images),
     product.description,
+    product.featured,
     product.active
   ]);
   return normalizeProductRow(result.rows[0]) || null;
@@ -314,8 +326,8 @@ async function deactivateProduct(id) {
     SET active = FALSE, updated_at = NOW()
     WHERE id = $1
     RETURNING
-      id, name, category, price, old_price AS "oldPrice", emoji,
-      rating::FLOAT, reviews, badge, stock, image, images, description, active
+      id, name, category, subcategory, price, old_price AS "oldPrice", emoji,
+      rating::FLOAT, reviews, badge, stock, image, images, description, featured, active
   `, [productId]);
   return normalizeProductRow(result.rows[0]) || null;
 }
@@ -379,6 +391,7 @@ function normalizeProductInput(input) {
   return {
     name: String(input.name || "").trim(),
     category: String(input.category || "").trim(),
+    subcategory: String(input.subcategory || "").trim(),
     price: Number(input.price),
     oldPrice: input.oldPrice === null || input.oldPrice === "" || typeof input.oldPrice === "undefined" ? null : Number(input.oldPrice),
     badge: String(input.badge || "").trim(),
@@ -386,6 +399,7 @@ function normalizeProductInput(input) {
     image: images[0] || null,
     images,
     description: input.description ? String(input.description).trim() : null,
+    featured: input.featured === true,
     active: input.active !== false
   };
 }
@@ -421,12 +435,18 @@ function normalizeProductRow(product) {
   return {
     ...product,
     image: images[0] || product.image || null,
-    images
+    images,
+    subcategory: String(product.subcategory || "").trim(),
+    featured: product.featured === true
   };
 }
 
 function normalizeProductRows(products) {
   return products.map(normalizeProductRow);
+}
+
+function sortProductsForDisplay(left, right) {
+  return Number(right.featured === true) - Number(left.featured === true) || Number(left.id || 0) - Number(right.id || 0);
 }
 
 async function createOrder(orderInput) {

@@ -83,6 +83,7 @@
 .product-tabs{flex-wrap:wrap;justify-content:flex-end}
 .product-tabs a{border:0;background:none;padding:8px 14px;border-radius:6px;color:#777;font-size:12px;font-weight:600}
 .product-tabs a.active,.product-tabs a:hover{background:#fff;color:var(--orange);box-shadow:0 2px 9px rgba(0,0,0,.07)}
+.featured-badge{position:absolute;top:43px;left:13px;background:var(--orange);color:#fff;border-radius:5px;padding:4px 8px;font-size:10px;font-weight:800;z-index:2}
 @media(max-width:760px){#productDetailContent{grid-template-columns:1fr}.product-detail-visual{min-height:260px;padding:30px}.product-detail-main{min-height:220px}.product-detail-info{padding:30px 24px}.product-detail-info h2{font-size:25px}.product-detail-bottom{align-items:stretch;flex-direction:column}.product-detail-actions{justify-content:stretch}.product-detail-bottom .button,.product-detail-actions{width:100%}}
 @media(max-width:760px){.logo-image{width:176px}.info-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:480px){.logo-image{width:43px}.footer-brand .logo-image{width:190px}.product-description{display:none}.product-image{max-height:125px}.product-detail-emoji{font-size:110px}.info-grid{grid-template-columns:1fr}}

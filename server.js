@@ -353,6 +353,7 @@ function validateOrder(customer, items, paymentProvider) {
 function validateProductUpdate(product) {
   if (!product.name?.trim()) return "Le nom du produit est requis.";
   if (!product.category?.trim()) return "La categorie est requise.";
+  if (String(product.subcategory || "").length > 80) return "La sous-categorie est trop longue.";
   if (product.price === "" || typeof product.price === "undefined" || !Number.isInteger(Number(product.price)) || Number(product.price) < 0) return "Prix invalide.";
   if (product.oldPrice !== null && product.oldPrice !== "" && typeof product.oldPrice !== "undefined" && (!Number.isInteger(Number(product.oldPrice)) || Number(product.oldPrice) < 0)) {
     return "Ancien prix invalide.";
@@ -828,6 +829,7 @@ function renderCategorySubcategoryCard(category, subcategory, selectedSubcategor
 function renderCategoryProductCard(product) {
   const image = getProductImages(product)[0];
   const description = truncateText(getProductDescription(product), 135);
+  const categoryLabel = product.subcategory ? `${product.category} / ${product.subcategory}` : product.category;
   return `<article class="category-product-card">
     <a class="category-product-link" href="${escapeHtml(productPath(product))}">
       <div class="category-product-visual">
@@ -835,7 +837,7 @@ function renderCategoryProductCard(product) {
         ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(product.name)}" loading="lazy">` : "<span>DT</span>"}
       </div>
       <div class="category-product-body">
-        <small>${escapeHtml(product.category)}</small>
+        <small>${escapeHtml(categoryLabel)}</small>
         <h3>${escapeHtml(product.name)}</h3>
         <p>${escapeHtml(description)}</p>
         <strong class="category-product-price">${formatSeoPrice(product.price)}</strong>
@@ -862,6 +864,33 @@ function renderProductSeoPage(product, baseUrl, relatedProducts = []) {
   const stockLabel = Number(product.stock) > 0 ? "En stock" : "Rupture temporaire";
   const discountLabel = getSeoDiscountLabel(product);
   const highlights = getSeoProductHighlights(product);
+  const productSubcategory = getProductSubcategory(product);
+  const productBreadcrumbItems = [
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Accueil",
+      item: `${baseUrl}/`
+    },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: product.category,
+      item: `${baseUrl}${categoryPath(product.category)}`
+    },
+    ...(productSubcategory ? [{
+      "@type": "ListItem",
+      position: 3,
+      name: productSubcategory,
+      item: `${baseUrl}${subcategoryPath(product.category, productSubcategory)}`
+    }] : []),
+    {
+      "@type": "ListItem",
+      position: productSubcategory ? 4 : 3,
+      name: product.name,
+      item: canonicalUrl
+    }
+  ];
   const visibleRelatedProducts = relatedProducts
     .filter(entry => Number(entry.id) !== Number(product.id))
     .slice(0, 4);
@@ -870,26 +899,7 @@ function renderProductSeoPage(product, baseUrl, relatedProducts = []) {
     "@graph": [
       {
         "@type": "BreadcrumbList",
-        itemListElement: [
-          {
-            "@type": "ListItem",
-            position: 1,
-            name: "Accueil",
-            item: `${baseUrl}/`
-          },
-          {
-            "@type": "ListItem",
-            position: 2,
-            name: product.category,
-            item: `${baseUrl}${categoryPath(product.category)}`
-          },
-          {
-            "@type": "ListItem",
-            position: 3,
-            name: product.name,
-            item: canonicalUrl
-          }
-        ]
+        itemListElement: productBreadcrumbItems
       },
       {
         "@type": "Product",
@@ -1033,7 +1043,7 @@ function renderProductSeoPage(product, baseUrl, relatedProducts = []) {
       </div>
     </nav>
     <div class="seo-breadcrumb" aria-label="Fil d'Ariane">
-      <a href="/">Accueil</a> / <a href="${escapeHtml(categoryPath(product.category))}">${escapeHtml(getCategoryDisplayName(product.category))}</a> / <span>${escapeHtml(product.name)}</span>
+      <a href="/">Accueil</a> / <a href="${escapeHtml(categoryPath(product.category))}">${escapeHtml(getCategoryDisplayName(product.category))}</a>${productSubcategory ? ` / <a href="${escapeHtml(subcategoryPath(product.category, productSubcategory))}">${escapeHtml(productSubcategory)}</a>` : ""} / <span>${escapeHtml(product.name)}</span>
     </div>
     <article class="seo-card">
       <section class="seo-gallery" aria-label="Images du produit">
@@ -1210,6 +1220,9 @@ function getCategorySubcategories(products) {
 }
 
 function getProductSubcategory(product) {
+  const manualSubcategory = String(product.subcategory || "").trim();
+  if (manualSubcategory) return manualSubcategory;
+
   const category = normalizeSearchText(product.category);
   const text = normalizeSearchText(`${product.name} ${product.badge} ${product.description}`);
 

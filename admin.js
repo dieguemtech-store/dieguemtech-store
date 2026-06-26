@@ -117,10 +117,30 @@ function renderProductCategories() {
 function getFilteredProducts() {
   const query = $("#productSearch").value.trim().toLowerCase();
   const category = $("#productCategoryFilter").value;
+  const status = $("#productStatusFilter").value;
+  const featured = $("#productFeaturedFilter").value;
   return products.filter(product => {
-    const haystack = `${product.name} ${product.category} ${product.badge} ${product.description || ""}`.toLowerCase();
-    return (!query || haystack.includes(query)) && (!category || product.category === category);
+    const isPublished = product.active !== false;
+    const isFeatured = product.featured === true;
+    const haystack = `${product.name} ${product.category} ${product.subcategory || ""} ${product.badge} ${product.description || ""}`.toLowerCase();
+    const matchesSearch = !query || haystack.includes(query);
+    const matchesCategory = !category || product.category === category;
+    const matchesStatus = !status || (status === "published" ? isPublished : !isPublished);
+    const matchesFeatured = !featured || (featured === "featured" ? isFeatured : !isFeatured);
+    return matchesSearch && matchesCategory && matchesStatus && matchesFeatured;
   });
+}
+
+function getCategoryOptions() {
+  return [...new Set(products.map(product => product.category).filter(Boolean))].sort();
+}
+
+function getSubcategoryOptions(category = "") {
+  return [...new Set(products
+    .filter(product => !category || product.category === category)
+    .map(product => product.subcategory)
+    .filter(Boolean)
+  )].sort();
 }
 
 function getProductImages(product) {
@@ -160,9 +180,10 @@ function renderProducts() {
 }
 
 function productCard(product) {
-  const activeLabel = product.active === false ? "Inactif" : "Actif";
+  const activeLabel = product.active === false ? "Masque" : "Publie";
   const images = getProductImages(product);
   const mainImage = images[0];
+  const subcategoryLabel = product.subcategory ? ` / ${escapeHtml(product.subcategory)}` : "";
   return `<article class="product-admin-card">
     <div class="product-admin-visual">
       ${mainImage ? `<img src="${escapeHtml(mainImage)}" alt="${escapeHtml(product.name)}">` : `<span>${product.emoji}</span>`}
@@ -170,15 +191,18 @@ function productCard(product) {
     </div>
     <div>
       <h3>${escapeHtml(product.name)}</h3>
-      <p>${escapeHtml(product.category)} &middot; ${escapeHtml(product.badge || "Sans badge")} &middot; ${images.length} image${images.length > 1 ? "s" : ""}</p>
+      <p>${escapeHtml(product.category)}${subcategoryLabel} &middot; ${escapeHtml(product.badge || "Sans badge")} &middot; ${images.length} image${images.length > 1 ? "s" : ""}</p>
+      <div class="product-chips">
+        <span class="product-state ${product.active === false ? "inactive" : "active"}">${activeLabel}</span>
+        ${product.featured === true ? `<span class="product-state featured">Mis en avant</span>` : ""}
+      </div>
       <p class="muted">${escapeHtml(product.description || "Aucune description.")}</p>
     </div>
     <div class="product-admin-meta">
       <strong>${formatPrice(product.price)}</strong>
       <span>Stock: ${product.stock}</span>
-      <span class="product-state ${product.active === false ? "inactive" : "active"}">${activeLabel}</span>
       <button type="button" data-edit-product="${product.id}">Modifier</button>
-      ${product.active === false ? "" : `<button type="button" class="danger-button" data-deactivate-product="${product.id}">Desactiver</button>`}
+      ${product.active === false ? "" : `<button type="button" class="danger-button" data-deactivate-product="${product.id}">Masquer</button>`}
     </div>
   </article>`;
 }
@@ -270,12 +294,14 @@ function openCreateProductModal() {
     name: "",
     category: "",
     badge: "",
+    subcategory: "",
     price: "",
     oldPrice: "",
     stock: 0,
     image: "",
     images: [],
     description: "",
+    featured: false,
     active: true
   });
   $("#productModal").hidden = false;
@@ -284,6 +310,8 @@ function openCreateProductModal() {
 function renderProductForm(product) {
   const isNew = !product.id;
   const images = getProductImages(product);
+  const categoryOptions = getCategoryOptions();
+  const subcategoryOptions = getSubcategoryOptions(product.category);
   $("#productForm").innerHTML = `<div class="product-form-head">
       <span class="eyebrow">${isNew ? "Nouveau produit" : `Produit #${product.id}`}</span>
       <h2>${isNew ? "Ajouter un produit" : "Modifier le produit"}</h2>
@@ -293,7 +321,16 @@ function renderProductForm(product) {
     </label>
     <div class="form-grid">
       <label>Categorie
-        <input name="category" value="${escapeHtml(product.category)}" required>
+        <input name="category" list="productCategoryOptions" value="${escapeHtml(product.category)}" required>
+        <datalist id="productCategoryOptions">
+          ${categoryOptions.map(category => `<option value="${escapeHtml(category)}"></option>`).join("")}
+        </datalist>
+      </label>
+      <label>Sous-categorie
+        <input name="subcategory" list="productSubcategoryOptions" value="${escapeHtml(product.subcategory || "")}" placeholder="Ex: Ventilateurs, Projecteurs...">
+        <datalist id="productSubcategoryOptions">
+          ${subcategoryOptions.map(subcategory => `<option value="${escapeHtml(subcategory)}"></option>`).join("")}
+        </datalist>
       </label>
       <label>Badge
         <input name="badge" value="${escapeHtml(product.badge || "")}" placeholder="-20%, Nouveau...">
@@ -306,6 +343,12 @@ function renderProductForm(product) {
       </label>
       <label>Stock
         <input name="stock" type="number" min="0" step="1" value="${product.stock}" required>
+      </label>
+      <label>Statut boutique
+        <select name="active">
+          <option value="true" ${product.active === false ? "" : "selected"}>Publie sur la boutique</option>
+          <option value="false" ${product.active === false ? "selected" : ""}>Masque de la boutique</option>
+        </select>
       </label>
     </div>
     <label>Galerie images
@@ -334,7 +377,7 @@ function renderProductForm(product) {
       <textarea name="description" rows="5" placeholder="Description commerciale du produit">${escapeHtml(product.description || "")}</textarea>
     </label>
     <label class="checkbox-row">
-      <input name="active" type="checkbox" ${product.active === false ? "" : "checked"}> Produit actif
+      <input name="featured" type="checkbox" ${product.featured === true ? "checked" : ""}> Mettre ce produit en avant
     </label>
     <input type="hidden" name="id" value="${product.id}">
     <div class="modal-actions">
@@ -482,6 +525,7 @@ async function saveProduct(form) {
   const payload = {
     name: formData.get("name"),
     category: formData.get("category"),
+    subcategory: formData.get("subcategory"),
     badge: formData.get("badge"),
     price: Number(formData.get("price")),
     oldPrice: formData.get("oldPrice") ? Number(formData.get("oldPrice")) : null,
@@ -489,7 +533,8 @@ async function saveProduct(form) {
     image: images[0] || "",
     images,
     description: formData.get("description"),
-    active: formData.get("active") === "on"
+    featured: formData.get("featured") === "on",
+    active: formData.get("active") !== "false"
   };
   await api(id ? `/api/admin/products/${encodeURIComponent(id)}` : "/api/admin/products", {
     method: id ? "PATCH" : "POST",
@@ -524,6 +569,8 @@ $("#orderSearch").addEventListener("input", renderOrders);
 $("#statusFilter").addEventListener("change", renderOrders);
 $("#productSearch").addEventListener("input", renderProducts);
 $("#productCategoryFilter").addEventListener("change", renderProducts);
+$("#productStatusFilter").addEventListener("change", renderProducts);
+$("#productFeaturedFilter").addEventListener("change", renderProducts);
 $("#addProductButton").addEventListener("click", openCreateProductModal);
 
 document.addEventListener("change", async event => {
@@ -557,6 +604,14 @@ $("#productForm").addEventListener("click", event => {
 });
 $("#productForm").addEventListener("input", event => {
   if (event.target.name === "images") updateProductImagePreview(event.target.value);
+  if (event.target.name === "category") {
+    const datalist = $("#productSubcategoryOptions");
+    if (datalist) {
+      datalist.innerHTML = getSubcategoryOptions(event.target.value)
+        .map(subcategory => `<option value="${escapeHtml(subcategory)}"></option>`)
+        .join("");
+    }
+  }
 });
 $("#productForm").addEventListener("change", async event => {
   if (event.target.id !== "productImageFiles") return;
