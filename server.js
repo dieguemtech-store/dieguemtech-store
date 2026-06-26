@@ -397,7 +397,8 @@ async function renderProductSeoRoute(request, response, next) {
       return response.redirect(301, canonicalPath);
     }
 
-    response.send(renderProductSeoPage(product, getPublicBaseUrl(request)));
+    const relatedProducts = await database.getProducts({ category: product.category });
+    response.send(renderProductSeoPage(product, getPublicBaseUrl(request), relatedProducts));
   } catch (error) {
     next(error);
   }
@@ -429,14 +430,23 @@ ${urls.map(url => `  <url>
 </urlset>`;
 }
 
-function renderProductSeoPage(product, baseUrl) {
+function renderProductSeoPage(product, baseUrl, relatedProducts = []) {
   const canonicalPath = productPath(product);
   const canonicalUrl = `${baseUrl}${canonicalPath}`;
   const images = getProductImages(product).map(image => absoluteUrl(image, baseUrl));
   const mainImage = images[0] || `${baseUrl}/assets/hero-tech.png`;
-  const description = truncateText(getProductDescription(product), 155);
+  const fullDescription = getProductDescription(product);
+  const description = truncateText(fullDescription, 155);
+  const schemaDescription = truncateText(fullDescription, 500);
   const title = `${product.name} | DieguemTech Store`;
   const availability = Number(product.stock) > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock";
+  const isLongDescription = fullDescription.replace(/\s+/g, " ").trim().length > 330;
+  const stockLabel = Number(product.stock) > 0 ? "En stock" : "Rupture temporaire";
+  const discountLabel = getSeoDiscountLabel(product);
+  const highlights = getSeoProductHighlights(product);
+  const visibleRelatedProducts = relatedProducts
+    .filter(entry => Number(entry.id) !== Number(product.id))
+    .slice(0, 4);
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
@@ -467,7 +477,7 @@ function renderProductSeoPage(product, baseUrl) {
         "@type": "Product",
         "@id": `${canonicalUrl}#product`,
         name: product.name,
-        description,
+        description: schemaDescription,
         image: images.length ? images : [mainImage],
         sku: `DT-${product.id}`,
         category: product.category,
@@ -542,23 +552,56 @@ function renderProductSeoPage(product, baseUrl) {
     .seo-back-button{border:1px solid #e2e2e2;background:#fff;color:#313133;border-radius:9px;padding:11px 14px;font-weight:900;font-size:13px}
     .seo-back-button:hover{border-color:#f68b1e;color:#f68b1e}
     .seo-nav-actions a{color:#f68b1e;font-weight:900;font-size:13px}
-    .seo-card{display:grid;grid-template-columns:.95fr 1.05fr;gap:34px;background:#fff;border:1px solid #ececec;border-radius:22px;padding:30px;box-shadow:0 18px 45px rgba(0,0,0,.07)}
-    .seo-gallery{background:linear-gradient(145deg,#fff8f0,#f1f1f1);border-radius:18px;display:grid;gap:14px;align-content:center;padding:26px;min-height:430px}
+    .seo-breadcrumb{display:flex;align-items:center;gap:8px;margin:0 0 18px;color:#8b8b8b;font-size:12px;font-weight:800;flex-wrap:wrap}
+    .seo-breadcrumb a{color:#313133}.seo-breadcrumb span{color:#f68b1e}
+    .seo-card{display:grid;grid-template-columns:.95fr 1.05fr;gap:34px;background:#fff;border:1px solid #ececec;border-radius:24px;padding:30px;box-shadow:0 18px 45px rgba(0,0,0,.07)}
+    .seo-gallery{background:linear-gradient(145deg,#fff8f0,#f1f1f1);border-radius:20px;display:grid;gap:14px;align-content:center;padding:26px;min-height:430px;position:sticky;top:18px}
     .seo-gallery-main{display:grid;place-items:center;min-height:300px}
     .seo-gallery-main img{max-width:100%;max-height:320px;object-fit:contain;filter:drop-shadow(0 18px 18px rgba(0,0,0,.14))}
     .seo-thumbs{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
-    .seo-thumbs img{width:58px;height:58px;object-fit:contain;background:#fff;border:1px solid #e6e6e6;border-radius:10px;padding:5px}
+    .seo-thumb{width:62px;height:62px;border:1px solid #e6e6e6;background:#fff;border-radius:12px;padding:5px;display:grid;place-items:center;box-shadow:0 8px 18px rgba(0,0,0,.04)}
+    .seo-thumb img{width:100%;height:100%;object-fit:contain}
+    .seo-thumb.active,.seo-thumb:hover{border-color:#f68b1e;box-shadow:0 10px 22px rgba(246,139,30,.18)}
     .seo-info .eyebrow{margin-bottom:10px}
     .seo-info h1{font:800 clamp(30px,4vw,48px)/1.05 Manrope;margin:0 0 12px;color:#1c1c1e;letter-spacing:-1.6px}
-    .seo-description{color:#5f5f62;line-height:1.8;font-size:15px}
+    .seo-badges{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 18px}
+    .seo-badge{display:inline-flex;align-items:center;gap:7px;border-radius:999px;background:#fff8f0;color:#f68b1e;border:1px solid rgba(246,139,30,.18);padding:8px 11px;font-size:12px;font-weight:900}
+    .seo-badge.dark{background:#f6f6f6;color:#313133;border-color:#e9e9e9}
+    .seo-description-card,.seo-help,.seo-related{margin-top:24px;background:#fff;border:1px solid #eee;border-radius:18px;padding:20px}
+    .seo-description-card h2,.seo-services h2,.seo-related h2{font:800 20px Manrope;margin:0 0 12px;color:#1c1c1e}
+    .seo-description{position:relative;color:#5f5f62;line-height:1.85;font-size:15px;white-space:pre-line}
+    .seo-description.is-collapsed{max-height:155px;overflow:hidden}
+    .seo-description.is-collapsed:after{content:"";position:absolute;left:0;right:0;bottom:0;height:58px;background:linear-gradient(180deg,rgba(255,255,255,0),#fff)}
+    .seo-read-more{border:0;background:none;color:#f68b1e;font-weight:900;padding:10px 0 0;font-size:13px}
     .seo-price{display:flex;align-items:flex-end;gap:12px;margin:24px 0}
     .seo-price strong{font:800 30px Manrope;color:#f68b1e}
     .seo-price del{color:#aaa;font-size:14px}
+    .seo-price small{align-self:center;color:#16a66a;background:#eaf8f1;border-radius:999px;padding:6px 9px;font-weight:900;font-size:11px}
     .seo-meta{display:grid;gap:9px;background:#fafafa;border:1px solid #eee;border-radius:14px;padding:16px;color:#666;font-size:13px}
+    .seo-meta span:before{content:"";width:7px;height:7px;border-radius:50%;background:#16a66a;display:inline-block;margin-right:9px}
     .seo-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
     .seo-actions .button{min-width:180px}
     .seo-note{margin-top:22px;color:#888;font-size:12px;line-height:1.7}
-    @media(max-width:760px){.seo-card{grid-template-columns:1fr;padding:20px}.seo-gallery{min-height:300px}.seo-gallery-main{min-height:220px}.seo-actions .button{width:100%}.seo-top{align-items:flex-start;flex-direction:column}}
+    .seo-services{margin-top:24px}
+    .seo-service-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    .seo-service-grid article{background:#fff;border:1px solid #eee;border-radius:16px;padding:16px;box-shadow:0 8px 26px rgba(0,0,0,.035)}
+    .seo-service-grid b{display:block;color:#1c1c1e;font-size:13px;margin-bottom:5px}
+    .seo-service-grid p{margin:0;color:#777;font-size:12px;line-height:1.6}
+    .seo-highlight-list{display:grid;gap:9px;margin:16px 0 0;padding:0;list-style:none}
+    .seo-highlight-list li{display:flex;gap:10px;color:#5f5f62;font-size:13px;line-height:1.6}
+    .seo-highlight-list li:before{content:"";width:8px;height:8px;border-radius:50%;background:#f68b1e;min-width:8px;margin-top:7px}
+    .seo-help{display:flex;align-items:center;justify-content:space-between;gap:18px;background:#313133;color:#fff}
+    .seo-help h2{font:800 21px Manrope;margin:0 0 5px}.seo-help p{margin:0;color:#d5d5d5;font-size:13px;line-height:1.6}
+    .seo-related-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+    .seo-related-card{border:1px solid #eee;border-radius:16px;overflow:hidden;background:#fff;transition:.25s}
+    .seo-related-card:hover{transform:translateY(-4px);box-shadow:0 14px 32px rgba(0,0,0,.08);border-color:#f68b1e}
+    .seo-related-visual{height:140px;background:linear-gradient(145deg,#f8f8f8,#eeeeef);display:grid;place-items:center;padding:14px}
+    .seo-related-visual img{max-width:100%;max-height:112px;object-fit:contain;filter:drop-shadow(0 12px 14px rgba(0,0,0,.12))}
+    .seo-related-visual span{font:800 32px Manrope;color:#f68b1e}
+    .seo-related-body{padding:13px}.seo-related-body h3{font:800 13px Manrope;margin:0 0 8px;color:#1c1c1e}.seo-related-body strong{color:#f68b1e;font-size:13px}
+    @media(max-width:900px){.seo-service-grid,.seo-related-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:760px){.seo-card{grid-template-columns:1fr;padding:20px}.seo-gallery{min-height:300px;position:relative;top:auto}.seo-gallery-main{min-height:220px}.seo-actions .button{width:100%}.seo-top{align-items:flex-start;flex-direction:column}.seo-help{align-items:flex-start;flex-direction:column}.seo-help .button{width:100%}}
+    @media(max-width:520px){.seo-service-grid,.seo-related-grid{grid-template-columns:1fr}.seo-card{padding:16px}.seo-product-page{width:min(100% - 24px,1120px);padding-top:18px}.seo-logo img{width:180px}.seo-info h1{letter-spacing:-1px}}
   </style>
   <script type="application/ld+json">${toJsonLdScript(structuredData)}</script>
 </head>
@@ -567,30 +610,47 @@ function renderProductSeoPage(product, baseUrl) {
     <nav class="seo-top" aria-label="Navigation produit">
       <a class="seo-logo" href="/" aria-label="DieguemTech Store - Accueil"><img src="/assets/logo.svg" alt="DieguemTech Store" width="220" height="56"></a>
       <div class="seo-nav-actions">
-        <button type="button" class="seo-back-button" onclick="if (window.history.length > 1) { window.history.back(); } else { window.location.href = '/#boutique'; }">Retour</button>
+        <button type="button" class="seo-back-button" data-back-button>Retour</button>
         <a href="/#boutique">Retour a la boutique</a>
       </div>
     </nav>
+    <div class="seo-breadcrumb" aria-label="Fil d'Ariane">
+      <a href="/">Accueil</a> / <a href="/#boutique">Boutique</a> / <span>${escapeHtml(product.category)}</span>
+    </div>
     <article class="seo-card">
       <section class="seo-gallery" aria-label="Images du produit">
         <div class="seo-gallery-main">
-          <img src="${escapeHtml(mainImage)}" alt="${escapeHtml(product.name)}">
+          <img src="${escapeHtml(mainImage)}" alt="${escapeHtml(product.name)}" data-main-image>
         </div>
-        ${images.length > 1 ? `<div class="seo-thumbs">${images.slice(0, 8).map(image => `<img src="${escapeHtml(image)}" alt="">`).join("")}</div>` : ""}
+        ${images.length > 1 ? `<div class="seo-thumbs">${images.slice(0, 8).map((image, index) => `<button type="button" class="seo-thumb ${index === 0 ? "active" : ""}" data-seo-thumb="${escapeHtml(image)}" aria-label="Afficher image ${index + 1}"><img src="${escapeHtml(image)}" alt=""></button>`).join("")}</div>` : ""}
       </section>
       <section class="seo-info">
         <span class="eyebrow">${escapeHtml(product.category)}</span>
         <h1>${escapeHtml(product.name)}</h1>
-        <div class="product-detail-rating"><span class="stars">★★★★★</span> ${Number(product.rating || 0)} (${Number(product.reviews || 0)} avis)</div>
-        <p class="seo-description">${escapeHtml(description)}</p>
+        <div class="product-detail-rating"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span> ${Number(product.rating || 0)} (${Number(product.reviews || 0)} avis)</div>
+        <div class="seo-badges">
+          <span class="seo-badge">${escapeHtml(stockLabel)}</span>
+          <span class="seo-badge dark">Reference DT-${Number(product.id)}</span>
+          ${product.badge ? `<span class="seo-badge dark">${escapeHtml(product.badge)}</span>` : ""}
+        </div>
         <div class="seo-price">
           <strong>${formatSeoPrice(product.price)}</strong>
           ${product.oldPrice ? `<del>${formatSeoPrice(product.oldPrice)}</del>` : ""}
+          ${discountLabel ? `<small>${escapeHtml(discountLabel)}</small>` : ""}
         </div>
         <div class="seo-meta">
-          <span>Disponibilite : <strong>${Number(product.stock) > 0 ? "En stock" : "Rupture temporaire"}</strong></span>
+          <span>Disponibilite : <strong>${escapeHtml(stockLabel)}</strong>${Number(product.stock) > 0 ? ` (${Number(product.stock)} disponible${Number(product.stock) > 1 ? "s" : ""})` : ""}</span>
           <span>Livraison : Dakar et autres zones selon confirmation</span>
           <span>Paiement : PayDunya / PayTech selon disponibilite</span>
+          <span>Support : conseil avant achat et suivi apres commande</span>
+        </div>
+        <div class="seo-description-card">
+          <h2>Description du produit</h2>
+          <div class="seo-description ${isLongDescription ? "is-collapsed" : ""}" id="productDescription">${escapeHtml(fullDescription)}</div>
+          ${isLongDescription ? `<button type="button" class="seo-read-more" data-description-toggle aria-expanded="false" aria-controls="productDescription">Lire la suite</button>` : ""}
+          <ul class="seo-highlight-list">
+            ${highlights.map(item => `<li>${escapeHtml(item)}</li>`).join("")}
+          </ul>
         </div>
         <div class="seo-actions">
           <a class="button primary" href="/#boutique">Acheter sur la boutique</a>
@@ -599,7 +659,69 @@ function renderProductSeoPage(product, baseUrl) {
         <p class="seo-note">Cette fiche produit est optimisee pour le referencement et le partage. Les prix et stocks peuvent etre confirmes au moment de la commande.</p>
       </section>
     </article>
+    <section class="seo-services" aria-label="Services inclus">
+      <h2>Ce que DieguemTech Store vous apporte</h2>
+      <div class="seo-service-grid">
+        <article><b>Produit selectionne</b><p>Nous privilegions des produits fiables, utiles et adaptes aux besoins high-tech du quotidien.</p></article>
+        <article><b>Paiement securise</b><p>Paiement mobile et solutions locales selon la disponibilite des services actives.</p></article>
+        <article><b>Livraison rapide</b><p>Organisation de la livraison a Dakar et dans les autres zones apres confirmation.</p></article>
+        <article><b>Support reactif</b><p>Assistance avant achat, confirmation du stock et suivi de commande par WhatsApp.</p></article>
+      </div>
+    </section>
+    <section class="seo-help">
+      <div>
+        <h2>Besoin d'un conseil avant de commander ?</h2>
+        <p>Envoyez le nom du produit sur WhatsApp. Le support peut confirmer la disponibilite, les options et la livraison.</p>
+      </div>
+      <a class="button primary" href="https://wa.me/221772177176?text=${encodeURIComponent(`Bonjour DieguemTech Store, je veux plus d'informations sur ${product.name}.`)}" target="_blank" rel="noopener">Contacter WhatsApp</a>
+    </section>
+    ${visibleRelatedProducts.length ? `<section class="seo-related" aria-label="Produits similaires">
+      <h2>Produits similaires</h2>
+      <div class="seo-related-grid">
+        ${visibleRelatedProducts.map(relatedProduct => {
+          const relatedImage = getProductImages(relatedProduct)[0];
+          const relatedImageUrl = relatedImage ? absoluteUrl(relatedImage, baseUrl) : "";
+          return `<a class="seo-related-card" href="${escapeHtml(productPath(relatedProduct))}">
+            <div class="seo-related-visual">${relatedImageUrl ? `<img src="${escapeHtml(relatedImageUrl)}" alt="${escapeHtml(relatedProduct.name)}" loading="lazy">` : "<span>DT</span>"}</div>
+            <div class="seo-related-body">
+              <h3>${escapeHtml(relatedProduct.name)}</h3>
+              <strong>${formatSeoPrice(relatedProduct.price)}</strong>
+            </div>
+          </a>`;
+        }).join("")}
+      </div>
+    </section>` : ""}
   </main>
+  <script>
+    (function(){
+      var mainImage = document.querySelector("[data-main-image]");
+      document.querySelectorAll("[data-seo-thumb]").forEach(function(button){
+        button.addEventListener("click", function(){
+          if (mainImage) mainImage.src = button.getAttribute("data-seo-thumb");
+          document.querySelectorAll("[data-seo-thumb]").forEach(function(item){
+            item.classList.toggle("active", item === button);
+          });
+        });
+      });
+      var description = document.getElementById("productDescription");
+      var toggle = document.querySelector("[data-description-toggle]");
+      if (description && toggle) {
+        toggle.addEventListener("click", function(){
+          var expanded = description.classList.toggle("is-expanded");
+          description.classList.toggle("is-collapsed", !expanded);
+          toggle.textContent = expanded ? "Voir moins" : "Lire la suite";
+          toggle.setAttribute("aria-expanded", String(expanded));
+        });
+      }
+      var backButton = document.querySelector("[data-back-button]");
+      if (backButton) {
+        backButton.addEventListener("click", function(){
+          if (window.history.length > 1) window.history.back();
+          else window.location.href = "/#boutique";
+        });
+      }
+    })();
+  </script>
 </body>
 </html>`;
 }
@@ -647,6 +769,75 @@ function absoluteUrl(value, baseUrl) {
 
 function formatSeoPrice(value) {
   return `${new Intl.NumberFormat("fr-FR").format(Number(value || 0))} FCFA`;
+}
+
+function getSeoDiscountLabel(product) {
+  const price = Number(product.price || 0);
+  const oldPrice = Number(product.oldPrice || 0);
+  if (oldPrice > price && price > 0) return `Economisez ${formatSeoPrice(oldPrice - price)}`;
+  return "";
+}
+
+function getSeoProductHighlights(product) {
+  const category = String(product.category || "").toLowerCase();
+  const common = [
+    "Produit verifie avant confirmation de la commande.",
+    "Conseil disponible pour choisir le bon modele selon votre besoin."
+  ];
+
+  if (category.includes("smartphone")) {
+    return [
+      "Ideal pour appels, internet, photos, reseaux sociaux et productivite mobile.",
+      "Verification de la disponibilite et des options avant livraison.",
+      ...common
+    ];
+  }
+
+  if (category.includes("gaming")) {
+    return [
+      "Selection pensee pour ameliorer le confort et l'experience de jeu.",
+      "Compatible avec les setups gaming modernes selon le modele choisi.",
+      ...common
+    ];
+  }
+
+  if (category.includes("iptv")) {
+    return [
+      "Solution pratique pour profiter de contenus multimedia sur grand ecran.",
+      "Support disponible pour vous orienter sur l'installation et la compatibilite.",
+      ...common
+    ];
+  }
+
+  if (category.includes("audio")) {
+    return [
+      "Concu pour les appels, la musique, les videos et l'utilisation quotidienne.",
+      "Format pratique pour une utilisation a la maison, au travail ou en deplacement.",
+      ...common
+    ];
+  }
+
+  if (category.includes("montres")) {
+    return [
+      "Pratique pour les notifications, le suivi sport et les usages connectes.",
+      "Design moderne adapte a une utilisation quotidienne.",
+      ...common
+    ];
+  }
+
+  if (category.includes("informatique")) {
+    return [
+      "Adapte a la bureautique, aux etudes, a la navigation et a la productivite.",
+      "Selection utile pour equiper un espace de travail moderne.",
+      ...common
+    ];
+  }
+
+  return [
+    "Accessoire utile pour completer votre equipement high-tech.",
+    "Bon rapport qualite-prix avec accompagnement avant achat.",
+    ...common
+  ];
 }
 
 function truncateText(value, maxLength) {
