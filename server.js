@@ -130,6 +130,18 @@ app.get("/api/products/:id", async (request, response, next) => {
   }
 });
 
+app.get("/sitemap.xml", async (request, response, next) => {
+  try {
+    const products = await database.getProducts();
+    response.type("application/xml").send(renderSitemap(getPublicBaseUrl(request), products));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/produit/:id", renderProductSeoRoute);
+app.get("/produit/:id/:slug", renderProductSeoRoute);
+
 app.post("/api/orders", async (request, response, next) => {
   try {
     const { customer, items, paymentProvider } = request.body;
@@ -356,6 +368,290 @@ function getBaseUrl(request) {
   const forwardedProto = request.get("x-forwarded-proto");
   const protocol = forwardedProto || request.protocol || "https";
   return `${protocol}://${host}`.replace(/\/$/, "");
+}
+
+function getPublicBaseUrl(request) {
+  if (process.env.PUBLIC_SITE_URL) return process.env.PUBLIC_SITE_URL.replace(/\/$/, "");
+  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, "");
+  const host = request.get("host") || "";
+  if (/onrender\.com$/i.test(host)) return "https://dieguemtechstore.com";
+  if (process.env.NODE_ENV === "production") return "https://dieguemtechstore.com";
+  return getBaseUrl(request);
+}
+
+async function renderProductSeoRoute(request, response, next) {
+  try {
+    const product = await database.getProduct(Number(request.params.id));
+    if (!product) return response.status(404).send(renderSeoNotFoundPage(getPublicBaseUrl(request)));
+
+    const canonicalPath = productPath(product);
+    if (request.path !== canonicalPath) {
+      return response.redirect(301, canonicalPath);
+    }
+
+    response.send(renderProductSeoPage(product, getPublicBaseUrl(request)));
+  } catch (error) {
+    next(error);
+  }
+}
+
+function renderSitemap(baseUrl, products) {
+  const today = new Date().toISOString().slice(0, 10);
+  const urls = [
+    {
+      loc: `${baseUrl}/`,
+      changefreq: "daily",
+      priority: "1.0"
+    },
+    ...products.map(product => ({
+      loc: `${baseUrl}${productPath(product)}`,
+      changefreq: "weekly",
+      priority: "0.8"
+    }))
+  ];
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.map(url => `  <url>
+    <loc>${escapeXml(url.loc)}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>${url.changefreq}</changefreq>
+    <priority>${url.priority}</priority>
+  </url>`).join("\n")}
+</urlset>`;
+}
+
+function renderProductSeoPage(product, baseUrl) {
+  const canonicalPath = productPath(product);
+  const canonicalUrl = `${baseUrl}${canonicalPath}`;
+  const images = getProductImages(product).map(image => absoluteUrl(image, baseUrl));
+  const mainImage = images[0] || `${baseUrl}/assets/hero-tech.png`;
+  const description = truncateText(getProductDescription(product), 155);
+  const title = `${product.name} | DieguemTech Store`;
+  const availability = Number(product.stock) > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock";
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Accueil",
+            item: `${baseUrl}/`
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: product.category,
+            item: `${baseUrl}/#boutique`
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: product.name,
+            item: canonicalUrl
+          }
+        ]
+      },
+      {
+        "@type": "Product",
+        "@id": `${canonicalUrl}#product`,
+        name: product.name,
+        description,
+        image: images.length ? images : [mainImage],
+        sku: `DT-${product.id}`,
+        category: product.category,
+        brand: {
+          "@type": "Brand",
+          name: "DieguemTech Store"
+        },
+        offers: {
+          "@type": "Offer",
+          url: canonicalUrl,
+          priceCurrency: "XOF",
+          price: Number(product.price || 0),
+          availability,
+          itemCondition: "https://schema.org/NewCondition",
+          seller: {
+            "@type": "Organization",
+            name: "DieguemTech Store",
+            url: `${baseUrl}/`
+          }
+        },
+        ...(Number(product.rating) > 0 && Number(product.reviews) > 0 ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: Number(product.rating),
+            reviewCount: Number(product.reviews)
+          }
+        } : {})
+      }
+    ]
+  };
+
+  return `<!doctype html>
+<html lang="fr-SN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="index, follow">
+  <meta name="description" content="${escapeHtml(description)}">
+  <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
+  <meta property="og:type" content="product">
+  <meta property="og:locale" content="fr_SN">
+  <meta property="og:site_name" content="DieguemTech Store">
+  <meta property="og:title" content="${escapeHtml(title)}">
+  <meta property="og:description" content="${escapeHtml(description)}">
+  <meta property="og:url" content="${escapeHtml(canonicalUrl)}">
+  <meta property="og:image" content="${escapeHtml(mainImage)}">
+  <meta property="og:image:alt" content="${escapeHtml(product.name)}">
+  <meta property="product:price:amount" content="${Number(product.price || 0)}">
+  <meta property="product:price:currency" content="XOF">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${escapeHtml(title)}">
+  <meta name="twitter:description" content="${escapeHtml(description)}">
+  <meta name="twitter:image" content="${escapeHtml(mainImage)}">
+  <meta name="theme-color" content="#f68b1e">
+  <title>${escapeHtml(title)}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body{background:#f7f7f7}
+    .seo-product-page{width:min(1120px,calc(100% - 34px));margin:0 auto;padding:28px 0 70px}
+    .seo-top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px}
+    .seo-logo{display:flex;align-items:center;gap:10px;font-weight:900;color:#313133}
+    .seo-logo span{width:42px;height:42px;border-radius:12px 5px 12px 5px;background:#f68b1e;color:#fff;display:grid;place-items:center;font:800 24px Manrope}
+    .seo-top a:last-child{color:#f68b1e;font-weight:900;font-size:13px}
+    .seo-card{display:grid;grid-template-columns:.95fr 1.05fr;gap:34px;background:#fff;border:1px solid #ececec;border-radius:22px;padding:30px;box-shadow:0 18px 45px rgba(0,0,0,.07)}
+    .seo-gallery{background:linear-gradient(145deg,#fff8f0,#f1f1f1);border-radius:18px;display:grid;gap:14px;align-content:center;padding:26px;min-height:430px}
+    .seo-gallery-main{display:grid;place-items:center;min-height:300px}
+    .seo-gallery-main img{max-width:100%;max-height:320px;object-fit:contain;filter:drop-shadow(0 18px 18px rgba(0,0,0,.14))}
+    .seo-thumbs{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+    .seo-thumbs img{width:58px;height:58px;object-fit:contain;background:#fff;border:1px solid #e6e6e6;border-radius:10px;padding:5px}
+    .seo-info .eyebrow{margin-bottom:10px}
+    .seo-info h1{font:800 clamp(30px,4vw,48px)/1.05 Manrope;margin:0 0 12px;color:#1c1c1e;letter-spacing:-1.6px}
+    .seo-description{color:#5f5f62;line-height:1.8;font-size:15px}
+    .seo-price{display:flex;align-items:flex-end;gap:12px;margin:24px 0}
+    .seo-price strong{font:800 30px Manrope;color:#f68b1e}
+    .seo-price del{color:#aaa;font-size:14px}
+    .seo-meta{display:grid;gap:9px;background:#fafafa;border:1px solid #eee;border-radius:14px;padding:16px;color:#666;font-size:13px}
+    .seo-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
+    .seo-actions .button{min-width:180px}
+    .seo-note{margin-top:22px;color:#888;font-size:12px;line-height:1.7}
+    @media(max-width:760px){.seo-card{grid-template-columns:1fr;padding:20px}.seo-gallery{min-height:300px}.seo-gallery-main{min-height:220px}.seo-actions .button{width:100%}.seo-top{align-items:flex-start;flex-direction:column}}
+  </style>
+  <script type="application/ld+json">${toJsonLdScript(structuredData)}</script>
+</head>
+<body>
+  <main class="seo-product-page">
+    <nav class="seo-top" aria-label="Navigation produit">
+      <a class="seo-logo" href="/"><span>D</span>DieguemTech Store</a>
+      <a href="/#boutique">Retour a la boutique</a>
+    </nav>
+    <article class="seo-card">
+      <section class="seo-gallery" aria-label="Images du produit">
+        <div class="seo-gallery-main">
+          <img src="${escapeHtml(mainImage)}" alt="${escapeHtml(product.name)}">
+        </div>
+        ${images.length > 1 ? `<div class="seo-thumbs">${images.slice(0, 8).map(image => `<img src="${escapeHtml(image)}" alt="">`).join("")}</div>` : ""}
+      </section>
+      <section class="seo-info">
+        <span class="eyebrow">${escapeHtml(product.category)}</span>
+        <h1>${escapeHtml(product.name)}</h1>
+        <div class="product-detail-rating"><span class="stars">★★★★★</span> ${Number(product.rating || 0)} (${Number(product.reviews || 0)} avis)</div>
+        <p class="seo-description">${escapeHtml(description)}</p>
+        <div class="seo-price">
+          <strong>${formatSeoPrice(product.price)}</strong>
+          ${product.oldPrice ? `<del>${formatSeoPrice(product.oldPrice)}</del>` : ""}
+        </div>
+        <div class="seo-meta">
+          <span>Disponibilite : <strong>${Number(product.stock) > 0 ? "En stock" : "Rupture temporaire"}</strong></span>
+          <span>Livraison : Dakar et autres zones selon confirmation</span>
+          <span>Paiement : PayDunya / PayTech selon disponibilite</span>
+        </div>
+        <div class="seo-actions">
+          <a class="button primary" href="/#boutique">Acheter sur la boutique</a>
+          <a class="button outline" href="https://wa.me/221772177176?text=${encodeURIComponent(`Bonjour DieguemTech Store, je suis interesse par ${product.name}.`)}" target="_blank" rel="noopener">Demander sur WhatsApp</a>
+        </div>
+        <p class="seo-note">Cette fiche produit est optimisee pour le referencement et le partage. Les prix et stocks peuvent etre confirmes au moment de la commande.</p>
+      </section>
+    </article>
+  </main>
+</body>
+</html>`;
+}
+
+function renderSeoNotFoundPage(baseUrl) {
+  return `<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Produit introuvable - DieguemTech Store</title></head>
+<body><main style="font-family:Arial,sans-serif;max-width:620px;margin:80px auto;padding:24px"><h1>Produit introuvable</h1><p>Ce produit n'est plus disponible ou a ete desactive.</p><a href="${escapeHtml(baseUrl)}/">Retour a la boutique</a></main></body></html>`;
+}
+
+function productPath(product) {
+  return `/produit/${product.id}/${slugify(product.name)}`;
+}
+
+function slugify(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "produit";
+}
+
+function getProductDescription(product) {
+  return product.description || "Produit selectionne par DieguemTech Store pour offrir un bon rapport qualite-prix et une experience fiable au quotidien.";
+}
+
+function getProductImages(product) {
+  const candidates = [];
+  if (product.image) candidates.push(product.image);
+  if (Array.isArray(product.images)) candidates.push(...product.images);
+  return [...new Set(
+    candidates
+      .map(image => String(image || "").trim())
+      .filter(Boolean)
+  )].slice(0, 8);
+}
+
+function absoluteUrl(value, baseUrl) {
+  const url = String(value || "").trim();
+  if (!url) return "";
+  if (/^https?:\/\//i.test(url)) return url;
+  return `${baseUrl}${url.startsWith("/") ? "" : "/"}${url}`;
+}
+
+function formatSeoPrice(value) {
+  return `${new Intl.NumberFormat("fr-FR").format(Number(value || 0))} FCFA`;
+}
+
+function truncateText(value, maxLength) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength - 3).trim()}...`;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, character => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;"
+  }[character]));
+}
+
+function escapeXml(value) {
+  return escapeHtml(value);
+}
+
+function toJsonLdScript(value) {
+  return JSON.stringify(value).replace(/</g, "\\u003c");
 }
 
 async function createPayTechPayment(order, request) {

@@ -32,6 +32,19 @@ const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, character =>
   "'": "&#039;"
 }[character]));
 
+function slugify(value){
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "produit";
+}
+
+function productUrl(product){
+  return `/produit/${product.id}/${slugify(product.name)}`;
+}
+
 function getProductDescription(product){
   return product.description || "Produit selectionne par DieguemTech Store pour offrir un bon rapport qualite-prix et une experience fiable au quotidien.";
 }
@@ -78,7 +91,10 @@ function productCard(product){
       <div class="product-rating"><span class="stars">★★★★★</span> ${product.rating} (${product.reviews})</div>
       <div class="product-bottom">
         <span class="price"><strong>${formatPrice(product.price)}</strong>${product.oldPrice ? `<del>${formatPrice(product.oldPrice)}</del>` : ""}</span>
-        <button class="add-cart" data-cart="${product.id}" aria-label="Ajouter ${escapeHtml(product.name)} au panier"><svg><use href="#icon-cart"></use></svg></button>
+        <div class="product-actions">
+          <a class="product-page-link" href="${productUrl(product)}" data-product-page aria-label="Voir la page de ${escapeHtml(product.name)}">Voir</a>
+          <button class="add-cart" data-cart="${product.id}" aria-label="Ajouter ${escapeHtml(product.name)} au panier"><svg><use href="#icon-cart"></use></svg></button>
+        </div>
       </div>
     </div>
   </article>`;
@@ -94,6 +110,17 @@ function renderProducts(search = ""){
   $("#productsGrid").innerHTML = filtered.slice(0, visibleCount).map(productCard).join("");
   $("#emptyState").style.display = filtered.length ? "none" : "block";
   $("#showAllProducts").style.display = filtered.length > visibleCount ? "inline-flex" : "none";
+}
+
+function updateSearchUrl(query){
+  const url = new URL(window.location.href);
+  const cleanQuery = String(query || "").trim();
+  if (cleanQuery) {
+    url.searchParams.set("q", cleanQuery);
+  } else {
+    url.searchParams.delete("q");
+  }
+  window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
 function persist(){
@@ -248,7 +275,10 @@ function openProductDetail(id){
       </div>
       <div class="product-detail-bottom">
         <span class="price"><strong>${formatPrice(product.price)}</strong>${product.oldPrice ? `<del>${formatPrice(product.oldPrice)}</del>` : ""}</span>
-        <button class="button primary" data-cart="${product.id}">Ajouter au panier</button>
+        <div class="product-detail-actions">
+          <a class="button outline" href="${productUrl(product)}">Page produit</a>
+          <button class="button primary" data-cart="${product.id}">Ajouter au panier</button>
+        </div>
       </div>
     </div>
   `;
@@ -267,6 +297,7 @@ document.addEventListener("click", event => {
   const filterButton = event.target.closest("[data-filter]");
   const detailCard = event.target.closest("[data-product-detail]");
   const detailImageButton = event.target.closest("[data-detail-image]");
+  const productPageLink = event.target.closest("[data-product-page]");
 
   if (detailImageButton) {
     const mainImage = $("#productDetailMainImage");
@@ -274,6 +305,7 @@ document.addEventListener("click", event => {
     $$(".product-detail-thumb").forEach(button => button.classList.toggle("active", button === detailImageButton));
     return;
   }
+  if (productPageLink) return;
 
   if (cartButton) {
     addToCart(Number(cartButton.dataset.cart));
@@ -401,7 +433,9 @@ $("#searchForm").addEventListener("submit", event => {
   event.preventDefault();
   activeFilter = "Tous";
   visibleCount = 12;
-  renderProducts($("#searchInput").value);
+  const query = $("#searchInput").value;
+  updateSearchUrl(query);
+  renderProducts(query);
   $("#boutique").scrollIntoView();
 });
 $("#searchInput").addEventListener("input", event => {
@@ -414,6 +448,7 @@ $("#resetSearch").addEventListener("click", () => {
   $("#searchInput").value = "";
   activeFilter = "Tous";
   visibleCount = 8;
+  updateSearchUrl("");
   renderProducts();
 });
 $("#showAllProducts").addEventListener("click", () => {
@@ -509,6 +544,10 @@ setInterval(() => {
   $("#minutes").textContent = String(Math.floor(diff % 3600000 / 60000)).padStart(2, "0");
 }, 1000);
 
+function getInitialSearch(){
+  return new URLSearchParams(window.location.search).get("q")?.trim() || "";
+}
+
 async function initializeStore(){
   try {
     const response = await fetch("/api/products");
@@ -516,7 +555,12 @@ async function initializeStore(){
     products = await response.json();
     cart = cart.filter(item => products.some(product => product.id === item.id));
     wishlist = wishlist.filter(id => products.some(product => product.id === id));
-    renderProducts();
+    const initialSearch = getInitialSearch();
+    if (initialSearch) {
+      $("#searchInput").value = initialSearch;
+      visibleCount = 12;
+    }
+    renderProducts(initialSearch);
     renderCart();
     renderWishlist();
     persist();
