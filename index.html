@@ -6,13 +6,21 @@
   <meta name="description" content="DieguemTech Store, votre boutique High-Tech, Gaming, IPTV, Smartphones et accessoires au meilleur prix.">
   <meta name="keywords" content="DieguemTech Store, high-tech Senegal, smartphones Dakar, gaming, IPTV, accessoires electroniques, boutique tech">
   <meta name="author" content="DieguemTech Store">
+  <meta name="robots" content="index, follow">
+  <meta name="application-name" content="DieguemTech Store">
   <meta property="og:type" content="website">
+  <meta property="og:locale" content="fr_SN">
+  <meta property="og:site_name" content="DieguemTech Store">
   <meta property="og:title" content="DieguemTech Store | High-Tech, Gaming, IPTV et Accessoires">
   <meta property="og:description" content="Achetez facilement vos produits High-Tech, Gaming, IPTV, Smartphones et accessoires electroniques au Senegal.">
   <meta property="og:url" content="https://dieguemtech-store.onrender.com/">
   <meta property="og:image" content="https://dieguemtech-store.onrender.com/assets/hero-tech.png">
   <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="DieguemTech Store | High-Tech, Gaming, IPTV et Accessoires">
+  <meta name="twitter:description" content="Boutique High-Tech, Gaming, IPTV, Smartphones et accessoires electroniques au Senegal.">
+  <meta name="twitter:image" content="https://dieguemtech-store.onrender.com/assets/hero-tech.png">
   <link rel="canonical" href="https://dieguemtech-store.onrender.com/">
+  <link rel="sitemap" type="application/xml" href="/sitemap.xml">
   <meta name="theme-color" content="#f68b1e">
   <title>DieguemTech Store | High-Tech, Gaming, IPTV et Accessoires</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,17 +30,89 @@
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "Store",
-      "name": "DieguemTech Store",
-      "url": "https://dieguemtech-store.onrender.com/",
-      "image": "https://dieguemtech-store.onrender.com/assets/hero-tech.png",
-      "telephone": "+221772177176",
-      "address": {
-        "@type": "PostalAddress",
-        "addressLocality": "Dakar",
-        "addressCountry": "SN"
-      },
-      "sameAs": ["https://wa.me/221772177176"]
+      "@graph": [
+        {
+          "@type": "Store",
+          "@id": "https://dieguemtech-store.onrender.com/#store",
+          "name": "DieguemTech Store",
+          "url": "https://dieguemtech-store.onrender.com/",
+          "image": "https://dieguemtech-store.onrender.com/assets/hero-tech.png",
+          "description": "Boutique High-Tech, Gaming, IPTV, Smartphones et accessoires electroniques au Senegal.",
+          "telephone": "+221772177176",
+          "priceRange": "FCFA",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Dakar",
+            "addressCountry": "SN"
+          },
+          "sameAs": ["https://wa.me/221772177176"]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://dieguemtech-store.onrender.com/#website",
+          "name": "DieguemTech Store",
+          "url": "https://dieguemtech-store.onrender.com/",
+          "publisher": {
+            "@id": "https://dieguemtech-store.onrender.com/#store"
+          },
+          "inLanguage": "fr-SN"
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://dieguemtech-store.onrender.com/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Quels types de produits vendez-vous ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Nous proposons des smartphones, accessoires, produits gaming, TV Box, solutions IPTV, audio, montres connectees et gadgets electroniques selectionnes pour leur fiabilite."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "La livraison est-elle disponible hors de Dakar ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Oui, la livraison peut etre organisee a Dakar et dans les autres regions selon la disponibilite du produit et les modalites confirmees par notre equipe."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Quels moyens de paiement sont acceptes ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "La boutique est preparee pour PayDunya et PayTech. Notre equipe peut aussi confirmer les options disponibles au moment de la commande."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Comment suivre ma commande ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Utilisez la section Suivi avec votre numero de commande et le telephone utilise lors de l'achat. Vous pouvez aussi contacter le support WhatsApp."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Les produits sont-ils garantis ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Chaque demande est etudiee selon le produit, son etat et les conditions de garantie. En cas de probleme a la reception, contactez rapidement le support avec votre numero de commande."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Proposez-vous une assistance pour IPTV ou TV Box ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Oui, le support peut vous orienter avant l'achat et vous accompagner apres la commande pour les produits IPTV, TV Box et accessoires compatibles."
+              }
+            }
+          ],
+          "inLanguage": "fr-SN"
+        }
+      ]
     }
   </script>
 </head>
