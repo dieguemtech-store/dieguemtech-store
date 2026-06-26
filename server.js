@@ -909,6 +909,14 @@ function getSeoProductHighlights(product) {
     ];
   }
 
+  if (category.includes("electromenager")) {
+    return [
+      "Produit pratique pour simplifier les taches de la maison et de la cuisine.",
+      "Format adapte aux usages quotidiens avec un bon rapport utilite-prix.",
+      ...common
+    ];
+  }
+
   return [
     "Accessoire utile pour completer votre equipement high-tech.",
     "Bon rapport qualite-prix avec accompagnement avant achat.",
