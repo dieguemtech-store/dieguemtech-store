@@ -190,6 +190,8 @@ app.get("/sitemap.xml", async (request, response, next) => {
 
 app.get("/produit/:id", renderProductSeoRoute);
 app.get("/produit/:id/:slug", renderProductSeoRoute);
+app.get("/categorie/:categorySlug", renderCategorySeoRoute);
+app.get("/categorie/:categorySlug/:subcategorySlug", renderCategorySeoRoute);
 
 app.post("/api/orders", async (request, response, next) => {
   try {
@@ -480,14 +482,73 @@ async function renderProductSeoRoute(request, response, next) {
   }
 }
 
+async function renderCategorySeoRoute(request, response, next) {
+  try {
+    const products = await database.getProducts();
+    const category = findCategoryBySlug(products, request.params.categorySlug);
+    const baseUrl = getPublicBaseUrl(request);
+
+    if (!category) {
+      return response.status(404).send(renderSeoNotFoundPage(
+        baseUrl,
+        "Categorie introuvable",
+        "Cette categorie n'existe pas encore ou ne contient aucun produit actif."
+      ));
+    }
+
+    const categoryProducts = products.filter(product => product.category === category);
+    const subcategories = getCategorySubcategories(categoryProducts);
+    const visibleSubcategories = subcategories.length > 1 ? subcategories : [];
+    let selectedSubcategory = null;
+    let visibleProducts = categoryProducts;
+
+    if (request.params.subcategorySlug) {
+      selectedSubcategory = subcategories.find(subcategory => slugify(subcategory.name) === request.params.subcategorySlug);
+      if (!selectedSubcategory) {
+        return response.status(404).send(renderSeoNotFoundPage(
+          baseUrl,
+          "Sous-categorie introuvable",
+          "Cette sous-categorie n'existe pas encore dans cette famille de produits."
+        ));
+      }
+      visibleProducts = selectedSubcategory.products;
+    }
+
+    const canonicalPath = selectedSubcategory
+      ? subcategoryPath(category, selectedSubcategory.name)
+      : categoryPath(category);
+
+    if (request.path !== canonicalPath) {
+      return response.redirect(301, canonicalPath);
+    }
+
+    response.send(renderCategorySeoPage({
+      category,
+      categoryProducts,
+      visibleProducts,
+      subcategories: visibleSubcategories,
+      selectedSubcategory,
+      baseUrl
+    }));
+  } catch (error) {
+    next(error);
+  }
+}
+
 function renderSitemap(baseUrl, products) {
   const today = new Date().toISOString().slice(0, 10);
+  const categoryPages = getCategorySitemapEntries(products);
   const urls = [
     {
       loc: `${baseUrl}/`,
       changefreq: "daily",
       priority: "1.0"
     },
+    ...categoryPages.map(page => ({
+      loc: `${baseUrl}${page.path}`,
+      changefreq: "weekly",
+      priority: page.priority
+    })),
     ...products.map(product => ({
       loc: `${baseUrl}${productPath(product)}`,
       changefreq: "weekly",
@@ -504,6 +565,287 @@ ${urls.map(url => `  <url>
     <priority>${url.priority}</priority>
   </url>`).join("\n")}
 </urlset>`;
+}
+
+function renderCategorySeoPage({
+  category,
+  categoryProducts,
+  visibleProducts,
+  subcategories,
+  selectedSubcategory,
+  baseUrl
+}) {
+  const displayCategory = getCategoryDisplayName(category);
+  const currentTitle = selectedSubcategory ? selectedSubcategory.name : displayCategory;
+  const canonicalPath = selectedSubcategory
+    ? subcategoryPath(category, selectedSubcategory.name)
+    : categoryPath(category);
+  const canonicalUrl = `${baseUrl}${canonicalPath}`;
+  const parentPath = selectedSubcategory ? categoryPath(category) : "/";
+  const backLabel = selectedSubcategory ? `Retour a ${displayCategory}` : "Retour a l'accueil";
+  const description = truncateText(getCategoryDescription(category, selectedSubcategory?.name), 155);
+  const heroProduct = visibleProducts[0] || categoryProducts[0] || {};
+  const heroImage = getProductImages(heroProduct)[0];
+  const heroImageUrl = heroImage ? absoluteUrl(heroImage, baseUrl) : `${baseUrl}/assets/hero-tech.png`;
+  const productsLabel = productCountLabel(visibleProducts.length);
+  const subcategoryTitle = selectedSubcategory ? "Autres sous-categories" : "Sous-categories";
+  const pageTitle = selectedSubcategory
+    ? `${selectedSubcategory.name} - ${displayCategory} | DieguemTech Store`
+    : `${displayCategory} | DieguemTech Store`;
+  const breadcrumbItems = [
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Accueil",
+      item: `${baseUrl}/`
+    },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: displayCategory,
+      item: `${baseUrl}${categoryPath(category)}`
+    }
+  ];
+
+  if (selectedSubcategory) {
+    breadcrumbItems.push({
+      "@type": "ListItem",
+      position: 3,
+      name: selectedSubcategory.name,
+      item: canonicalUrl
+    });
+  }
+
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: breadcrumbItems
+      },
+      {
+        "@type": "CollectionPage",
+        name: currentTitle,
+        description,
+        url: canonicalUrl,
+        isPartOf: {
+          "@type": "WebSite",
+          name: "DieguemTech Store",
+          url: `${baseUrl}/`
+        }
+      },
+      {
+        "@type": "ItemList",
+        name: `${currentTitle} - produits`,
+        itemListElement: visibleProducts.slice(0, 40).map((product, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          name: product.name,
+          url: `${baseUrl}${productPath(product)}`
+        }))
+      }
+    ]
+  };
+
+  return `<!doctype html>
+<html lang="fr-SN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="index, follow">
+  <meta name="description" content="${escapeHtml(description)}">
+  <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="fr_SN">
+  <meta property="og:site_name" content="DieguemTech Store">
+  <meta property="og:title" content="${escapeHtml(pageTitle)}">
+  <meta property="og:description" content="${escapeHtml(description)}">
+  <meta property="og:url" content="${escapeHtml(canonicalUrl)}">
+  <meta property="og:image" content="${escapeHtml(heroImageUrl)}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${escapeHtml(pageTitle)}">
+  <meta name="twitter:description" content="${escapeHtml(description)}">
+  <meta name="twitter:image" content="${escapeHtml(heroImageUrl)}">
+  <meta name="theme-color" content="#f68b1e">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="shortcut icon" href="/assets/favicon.svg">
+  <link rel="apple-touch-icon" href="/assets/logo-mark.svg">
+  <link rel="manifest" href="/site.webmanifest">
+  <title>${escapeHtml(pageTitle)}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body{background:#f7f7f7}
+    .category-page{width:min(1180px,calc(100% - 34px));margin:0 auto;padding:28px 0 72px}
+    .category-top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px}
+    .category-logo img{display:block;width:210px;height:auto}
+    .category-nav-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .category-back-button{display:inline-flex;align-items:center;justify-content:center;border:1px solid #e2e2e2;background:#fff;color:#313133;border-radius:9px;padding:11px 14px;font-weight:900;font-size:13px}
+    .category-back-button:hover{border-color:#f68b1e;color:#f68b1e}
+    .category-nav-actions a:not(.category-back-button){color:#f68b1e;font-weight:900;font-size:13px}
+    .category-breadcrumb{display:flex;align-items:center;gap:8px;margin:0 0 18px;color:#8b8b8b;font-size:12px;font-weight:800;flex-wrap:wrap}
+    .category-breadcrumb a{color:#313133}.category-breadcrumb span{color:#f68b1e}
+    .category-hero{position:relative;overflow:hidden;border-radius:26px;background:radial-gradient(circle at 78% 28%,rgba(246,139,30,.34),transparent 30%),linear-gradient(135deg,#252526,#111112);color:#fff;padding:46px;display:grid;grid-template-columns:1.2fr .8fr;gap:30px;align-items:center;box-shadow:0 18px 45px rgba(0,0,0,.13)}
+    .category-hero h1{font:800 clamp(34px,5vw,58px)/1.04 Manrope;margin:0 0 14px;letter-spacing:-1.8px}
+    .category-hero p{color:#d4d4d4;max-width:620px;margin:0 0 22px;font-size:15px;line-height:1.75}
+    .category-hero-metrics{display:flex;gap:10px;flex-wrap:wrap}
+    .category-pill{display:inline-flex;align-items:center;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.08);border-radius:999px;padding:8px 12px;font-size:12px;font-weight:900}
+    .category-hero-visual{min-height:260px;border-radius:22px;background:rgba(255,255,255,.08);display:grid;place-items:center;padding:24px}
+    .category-hero-visual img{max-width:100%;max-height:245px;object-fit:contain;filter:drop-shadow(0 18px 20px rgba(0,0,0,.28))}
+    .category-hero-visual span{font:800 60px Manrope;color:#f68b1e}
+    .category-section{margin-top:28px;background:#fff;border:1px solid #ededed;border-radius:22px;padding:24px;box-shadow:0 12px 34px rgba(0,0,0,.045)}
+    .category-section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px}
+    .category-section-head h2{font:800 24px Manrope;margin:0;color:#1c1c1e;letter-spacing:-.7px}
+    .category-section-head p{margin:4px 0 0;color:#8a8a8a;font-size:12px}
+    .category-subgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+    .category-subcard{border:1px solid #eee;border-radius:16px;background:#fff;overflow:hidden;transition:.25s;display:grid;grid-template-rows:130px auto}
+    .category-subcard:hover,.category-subcard.active{border-color:#f68b1e;box-shadow:0 12px 28px rgba(246,139,30,.13);transform:translateY(-3px)}
+    .category-subvisual{background:linear-gradient(145deg,#fff8f0,#f2f2f2);display:grid;place-items:center;padding:16px}
+    .category-subvisual img{max-width:100%;max-height:105px;object-fit:contain;filter:drop-shadow(0 12px 13px rgba(0,0,0,.12))}
+    .category-subbody{padding:14px}
+    .category-subbody strong{display:block;color:#1c1c1e;font-size:14px;margin-bottom:4px}
+    .category-subbody small{color:#999;font-size:11px;font-weight:800}
+    .category-products-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+    .category-product-card{border:1px solid #ececec;border-radius:18px;background:#fff;overflow:hidden;transition:.25s;display:flex;flex-direction:column}
+    .category-product-card:hover{transform:translateY(-5px);box-shadow:0 14px 34px rgba(0,0,0,.08);border-color:#f68b1e}
+    .category-product-link{display:flex;flex-direction:column;flex:1}
+    .category-product-visual{height:190px;background:linear-gradient(145deg,#f8f8f8,#eeeeef);display:grid;place-items:center;padding:18px;position:relative}
+    .category-product-visual img{max-width:100%;max-height:155px;object-fit:contain;filter:drop-shadow(0 14px 14px rgba(0,0,0,.13))}
+    .category-product-visual span{font:800 38px Manrope;color:#f68b1e}
+    .category-product-badge{position:absolute;left:12px;top:12px;background:#2d8d67;color:#fff;border-radius:7px;padding:5px 8px;font-size:10px;font-weight:900}
+    .category-product-body{padding:15px;display:flex;flex-direction:column;gap:7px;flex:1}
+    .category-product-body small{color:#aaa;text-transform:uppercase;font-size:9px;font-weight:900;letter-spacing:1px}
+    .category-product-body h3{font:800 14px/1.35 Manrope;margin:0;color:#1c1c1e}
+    .category-product-body p{color:#666;font-size:12px;line-height:1.6;margin:0}
+    .category-product-price{margin-top:auto;color:#f68b1e;font:800 16px Manrope}
+    .category-product-actions{border-top:1px solid #f0f0f0;padding:12px 15px;display:flex;gap:8px;align-items:center;justify-content:space-between}
+    .category-see-link{font-size:12px;font-weight:900;color:#313133}
+    .category-see-link:hover{color:#f68b1e}
+    .category-cart-button{border:0;background:#f68b1e;color:#fff;border-radius:8px;padding:9px 10px;font-size:11px;font-weight:900}
+    .category-cart-button:hover{background:#313133}
+    .category-empty{padding:50px;text-align:center;color:#777}
+    .category-toast{position:fixed;right:24px;bottom:24px;background:#222;color:#fff;border-radius:12px;padding:14px 18px;box-shadow:0 16px 40px rgba(0,0,0,.24);transform:translateY(90px);opacity:0;transition:.25s;z-index:100}
+    .category-toast.active{transform:translateY(0);opacity:1}
+    .category-toast strong{display:block;font-size:12px}.category-toast small{color:#bbb;font-size:11px}
+    @media(max-width:1000px){.category-products-grid,.category-subgrid{grid-template-columns:repeat(3,1fr)}.category-hero{grid-template-columns:1fr}}
+    @media(max-width:760px){.category-page{width:min(100% - 24px,1180px);padding-top:18px}.category-top{align-items:flex-start;flex-direction:column}.category-logo img{width:185px}.category-hero{padding:30px 22px}.category-hero-visual{min-height:210px}.category-products-grid,.category-subgrid{grid-template-columns:repeat(2,1fr)}.category-section{padding:18px}.category-section-head{align-items:flex-start;flex-direction:column}}
+    @media(max-width:520px){.category-products-grid,.category-subgrid{grid-template-columns:1fr}.category-product-visual{height:180px}.category-hero h1{letter-spacing:-1px}.category-product-actions{align-items:stretch;flex-direction:column}.category-cart-button,.category-see-link{text-align:center;width:100%}}
+  </style>
+  <script type="application/ld+json">${toJsonLdScript(structuredData)}</script>
+</head>
+<body>
+  <main class="category-page">
+    <nav class="category-top" aria-label="Navigation categorie">
+      <a class="category-logo" href="/" aria-label="DieguemTech Store - Accueil"><img src="/assets/logo.svg" alt="DieguemTech Store" width="220" height="56"></a>
+      <div class="category-nav-actions">
+        <a class="category-back-button" href="${escapeHtml(parentPath)}">${escapeHtml(backLabel)}</a>
+        <a href="/#categories">Toutes les categories</a>
+      </div>
+    </nav>
+    <div class="category-breadcrumb" aria-label="Fil d'Ariane">
+      <a href="/">Accueil</a> /
+      ${selectedSubcategory ? `<a href="${escapeHtml(categoryPath(category))}">${escapeHtml(displayCategory)}</a> / <span>${escapeHtml(selectedSubcategory.name)}</span>` : `<span>${escapeHtml(displayCategory)}</span>`}
+    </div>
+    <section class="category-hero">
+      <div>
+        <span class="eyebrow light">${selectedSubcategory ? "Sous-categorie" : "Categorie"}</span>
+        <h1>${escapeHtml(currentTitle)}</h1>
+        <p>${escapeHtml(getCategoryDescription(category, selectedSubcategory?.name))}</p>
+        <div class="category-hero-metrics">
+          <span class="category-pill">${escapeHtml(productsLabel)}</span>
+          <span class="category-pill">Livraison rapide</span>
+          <span class="category-pill">Support WhatsApp</span>
+        </div>
+      </div>
+      <div class="category-hero-visual">
+        ${heroImage ? `<img src="${escapeHtml(heroImage)}" alt="${escapeHtml(currentTitle)}">` : "<span>DT</span>"}
+      </div>
+    </section>
+    ${subcategories.length ? `<section class="category-section">
+      <div class="category-section-head">
+        <div><span class="eyebrow">${escapeHtml(subcategoryTitle)}</span><h2>${selectedSubcategory ? "Continuer l'exploration" : "Choisissez plus precisement"}</h2></div>
+        <p>${escapeHtml(productCountLabel(categoryProducts.length))} dans ${escapeHtml(displayCategory)}</p>
+      </div>
+      <div class="category-subgrid">
+        ${subcategories.map(subcategory => renderCategorySubcategoryCard(category, subcategory, selectedSubcategory)).join("")}
+      </div>
+    </section>` : ""}
+    <section class="category-section">
+      <div class="category-section-head">
+        <div><span class="eyebrow">Catalogue</span><h2>${selectedSubcategory ? `Produits ${escapeHtml(selectedSubcategory.name)}` : "Tous les produits"}</h2></div>
+        <p>${escapeHtml(productsLabel)}</p>
+      </div>
+      ${visibleProducts.length ? `<div class="category-products-grid">
+        ${visibleProducts.map(product => renderCategoryProductCard(product)).join("")}
+      </div>` : `<div class="category-empty"><h3>Aucun produit disponible</h3><p>Cette categorie sera mise a jour tres bientot.</p></div>`}
+    </section>
+  </main>
+  <div class="category-toast" id="categoryToast" aria-live="polite"><strong>Produit ajoute</strong><small>Votre panier a ete mis a jour.</small></div>
+  <script>
+    (function(){
+      var toast = document.getElementById("categoryToast");
+      function showToast(name) {
+        if (!toast) return;
+        toast.querySelector("strong").textContent = "Produit ajoute";
+        toast.querySelector("small").textContent = name ? name + " est dans votre panier." : "Votre panier a ete mis a jour.";
+        toast.classList.add("active");
+        clearTimeout(showToast.timer);
+        showToast.timer = setTimeout(function(){ toast.classList.remove("active"); }, 2600);
+      }
+      document.querySelectorAll("[data-cart-product]").forEach(function(button){
+        button.addEventListener("click", function(){
+          var id = Number(button.getAttribute("data-cart-product"));
+          var name = button.getAttribute("data-product-name") || "";
+          var cart = [];
+          try { cart = JSON.parse(localStorage.getItem("dt-cart") || "[]"); } catch (error) { cart = []; }
+          var item = cart.find(function(entry){ return Number(entry.id) === id; });
+          if (item) item.qty = Number(item.qty || 0) + 1;
+          else cart.push({ id: id, qty: 1 });
+          localStorage.setItem("dt-cart", JSON.stringify(cart));
+          showToast(name);
+        });
+      });
+    })();
+  </script>
+</body>
+</html>`;
+}
+
+function renderCategorySubcategoryCard(category, subcategory, selectedSubcategory) {
+  const image = getProductImages(subcategory.products[0] || {})[0];
+  const isActive = selectedSubcategory?.name === subcategory.name;
+  return `<a class="category-subcard ${isActive ? "active" : ""}" href="${escapeHtml(subcategoryPath(category, subcategory.name))}">
+    <div class="category-subvisual">${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(subcategory.name)}" loading="lazy">` : "<span>DT</span>"}</div>
+    <div class="category-subbody">
+      <strong>${escapeHtml(subcategory.name)}</strong>
+      <small>${escapeHtml(productCountLabel(subcategory.count))}</small>
+    </div>
+  </a>`;
+}
+
+function renderCategoryProductCard(product) {
+  const image = getProductImages(product)[0];
+  const description = truncateText(getProductDescription(product), 135);
+  return `<article class="category-product-card">
+    <a class="category-product-link" href="${escapeHtml(productPath(product))}">
+      <div class="category-product-visual">
+        ${product.badge ? `<span class="category-product-badge">${escapeHtml(product.badge)}</span>` : ""}
+        ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(product.name)}" loading="lazy">` : "<span>DT</span>"}
+      </div>
+      <div class="category-product-body">
+        <small>${escapeHtml(product.category)}</small>
+        <h3>${escapeHtml(product.name)}</h3>
+        <p>${escapeHtml(description)}</p>
+        <strong class="category-product-price">${formatSeoPrice(product.price)}</strong>
+      </div>
+    </a>
+    <div class="category-product-actions">
+      <a class="category-see-link" href="${escapeHtml(productPath(product))}">Voir le produit</a>
+      <button class="category-cart-button" type="button" data-cart-product="${Number(product.id)}" data-product-name="${escapeHtml(product.name)}">Ajouter au panier</button>
+    </div>
+  </article>`;
 }
 
 function renderProductSeoPage(product, baseUrl, relatedProducts = []) {
@@ -539,7 +881,7 @@ function renderProductSeoPage(product, baseUrl, relatedProducts = []) {
             "@type": "ListItem",
             position: 2,
             name: product.category,
-            item: `${baseUrl}/#boutique`
+            item: `${baseUrl}${categoryPath(product.category)}`
           },
           {
             "@type": "ListItem",
@@ -691,7 +1033,7 @@ function renderProductSeoPage(product, baseUrl, relatedProducts = []) {
       </div>
     </nav>
     <div class="seo-breadcrumb" aria-label="Fil d'Ariane">
-      <a href="/">Accueil</a> / <a href="/#boutique">Boutique</a> / <span>${escapeHtml(product.category)}</span>
+      <a href="/">Accueil</a> / <a href="${escapeHtml(categoryPath(product.category))}">${escapeHtml(getCategoryDisplayName(product.category))}</a> / <span>${escapeHtml(product.name)}</span>
     </div>
     <article class="seo-card">
       <section class="seo-gallery" aria-label="Images du produit">
@@ -802,10 +1144,169 @@ function renderProductSeoPage(product, baseUrl, relatedProducts = []) {
 </html>`;
 }
 
-function renderSeoNotFoundPage(baseUrl) {
+function renderSeoNotFoundPage(baseUrl, title = "Produit introuvable", message = "Ce produit n'est plus disponible ou a ete desactive.") {
   return `<!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><link rel="icon" type="image/svg+xml" href="/assets/favicon.svg"><title>Produit introuvable - DieguemTech Store</title></head>
-<body><main style="font-family:Arial,sans-serif;max-width:620px;margin:80px auto;padding:24px"><h1>Produit introuvable</h1><p>Ce produit n'est plus disponible ou a ete desactive.</p><a href="${escapeHtml(baseUrl)}/">Retour a la boutique</a></main></body></html>`;
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><link rel="icon" type="image/svg+xml" href="/assets/favicon.svg"><title>${escapeHtml(title)} - DieguemTech Store</title></head>
+<body><main style="font-family:Arial,sans-serif;max-width:620px;margin:80px auto;padding:24px"><h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p><a href="${escapeHtml(baseUrl)}/">Retour a la boutique</a></main></body></html>`;
+}
+
+function categoryPath(category) {
+  return `/categorie/${slugify(category)}`;
+}
+
+function subcategoryPath(category, subcategory) {
+  return `${categoryPath(category)}/${slugify(subcategory)}`;
+}
+
+function findCategoryBySlug(products, categorySlug) {
+  return getUniqueCategories(products).find(category => slugify(category) === categorySlug);
+}
+
+function getUniqueCategories(products) {
+  const seen = new Set();
+  const categories = [];
+  for (const product of products) {
+    const category = String(product.category || "").trim();
+    if (category && !seen.has(category)) {
+      seen.add(category);
+      categories.push(category);
+    }
+  }
+  return categories;
+}
+
+function getCategorySitemapEntries(products) {
+  return getUniqueCategories(products).flatMap(category => {
+    const categoryProducts = products.filter(product => product.category === category);
+    const subcategories = getCategorySubcategories(categoryProducts);
+    const visibleSubcategories = subcategories.length > 1 ? subcategories : [];
+    return [
+      { path: categoryPath(category), priority: "0.9" },
+      ...visibleSubcategories.map(subcategory => ({
+        path: subcategoryPath(category, subcategory.name),
+        priority: "0.85"
+      }))
+    ];
+  });
+}
+
+function getCategorySubcategories(products) {
+  const groups = new Map();
+  for (const product of products) {
+    const name = getProductSubcategory(product);
+    if (!name) continue;
+    if (!groups.has(name)) {
+      groups.set(name, {
+        name,
+        count: 0,
+        products: []
+      });
+    }
+    const group = groups.get(name);
+    group.count += 1;
+    group.products.push(product);
+  }
+  return [...groups.values()].sort((left, right) => right.count - left.count || left.name.localeCompare(right.name));
+}
+
+function getProductSubcategory(product) {
+  const category = normalizeSearchText(product.category);
+  const text = normalizeSearchText(`${product.name} ${product.badge} ${product.description}`);
+
+  if (category.includes("climatisation")) {
+    if (text.includes("rafraichisseur") || text.includes("air cooler") || text.includes("humidificateur")) return "Rafraichisseurs d'air";
+    if (text.includes("ventilateur")) return "Ventilateurs";
+    if (text.includes("climatiseur") || text.includes("split") || text.includes("btu")) return "Climatiseurs";
+    return "Confort thermique";
+  }
+
+  if ((category.includes("tv") && !category.includes("iptv")) || category.includes("home cinema")) {
+    if (text.includes("support") || text.includes("hdmi") || text.includes("cable")) return "Supports & cables";
+    if (text.includes("projecteur") || text.includes("projection") || text.includes("ecran")) return "Projection";
+    if (text.includes("barre") || text.includes("woofer") || text.includes("home cinema") || text.includes("son")) return "Son & home cinema";
+    if (text.includes("lecteur") || text.includes("dvd") || text.includes("video")) return "Lecteurs video";
+    if (text.includes("tv") || text.includes("televiseur") || text.includes("pouces") || text.includes("smart")) return "Televiseurs";
+    return "TV & accessoires";
+  }
+
+  if (category.includes("electromenager")) {
+    if (text.includes("aspirateur") || text.includes("nettoyage") || text.includes("linge") || text.includes("repasser")) return "Entretien & linge";
+    if (text.includes("cafe") || text.includes("petit dej") || text.includes("grille") || text.includes("bouilloire")) return "Petit dejeuner";
+    if (text.includes("blender") || text.includes("cuisine") || text.includes("friteuse") || text.includes("air fryer") || text.includes("four")) return "Cuisine";
+    return "Maison";
+  }
+
+  if (category.includes("informatique")) {
+    if (text.includes("routeur") || text.includes("wifi") || text.includes("4g") || text.includes("connexion")) return "Reseau & connexion";
+    if (text.includes("stockage") || text.includes("ssd") || text.includes("disque")) return "Stockage";
+    return "Bureau & peripheriques";
+  }
+
+  if (category.includes("accessoires")) {
+    if (text.includes("charge") || text.includes("power") || text.includes("batterie")) return "Charge & energie";
+    if (text.includes("camera") || text.includes("led") || text.includes("securite")) return "Maison connectee";
+    return "Accessoires mobile";
+  }
+
+  if (category.includes("audio")) {
+    if (text.includes("enceinte") || text.includes("speaker") || text.includes("bass") || text.includes("haut-parleur")) return "Enceintes & basses";
+    return "Ecouteurs & casques";
+  }
+
+  return "";
+}
+
+function getCategoryDisplayName(category) {
+  if (category === "TV & Home Cinema") return "TV, Video & Home cinema";
+  if (category === "Electromenager") return "Electromenager";
+  return category;
+}
+
+function getCategoryDescription(category, subcategory = "") {
+  if (subcategory) {
+    return `Explorez notre selection ${subcategory} dans la categorie ${getCategoryDisplayName(category)}. Les produits sont presentes avec images, prix, descriptions et acces direct a leur page detaillee.`;
+  }
+
+  const normalizedCategory = normalizeSearchText(category);
+  if (normalizedCategory.includes("climatisation")) {
+    return "Retrouvez climatiseurs, ventilateurs, modeles rechargeables et rafraichisseurs d'air pour ameliorer le confort thermique a la maison, au bureau ou dans un espace de vie.";
+  }
+  if (normalizedCategory.includes("iptv")) {
+    return "Solutions IPTV et TV Box pour transformer votre televiseur en espace multimedia connecte.";
+  }
+  if ((normalizedCategory.includes("tv") && !normalizedCategory.includes("iptv")) || normalizedCategory.includes("home cinema")) {
+    return "Decouvrez nos televisions, projecteurs, barres de son, supports, cables et accessoires video pour creer une vraie experience multimedia a domicile.";
+  }
+  if (normalizedCategory.includes("electromenager")) {
+    return "Equipez la maison avec des produits utiles pour la cuisine, le petit dejeuner, l'entretien, le linge et les besoins du quotidien.";
+  }
+  if (normalizedCategory.includes("informatique")) {
+    return "Selection informatique pour le bureau, les etudes, la connexion, le stockage et les peripheriques essentiels.";
+  }
+  if (normalizedCategory.includes("accessoires")) {
+    return "Accessoires pratiques pour smartphone, maison connectee, charge, securite et usages high-tech du quotidien.";
+  }
+  if (normalizedCategory.includes("audio")) {
+    return "Ecouteurs, casques et enceintes pour appels, musique, videos et divertissement au quotidien.";
+  }
+  if (normalizedCategory.includes("gaming")) {
+    return "Produits gaming pour ameliorer le confort, le son, les commandes et l'experience de jeu.";
+  }
+  if (normalizedCategory.includes("smartphone")) {
+    return "Smartphones selectionnes pour les appels, internet, reseaux sociaux, photos et usages quotidiens.";
+  }
+  return "Explorez les produits selectionnes par DieguemTech Store avec images, prix et fiches detaillees.";
+}
+
+function productCountLabel(count) {
+  return `${Number(count || 0)} produit${Number(count || 0) > 1 ? "s" : ""}`;
+}
+
+function normalizeSearchText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
 }
 
 function productPath(product) {
