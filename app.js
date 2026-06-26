@@ -87,7 +87,7 @@ function persist(){
   $("#wishlistCount").textContent = wishlist.length;
 }
 
-function showToast(title = "Produit ajoute", text = "Votre panier a ete mis a jour."){
+function showToast(title = "Produit ajouté", text = "Votre panier a été mis à jour."){
   const toast = $("#toast");
   toast.querySelector("strong").textContent = title;
   toast.querySelector("small").textContent = text;
@@ -103,7 +103,7 @@ function addToCart(id){
   item ? item.qty++ : cart.push({ id, qty: 1 });
   persist();
   renderCart();
-  showToast("Produit ajoute", `${product.name} est dans votre panier.`);
+  showToast("Produit ajouté", `${product.name} est dans votre panier.`);
 }
 
 function toggleWishlist(id){
@@ -112,8 +112,8 @@ function toggleWishlist(id){
   renderProducts($("#searchInput").value);
   renderWishlist();
   showToast(
-    wishlist.includes(id) ? "Ajoute aux favoris" : "Retire des favoris",
-    wishlist.includes(id) ? "Vous pourrez le retrouver facilement." : "Votre liste de souhaits a ete mise a jour."
+    wishlist.includes(id) ? "Ajouté aux favoris" : "Retiré des favoris",
+    wishlist.includes(id) ? "Vous pourrez le retrouver facilement." : "Votre liste de souhaits a été mise à jour."
   );
 }
 
@@ -127,7 +127,7 @@ function cartItemVisual(product){
 function renderCart(){
   const container = $("#cartItems");
   if (!cart.length) {
-    container.innerHTML = `<div class="empty-drawer"><span>🛒</span><h3>Votre panier est vide</h3><p>Decouvrez nos produits et trouvez votre prochain coup de coeur tech.</p></div>`;
+    container.innerHTML = `<div class="empty-drawer"><span>🛒</span><h3>Votre panier est vide</h3><p>Découvrez nos produits et trouvez votre prochain coup de cœur tech.</p></div>`;
     $("#cartFooter").style.display = "none";
     return;
   }
@@ -160,7 +160,7 @@ function renderCart(){
 function renderWishlist(){
   const container = $("#wishlistItems");
   if (!wishlist.length) {
-    container.innerHTML = `<div class="empty-drawer"><span>♡</span><h3>Aucun favori pour le moment</h3><p>Cliquez sur le coeur d'un produit pour le garder sous la main.</p></div>`;
+    container.innerHTML = `<div class="empty-drawer"><span>♡</span><h3>Aucun favori pour le moment</h3><p>Cliquez sur le cœur d'un produit pour le garder sous la main.</p></div>`;
     return;
   }
   container.innerHTML = wishlist.map(id => {
@@ -320,6 +320,39 @@ async function trackOrder(form) {
   }
 }
 
+function openModal(modal) {
+  closeAll();
+  modal.classList.add("active");
+  modal.setAttribute("aria-hidden", "false");
+  $("#overlay").classList.add("active");
+  document.body.classList.add("no-scroll");
+}
+
+function showOrderSuccess(result, customerPhone, provider) {
+  const orderId = result.orderId;
+  $("#successOrderId").textContent = orderId;
+  $("#orderWhatsappLink").href = `https://wa.me/221772177176?text=${encodeURIComponent(`Bonjour DieguemTech Store, je viens de passer la commande ${orderId}.`)}`;
+  $("#trackingForm").elements.orderId.value = orderId;
+  $("#trackingForm").elements.phone.value = customerPhone;
+  openModal($("#orderSuccessModal"));
+  showToast("Commande créée", `Numéro ${orderId} - paiement ${provider} en attente.`);
+}
+
+async function copyOrderId() {
+  const orderId = $("#successOrderId").textContent.trim();
+  try {
+    await navigator.clipboard.writeText(orderId);
+  } catch (error) {
+    const input = document.createElement("input");
+    input.value = orderId;
+    document.body.appendChild(input);
+    input.select();
+    document.execCommand("copy");
+    input.remove();
+  }
+  showToast("Numéro copié", orderId);
+}
+
 $("#searchForm").addEventListener("submit", event => {
   event.preventDefault();
   activeFilter = "Tous";
@@ -346,6 +379,12 @@ $("#showAllProducts").addEventListener("click", () => {
 $("#trackingForm").addEventListener("submit", event => {
   event.preventDefault();
   trackOrder(event.target);
+});
+$("#copyOrderIdButton").addEventListener("click", copyOrderId);
+$("#trackOrderLink").addEventListener("click", event => {
+  event.preventDefault();
+  closeAll();
+  $("#suivi").scrollIntoView({ behavior: "smooth" });
 });
 $("#cartButton").addEventListener("click", () => {
   renderCart();
@@ -375,9 +414,10 @@ $("#payButton").addEventListener("click", async () => {
     return;
   }
   const provider = $(".payment-options button.selected").dataset.payment;
+  const customerPhone = fields[1].value;
   const payButton = $("#payButton");
   payButton.disabled = true;
-  payButton.textContent = "Creation de la commande...";
+  payButton.textContent = "Création de la commande...";
   try {
     const response = await fetch("/api/orders", {
       method: "POST",
@@ -393,7 +433,7 @@ $("#payButton").addEventListener("click", async () => {
       })
     });
     const result = await response.json();
-    if (!response.ok) throw new Error(result.error || "La commande n'a pas pu etre creee.");
+    if (!response.ok) throw new Error(result.error || "La commande n'a pas pu être créée.");
     if (provider === "PayTech" && result.redirect_url) {
       window.location.href = result.redirect_url;
       return;
@@ -401,9 +441,8 @@ $("#payButton").addEventListener("click", async () => {
     cart = [];
     persist();
     renderCart();
-    closeAll();
     fields.forEach(field => field.value = "");
-    showToast(`Commande ${result.orderId}`, `Commande creee. Paiement ${provider} en attente.`);
+    showOrderSuccess(result, customerPhone, provider);
   } catch (error) {
     showToast("Commande impossible", error.message);
   } finally {

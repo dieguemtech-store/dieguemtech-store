@@ -429,6 +429,22 @@
     <p class="demo-note">Démonstration : aucune transaction réelle ne sera effectuée.</p>
   </div>
 
+  <div class="modal order-success-modal" id="orderSuccessModal" aria-hidden="true">
+    <button class="modal-close" aria-label="Fermer">×</button>
+    <span class="eyebrow">Commande enregistrée</span>
+    <h2>Merci pour votre commande</h2>
+    <p class="success-intro">Gardez ce numéro pour suivre votre commande ou contacter le support.</p>
+    <div class="order-reference">
+      <span>Numéro de commande</span>
+      <strong id="successOrderId">DT-...</strong>
+    </div>
+    <div class="modal-actions success-actions">
+      <button class="button primary" type="button" id="copyOrderIdButton">Copier le numéro</button>
+      <a class="button outline" href="#suivi" id="trackOrderLink">Suivre la commande</a>
+      <a class="button outline" href="https://wa.me/221772177176" target="_blank" rel="noopener" id="orderWhatsappLink">WhatsApp support</a>
+    </div>
+  </div>
+
   <div class="toast" id="toast"><span>✓</span><p><strong>Produit ajouté</strong><small>Votre panier a été mis à jour.</small></p></div>
 
   <div class="modal product-detail-modal" id="productDetailModal" aria-hidden="true">
