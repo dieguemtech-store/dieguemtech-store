@@ -260,6 +260,14 @@ app.get("/payment-cancel", (request, response) => {
   ));
 });
 
+app.get("/site.webmanifest", (request, response) => {
+  response.type("application/manifest+json").sendFile(path.join(__dirname, "site.webmanifest"));
+});
+
+app.get("/favicon.ico", (request, response) => {
+  response.redirect(301, "/assets/favicon.svg");
+});
+
 app.use(express.static(__dirname, {
   extensions: ["html"],
   index: "index.html"
