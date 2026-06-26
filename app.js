@@ -76,7 +76,7 @@ function productCard(product){
   const liked = wishlist.includes(product.id);
   const badgeClass = product.badge.includes("%") ? "discount-badge" : "new-badge";
   const description = getProductDescription(product);
-  return `<article class="product-card" data-product-detail="${product.id}" tabindex="0" role="button" aria-label="Voir ${escapeHtml(product.name)}">
+  return `<article class="product-card" data-product-page-card="${productUrl(product)}" tabindex="0" role="link" aria-label="Ouvrir la page de ${escapeHtml(product.name)}">
     <div class="product-visual">
       <span class="${badgeClass}">${escapeHtml(product.badge)}</span>
       <button class="wishlist-toggle ${liked ? "active" : ""}" data-wishlist="${product.id}" aria-label="Ajouter aux favoris">
@@ -295,7 +295,7 @@ document.addEventListener("click", event => {
   const qtyButton = event.target.closest("[data-qty]");
   const removeButton = event.target.closest("[data-remove]");
   const filterButton = event.target.closest("[data-filter]");
-  const detailCard = event.target.closest("[data-product-detail]");
+  const productPageCard = event.target.closest("[data-product-page-card]");
   const detailImageButton = event.target.closest("[data-detail-image]");
   const productPageLink = event.target.closest("[data-product-page]");
 
@@ -344,14 +344,14 @@ document.addEventListener("click", event => {
     $("#mainNav").classList.remove("open");
     return;
   }
-  if (detailCard) openProductDetail(detailCard.dataset.productDetail);
+  if (productPageCard) window.location.href = productPageCard.dataset.productPageCard;
 });
 
 document.addEventListener("keydown", event => {
-  const detailCard = event.target.closest?.("[data-product-detail]");
-  if (detailCard && (event.key === "Enter" || event.key === " ")) {
+  const productPageCard = event.target.closest?.("[data-product-page-card]");
+  if (productPageCard && (event.key === "Enter" || event.key === " ")) {
     event.preventDefault();
-    openProductDetail(detailCard.dataset.productDetail);
+    window.location.href = productPageCard.dataset.productPageCard;
   }
 });
 

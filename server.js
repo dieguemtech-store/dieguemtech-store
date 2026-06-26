@@ -525,7 +525,10 @@ function renderProductSeoPage(product, baseUrl) {
     .seo-top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px}
     .seo-logo{display:flex;align-items:center;gap:10px;font-weight:900;color:#313133}
     .seo-logo span{width:42px;height:42px;border-radius:12px 5px 12px 5px;background:#f68b1e;color:#fff;display:grid;place-items:center;font:800 24px Manrope}
-    .seo-top a:last-child{color:#f68b1e;font-weight:900;font-size:13px}
+    .seo-nav-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .seo-back-button{border:1px solid #e2e2e2;background:#fff;color:#313133;border-radius:9px;padding:11px 14px;font-weight:900;font-size:13px}
+    .seo-back-button:hover{border-color:#f68b1e;color:#f68b1e}
+    .seo-nav-actions a{color:#f68b1e;font-weight:900;font-size:13px}
     .seo-card{display:grid;grid-template-columns:.95fr 1.05fr;gap:34px;background:#fff;border:1px solid #ececec;border-radius:22px;padding:30px;box-shadow:0 18px 45px rgba(0,0,0,.07)}
     .seo-gallery{background:linear-gradient(145deg,#fff8f0,#f1f1f1);border-radius:18px;display:grid;gap:14px;align-content:center;padding:26px;min-height:430px}
     .seo-gallery-main{display:grid;place-items:center;min-height:300px}
@@ -550,7 +553,10 @@ function renderProductSeoPage(product, baseUrl) {
   <main class="seo-product-page">
     <nav class="seo-top" aria-label="Navigation produit">
       <a class="seo-logo" href="/"><span>D</span>DieguemTech Store</a>
-      <a href="/#boutique">Retour a la boutique</a>
+      <div class="seo-nav-actions">
+        <button type="button" class="seo-back-button" onclick="if (window.history.length > 1) { window.history.back(); } else { window.location.href = '/#boutique'; }">Retour</button>
+        <a href="/#boutique">Retour a la boutique</a>
+      </div>
     </nav>
     <article class="seo-card">
       <section class="seo-gallery" aria-label="Images du produit">
