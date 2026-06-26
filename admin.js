@@ -127,7 +127,7 @@ function getProductImages(product) {
   if (Array.isArray(product.images)) candidates.push(...product.images);
   return [...new Set(
     candidates
-      .map(image => String(image || "").trim())
+      .map(normalizeProductImagePath)
       .filter(Boolean)
   )].slice(0, 8);
 }
@@ -136,9 +136,19 @@ function parseImageLines(value) {
   return [...new Set(
     String(value || "")
       .split(/[\n,]/)
-      .map(image => image.trim())
+      .map(normalizeProductImagePath)
       .filter(Boolean)
   )].slice(0, 8);
+}
+
+function normalizeProductImagePath(image) {
+  const value = String(image || "").trim().replace(/\\/g, "/");
+  if (!value) return "";
+  if (/^https?:\/\//i.test(value)) return value;
+  if (/^\/?assets?\//i.test(value)) {
+    return `/assets/${value.replace(/^\/?assets?\/*/i, "")}`;
+  }
+  return value;
 }
 
 function renderProducts() {
@@ -297,14 +307,14 @@ function renderProductForm(product) {
       </label>
     </div>
     <label>Galerie images
-      <textarea name="images" rows="5" placeholder="Une URL par ligne. Exemple: https://site.com/photo.jpg">${escapeHtml(images.join("\n"))}</textarea>
-      <small class="field-help">La premiere image devient l'image principale. Tu peux ajouter jusqu'a 8 images par produit.</small>
+      <textarea name="images" rows="5" placeholder="Une image par ligne. Exemple: assets/nom-du-produit.png">${escapeHtml(images.join("\n"))}</textarea>
+      <small class="field-help">Formats acceptes: assets/photo.png, /assets/photo.png ou une URL https. La premiere image devient l'image principale.</small>
     </label>
     <div class="image-preview-card">
       <div class="image-preview" id="productImagePreview"></div>
       <div>
         <strong>Apercu des images</strong>
-        <p>Colle des liens directs publics. Les chemins internes comme /assets/produit.png fonctionnent aussi.</p>
+        <p>Pour une image locale, place d'abord le fichier dans le dossier assets, puis indique son chemin ici.</p>
         <small id="productImageHelp"></small>
       </div>
     </div>

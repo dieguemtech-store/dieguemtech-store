@@ -301,13 +301,10 @@ function validateProductUpdate(product) {
     return "Ancien prix invalide.";
   }
   if (product.stock === "" || typeof product.stock === "undefined" || !Number.isInteger(Number(product.stock)) || Number(product.stock) < 0) return "Stock invalide.";
-  if (product.image && !String(product.image).startsWith("/") && !/^https?:\/\//.test(String(product.image))) {
-    return "L'image doit etre une URL http(s) ou un chemin commencant par /.";
-  }
   const images = collectProductImages(product);
   if (images.length > 8) return "Maximum 8 images par produit.";
   const invalidImage = images.find(image => !isValidProductImage(image));
-  if (invalidImage) return "Chaque image doit etre une URL http(s) ou un chemin commencant par /.";
+  if (invalidImage) return "Chaque image doit etre une URL http(s) ou un chemin assets/photo.png.";
   return null;
 }
 
@@ -321,13 +318,23 @@ function collectProductImages(product) {
   }
   return [...new Set(
     candidates
-      .map(image => String(image || "").trim())
+      .map(normalizeProductImagePath)
       .filter(Boolean)
   )];
 }
 
 function isValidProductImage(image) {
   return String(image).startsWith("/") || /^https?:\/\//.test(String(image));
+}
+
+function normalizeProductImagePath(image) {
+  const value = String(image || "").trim().replace(/\\/g, "/");
+  if (!value) return "";
+  if (/^https?:\/\//i.test(value)) return value;
+  if (/^\/?assets?\//i.test(value)) {
+    return `/assets/${value.replace(/^\/?assets?\/*/i, "")}`;
+  }
+  return value;
 }
 
 function normalizePhone(value) {

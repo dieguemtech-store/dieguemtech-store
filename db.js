@@ -312,9 +312,19 @@ function normalizeImageList(images, primaryImage = "") {
   }
   return [...new Set(
     candidates
-      .map(image => String(image || "").trim())
+      .map(normalizeProductImagePath)
       .filter(Boolean)
   )].slice(0, 8);
+}
+
+function normalizeProductImagePath(image) {
+  const value = String(image || "").trim().replace(/\\/g, "/");
+  if (!value) return "";
+  if (/^https?:\/\//i.test(value)) return value;
+  if (/^\/?assets?\//i.test(value)) {
+    return `/assets/${value.replace(/^\/?assets?\/*/i, "")}`;
+  }
+  return value;
 }
 
 function normalizeProductRow(product) {
