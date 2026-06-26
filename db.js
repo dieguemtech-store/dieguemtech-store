@@ -103,7 +103,7 @@ async function getProducts({ category = "", search = "" } = {}) {
     return seedProducts.filter(product => {
       const matchesCategory = !category || product.category.toLowerCase() === category.toLowerCase();
       const matchesSearch = !search || `${product.name} ${product.category}`.toLowerCase().includes(search.toLowerCase());
-      return matchesCategory && matchesSearch;
+      return product.active !== false && matchesCategory && matchesSearch;
     });
   }
 
@@ -130,7 +130,7 @@ async function getProducts({ category = "", search = "" } = {}) {
 }
 
 async function getProduct(id, client = pool) {
-  if (!pool) return seedProducts.find(product => product.id === Number(id));
+  if (!pool) return seedProducts.find(product => product.id === Number(id) && product.active !== false);
   const result = await client.query(`
     SELECT
       id, name, category, price, old_price AS "oldPrice", emoji,
@@ -237,6 +237,28 @@ async function updateProduct(id, input) {
     product.description,
     product.active
   ]);
+  return result.rows[0] || null;
+}
+
+async function deactivateProduct(id) {
+  const productId = Number(id);
+  if (!Number.isInteger(productId) || productId < 1) return null;
+
+  if (!pool) {
+    const product = seedProducts.find(entry => entry.id === productId);
+    if (!product) return null;
+    product.active = false;
+    return { ...product, active: false };
+  }
+
+  const result = await pool.query(`
+    UPDATE products
+    SET active = FALSE, updated_at = NOW()
+    WHERE id = $1
+    RETURNING
+      id, name, category, price, old_price AS "oldPrice", emoji,
+      rating::FLOAT, reviews, badge, stock, image, description, active
+  `, [productId]);
   return result.rows[0] || null;
 }
 
@@ -428,6 +450,7 @@ module.exports = {
   getProduct,
   createProduct,
   updateProduct,
+  deactivateProduct,
   createOrder,
   getOrders,
   updateOrderStatus

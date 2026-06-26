@@ -141,6 +141,7 @@ function productCard(product) {
       <span>Stock: ${product.stock}</span>
       <span class="product-state ${product.active === false ? "inactive" : "active"}">${activeLabel}</span>
       <button type="button" data-edit-product="${product.id}">Modifier</button>
+      ${product.active === false ? "" : `<button type="button" class="danger-button" data-deactivate-product="${product.id}">Desactiver</button>`}
     </div>
   </article>`;
 }
@@ -405,6 +406,15 @@ async function saveProduct(form) {
   await loadProducts();
 }
 
+async function deactivateProduct(id) {
+  const product = products.find(item => item.id === Number(id));
+  if (!product) return;
+  const confirmed = window.confirm(`Desactiver "${product.name}" ? Il disparaitra de la boutique, mais restera dans l'admin.`);
+  if (!confirmed) return;
+  await api(`/api/admin/products/${encodeURIComponent(id)}`, { method: "DELETE" });
+  await loadProducts();
+}
+
 $("#loginForm").addEventListener("submit", async event => {
   event.preventDefault();
   setMessage("");
@@ -434,9 +444,11 @@ document.addEventListener("click", event => {
   const viewButton = event.target.closest("[data-view-order]");
   const printButton = event.target.closest("[data-print-order]");
   const editProductButton = event.target.closest("[data-edit-product]");
+  const deactivateProductButton = event.target.closest("[data-deactivate-product]");
   if (viewButton) openOrderModal(viewButton.dataset.viewOrder);
   if (printButton) printOrder(printButton.dataset.printOrder);
   if (editProductButton) openProductModal(editProductButton.dataset.editProduct);
+  if (deactivateProductButton) deactivateProduct(deactivateProductButton.dataset.deactivateProduct);
 });
 
 $("#closeOrderModal").addEventListener("click", closeOrderModal);

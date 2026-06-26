@@ -99,6 +99,16 @@ app.patch("/api/admin/products/:id", requireAdmin, async (request, response, nex
   }
 });
 
+app.delete("/api/admin/products/:id", requireAdmin, async (request, response, next) => {
+  try {
+    const product = await database.deactivateProduct(request.params.id);
+    if (!product) return response.status(404).json({ error: "Produit introuvable." });
+    response.json(product);
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.get("/api/products", async (request, response, next) => {
   try {
     const category = String(request.query.category || "").toLowerCase();
