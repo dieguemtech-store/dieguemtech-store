@@ -1,4 +1,4 @@
-const CACHE_NAME = "dieguemtech-store-v1";
+const CACHE_NAME = "dieguemtech-store-v2";
 const APP_SHELL = [
   "/",
   "/?source=pwa",
@@ -45,6 +45,11 @@ self.addEventListener("fetch", event => {
     return;
   }
 
+  if (["/styles.css", "/app.js", "/site.webmanifest"].includes(url.pathname)) {
+    event.respondWith(networkFirstAsset(request));
+    return;
+  }
+
   event.respondWith(cacheFirstAsset(request));
 });
 
@@ -68,4 +73,17 @@ async function cacheFirstAsset(request) {
   const response = await fetch(request);
   if (response.ok) cache.put(request, response.clone());
   return response;
+}
+
+async function networkFirstAsset(request) {
+  const cache = await caches.open(CACHE_NAME);
+  try {
+    const response = await fetch(request);
+    if (response.ok) cache.put(request, response.clone());
+    return response;
+  } catch (error) {
+    const cached = await cache.match(request);
+    if (cached) return cached;
+    throw error;
+  }
 }
