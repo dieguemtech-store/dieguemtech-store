@@ -682,4 +682,50 @@ async function initializeStore(){
   }
 }
 
+function setupInstallPrompt(){
+  const installButton = $("#installAppButton");
+  if (!installButton) return;
+  let installPrompt = null;
+
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  if (isStandalone) installButton.hidden = true;
+
+  window.addEventListener("beforeinstallprompt", event => {
+    event.preventDefault();
+    installPrompt = event;
+    installButton.hidden = false;
+  });
+
+  installButton.addEventListener("click", async () => {
+    if (!installPrompt) {
+      showToast("Installation", "Utilisez le menu du navigateur pour ajouter DieguemTech a l'ecran d'accueil.");
+      return;
+    }
+    installPrompt.prompt();
+    const choice = await installPrompt.userChoice.catch(() => ({ outcome: "dismissed" }));
+    installPrompt = null;
+    installButton.hidden = true;
+    if (choice.outcome === "accepted") {
+      showToast("Application installee", "DieguemTech Store est maintenant sur votre appareil.");
+    }
+  });
+
+  window.addEventListener("appinstalled", () => {
+    installPrompt = null;
+    installButton.hidden = true;
+    showToast("Application installee", "Merci d'avoir ajoute DieguemTech Store.");
+  });
+}
+
+function registerServiceWorker(){
+  if (!("serviceWorker" in navigator)) return;
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(error => {
+      console.warn("Service worker non enregistre:", error);
+    });
+  });
+}
+
+setupInstallPrompt();
+registerServiceWorker();
 initializeStore();

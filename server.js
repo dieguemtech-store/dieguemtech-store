@@ -341,6 +341,11 @@ app.get("/site.webmanifest", (request, response) => {
   response.type("application/manifest+json").sendFile(path.join(__dirname, "site.webmanifest"));
 });
 
+app.get("/sw.js", (request, response) => {
+  response.set("Cache-Control", "no-cache, no-store, must-revalidate");
+  response.type("application/javascript").sendFile(path.join(__dirname, "sw.js"));
+});
+
 app.get("/favicon.ico", (request, response) => {
   response.redirect(301, "/assets/favicon.svg");
 });

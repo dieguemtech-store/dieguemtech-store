@@ -2,11 +2,41 @@
   "name": "DieguemTech Store",
   "short_name": "DieguemTech",
   "description": "Boutique high-tech au Senegal : smartphones, gaming, IPTV, TV Box, accessoires et livraison a Dakar.",
-  "start_url": "/",
+  "id": "/?source=pwa",
+  "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "orientation": "portrait-primary",
+  "lang": "fr-SN",
+  "dir": "ltr",
   "background_color": "#ffffff",
   "theme_color": "#f68b1e",
+  "categories": ["shopping", "business", "technology"],
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Boutique",
+      "short_name": "Boutique",
+      "description": "Voir les produits DieguemTech Store",
+      "url": "/#boutique",
+      "icons": [{ "src": "/assets/logo-mark.svg", "sizes": "512x512", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Suivi commande",
+      "short_name": "Suivi",
+      "description": "Suivre une commande",
+      "url": "/#suivi",
+      "icons": [{ "src": "/assets/logo-mark.svg", "sizes": "512x512", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Contact WhatsApp",
+      "short_name": "WhatsApp",
+      "description": "Contacter le support DieguemTech",
+      "url": "/#contact",
+      "icons": [{ "src": "/assets/logo-mark.svg", "sizes": "512x512", "type": "image/svg+xml" }]
+    }
+  ],
   "icons": [
     {
       "src": "/assets/favicon.svg",

@@ -9,6 +9,9 @@
   <meta name="robots" content="index, follow">
   <meta name="application-name" content="DieguemTech Store">
   <meta name="apple-mobile-web-app-title" content="DieguemTech">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="language" content="fr-SN">
   <meta name="format-detection" content="telephone=yes">
   <meta name="geo.region" content="SN-DK">
@@ -225,6 +228,10 @@
         <button class="header-action account-button">
           <svg><use href="#icon-user"></use></svg>
           <span><small>Bonjour !</small>Mon compte</span>
+        </button>
+        <button class="header-action install-app-button" id="installAppButton" hidden>
+          <span class="action-icon">↧</span>
+          <span><small>Installer</small>L'app</span>
         </button>
         <button class="header-action" id="wishlistButton" aria-label="Ouvrir les favoris">
           <span class="action-icon"><svg><use href="#icon-heart"></use></svg><b id="wishlistCount">0</b></span>
