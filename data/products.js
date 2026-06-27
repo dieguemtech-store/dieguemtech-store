@@ -1,5 +1,5 @@
-const jumiaGallery = image => [1, 2, 3, 4].map(index =>
-  image.replace(/\/\d+\.jpg(\?.*)?$/i, (match, query = '') => '/' + index + '.jpg' + query)
+const jumiaGallery = image => [300, 500, 680, 900].map(size =>
+  image.replace(/fit-in\/\d+x\d+/i, `fit-in/${size}x${size}`)
 );
 
 module.exports = [

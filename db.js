@@ -426,11 +426,13 @@ function normalizeImageList(images, primaryImage = "") {
   } else if (typeof images === "string") {
     candidates.push(...images.split(/[\n,]/));
   }
-  return [...new Set(
+  const normalizedImages = [...new Set(
     candidates
       .map(normalizeProductImagePath)
       .filter(Boolean)
-  )].slice(0, 8);
+  )];
+  addJumiaGalleryVariants(normalizedImages);
+  return normalizedImages.slice(0, 8);
 }
 
 function normalizeProductImagePath(image) {
@@ -441,6 +443,23 @@ function normalizeProductImagePath(image) {
     return `/assets/${value.replace(/^\/?assets?\/*/i, "")}`;
   }
   return value;
+}
+
+function addJumiaGalleryVariants(images) {
+  if (images.length >= 4) return;
+  const jumiaImage = images.find(image => /^https?:\/\/sn\.jumia\.is\//i.test(image) && /fit-in\/\d+x\d+/i.test(image));
+  if (!jumiaImage) return;
+
+  for (const image of getJumiaGalleryVariants(jumiaImage)) {
+    if (!images.includes(image)) images.push(image);
+    if (images.length >= 4) return;
+  }
+}
+
+function getJumiaGalleryVariants(image) {
+  return [300, 500, 680, 900].map(size =>
+    image.replace(/fit-in\/\d+x\d+/i, `fit-in/${size}x${size}`)
+  );
 }
 
 function normalizeProductRow(product) {
