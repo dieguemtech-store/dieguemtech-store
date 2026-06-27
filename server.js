@@ -1911,11 +1911,11 @@ function getEmailDomain(value) {
 function getEmailErrorHint(error) {
   const details = getNotificationError(error).toLowerCase();
   const status = Number(error.response?.status || 0);
-  if (status === 401 || status === 403 || details.includes("api key")) {
-    return "Verifiez RESEND_API_KEY dans Render.";
-  }
   if (details.includes("domain") || details.includes("verify") || details.includes("verified")) {
     return "Verifiez le domaine expediteur dans Resend et utilisez une adresse ORDER_EMAIL_FROM avec un domaine valide, par exemple DieguemTech Store <commandes@dieguemtechstore.com>.";
+  }
+  if (status === 401 || status === 403 || details.includes("api key")) {
+    return "Verifiez RESEND_API_KEY dans Render.";
   }
   if (details.includes("from")) {
     return "Verifiez ORDER_EMAIL_FROM dans Render.";
