@@ -1,3 +1,7 @@
+const jumiaGallery = image => [1, 2, 3, 4].map(index =>
+  image.replace(/\/\d+\.jpg(\?.*)?$/i, (match, query = '') => '/' + index + '.jpg' + query)
+);
+
 module.exports = [
   {
     id: 101,
@@ -11,7 +15,7 @@ module.exports = [
     badge: "Arrivage",
     stock: 7,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/84/471721/1.jpg?2494",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/84/471721/1.jpg?2494"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/84/471721/1.jpg?2494"),
     description: "Smartphone Samsung Galaxy A16 avec 4 Go de RAM et 128 Go de stockage, pense pour les appels, les reseaux sociaux, la navigation et les usages quotidiens avec une bonne autonomie."
   },
   {
@@ -26,7 +30,7 @@ module.exports = [
     badge: "Nouveau",
     stock: 9,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/56/289221/1.jpg?4469",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/56/289221/1.jpg?4469"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/56/289221/1.jpg?4469"),
     description: "Samsung Galaxy A06 double SIM avec grand ecran 6,7 pouces, stockage 64 Go, appareil photo 50 MP et batterie 5000 mAh pour rester connecte toute la journee."
   },
   {
@@ -41,7 +45,7 @@ module.exports = [
     badge: "Prix doux",
     stock: 18,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/90/283521/1.jpg?6197",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/90/283521/1.jpg?6197"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/90/283521/1.jpg?6197"),
     description: "Ecouteurs Bluetooth au format tour de cou, pratiques pour les appels, la musique, le sport leger et les deplacements quotidiens."
   },
   {
@@ -56,7 +60,7 @@ module.exports = [
     badge: "Gaming",
     stock: 11,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/12/896821/1.jpg?8487",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/12/896821/1.jpg?8487"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/12/896821/1.jpg?8487"),
     description: "Casque stereo filaire polyvalent avec micro, adapte au gaming, aux appels et a la musique avec une prise en main simple pour PC et appareils compatibles."
   },
   {
@@ -71,7 +75,7 @@ module.exports = [
     badge: "4K",
     stock: 10,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/40/648621/1.jpg?0263",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/40/648621/1.jpg?0263"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/40/648621/1.jpg?0263"),
     description: "TV Box Android compatible 4K avec stockage genereux, ideale pour transformer un televiseur en espace multimedia avec applications, streaming et contenus connectes."
   },
   {
@@ -86,7 +90,7 @@ module.exports = [
     badge: "Premium",
     stock: 6,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/58/75216/1.jpg?9672",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/58/75216/1.jpg?9672"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/58/75216/1.jpg?9672"),
     description: "Stick TV Xiaomi 4K compact pour acceder facilement aux applications de streaming, contenus multimedia et services connectes sur grand ecran."
   },
   {
@@ -101,7 +105,7 @@ module.exports = [
     badge: "Smart",
     stock: 8,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/29/744721/1.jpg?2772",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/29/744721/1.jpg?2772"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/29/744721/1.jpg?2772"),
     description: "Montre connectee avec ecran tactile HD, suivi cardio, sommeil et notifications, pratique pour suivre ses activites et rester informe au quotidien."
   },
   {
@@ -116,7 +120,7 @@ module.exports = [
     badge: "Mobile",
     stock: 12,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/05/749721/1.jpg?2499",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/05/749721/1.jpg?2499"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/05/749721/1.jpg?2499"),
     description: "Batterie externe Oraimo MagPower 10000 mAh, utile pour recharger un smartphone en deplacement et garder de l'autonomie pendant la journee."
   },
   {
@@ -131,7 +135,7 @@ module.exports = [
     badge: "Setup",
     stock: 7,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/82/366321/1.jpg?3667",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/82/366321/1.jpg?3667"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/82/366321/1.jpg?3667"),
     description: "Pack gaming avec clavier, souris et tapis, pratique pour demarrer ou completer un setup PC avec une solution simple et coordonnee."
   },
   {
@@ -146,7 +150,7 @@ module.exports = [
     badge: "Connecte",
     stock: 9,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/08/883821/1.jpg?4615",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/08/883821/1.jpg?4615"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/08/883821/1.jpg?4615"),
     description: "Routeur WiFi portable avec support reseau mobile et batterie integree, utile pour partager une connexion internet a la maison, au bureau ou en deplacement."
   },
   {
@@ -161,7 +165,7 @@ module.exports = [
     badge: "Bureau",
     stock: 18,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/64/68849/1.jpg?6250",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/64/68849/1.jpg?6250"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/64/68849/1.jpg?6250"),
     description: "Souris sans fil fine et rechargeable avec connexion Bluetooth et 2,4 GHz, pratique pour ordinateur portable, bureau, etudes et deplacements."
   },
   {
@@ -176,7 +180,7 @@ module.exports = [
     badge: "Stockage",
     stock: 5,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/44/894821/1.jpg?3578",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/44/894821/1.jpg?3578"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/44/894821/1.jpg?3578"),
     description: "SSD externe portable 1To pour sauvegarder documents, photos, videos et projets avec une solution rapide et compacte compatible USB."
   },
   {
@@ -191,7 +195,7 @@ module.exports = [
     badge: "Bureau",
     stock: 6,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/78/222421/1.jpg?0593",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/78/222421/1.jpg?0593"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/78/222421/1.jpg?0593"),
     description: "Imprimante HP tout-en-un couleur avec WiFi, copie et scanner, ideale pour la maison, les etudes, les documents administratifs et le petit bureau."
   },
   {
@@ -206,7 +210,7 @@ module.exports = [
     badge: "Securite",
     stock: 14,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/07/567721/1.jpg?9868",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/07/567721/1.jpg?9868"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/07/567721/1.jpg?9868"),
     description: "Mini camera WiFi 1080P pour surveillance interieure, suivi de zone et securite simple a installer selon l'usage souhaite."
   },
   {
@@ -221,7 +225,7 @@ module.exports = [
     badge: "Audio",
     stock: 8,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/10/876721/1.jpg?1116",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/10/876721/1.jpg?1116"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/10/876721/1.jpg?1116"),
     description: "Barre de son Bluetooth pour ameliorer l'audio d'une television, d'un ordinateur ou d'un espace multimedia avec un son plus ample."
   },
   {
@@ -236,7 +240,7 @@ module.exports = [
     badge: "ANC",
     stock: 10,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/60/597721/1.jpg?2319",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/60/597721/1.jpg?2319"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/60/597721/1.jpg?2319"),
     description: "Ecouteurs Bluetooth Oraimo avec reduction de bruit, audio spatial et format compact pour musique, appels et deplacements."
   },
   {
@@ -251,7 +255,7 @@ module.exports = [
     badge: "LED",
     stock: 13,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/78/346621/1.jpg?3232",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/78/346621/1.jpg?3232"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/78/346621/1.jpg?3232"),
     description: "Lampe LED pliable avec plusieurs couleurs de lumiere et niveaux de luminosite, pratique pour bureau, lecture et travail le soir."
   },
   {
@@ -266,7 +270,7 @@ module.exports = [
     badge: "4G",
     stock: 5,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/30/200721/1.jpg?8530",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/30/200721/1.jpg?8530"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/30/200721/1.jpg?8530"),
     description: "Routeur mobile TP-Link 4G pour partager une connexion internet avec plusieurs appareils, utile en deplacement, au bureau ou a la maison."
   },
   {
@@ -281,7 +285,7 @@ module.exports = [
     badge: "Charge",
     stock: 20,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/94/218721/1.jpg?2934",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/94/218721/1.jpg?2934"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/94/218721/1.jpg?2934"),
     description: "Chargeur multiports USB-A et USB-C pour organiser la recharge de plusieurs appareils compatibles depuis un seul point."
   },
   {
@@ -296,7 +300,7 @@ module.exports = [
     badge: "Bass",
     stock: 7,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/34/616821/1.jpg?5923",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/34/616821/1.jpg?5923"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/34/616821/1.jpg?5923"),
     description: "Casque Bluetooth Oraimo avec son puissant, design confortable et autonomie adaptee aux appels, a la musique et aux longues sessions d'ecoute."
   },
   {
@@ -311,7 +315,7 @@ module.exports = [
     badge: "Cuisine",
     stock: 12,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/31/249221/1.jpg?2768",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/31/249221/1.jpg?2768"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/31/249221/1.jpg?2768"),
     description: "Blender 1,5 litre pour smoothies, jus, sauces et preparations rapides du quotidien avec format simple pour la cuisine."
   },
   {
@@ -326,7 +330,7 @@ module.exports = [
     badge: "Cuisine",
     stock: 9,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/26/987811/1.jpg?5092",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/26/987811/1.jpg?5092"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/26/987811/1.jpg?5092"),
     description: "Blender Binatone avec broyeur, utile pour mixer, broyer et preparer facilement jus, sauces, epices et ingredients du quotidien."
   },
   {
@@ -341,7 +345,7 @@ module.exports = [
     badge: "Maison",
     stock: 16,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/43/511621/1.jpg?8560",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/43/511621/1.jpg?8560"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/43/511621/1.jpg?8560"),
     description: "Bouilloire electrique 2 litres pour chauffer rapidement l'eau, pratique pour the, cafe, cuisine et usage familial."
   },
   {
@@ -356,7 +360,7 @@ module.exports = [
     badge: "Linge",
     stock: 11,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/58/736321/1.jpg?3409",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/58/736321/1.jpg?3409"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/58/736321/1.jpg?3409"),
     description: "Fer a repasser vapeur 1200W, compact et pratique pour entretenir les vetements et eliminer les plis au quotidien."
   },
   {
@@ -371,7 +375,7 @@ module.exports = [
     badge: "Maison",
     stock: 8,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/03/343911/1.jpg?8022",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/03/343911/1.jpg?8022"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/03/343911/1.jpg?8022"),
     description: "Ventilateur sur pied 16 pouces pour rafraichir une chambre, un salon ou un bureau avec un format stable et facile a placer."
   },
   {
@@ -386,7 +390,7 @@ module.exports = [
     badge: "Cafe",
     stock: 10,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/64/419821/1.jpg?9278",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/64/419821/1.jpg?9278"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/64/419821/1.jpg?9278"),
     description: "Machine a cafe 1,2 litre avec fonction anti-goutte, ideale pour preparer plusieurs tasses a la maison ou au bureau."
   },
   {
@@ -401,7 +405,7 @@ module.exports = [
     badge: "Petit dej",
     stock: 5,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/31/314821/1.jpg?4621",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/31/314821/1.jpg?4621"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/31/314821/1.jpg?4621"),
     description: "Grille-pain Tefal 2 fentes avec plusieurs niveaux de brunissage, pratique pour petits dejeuners rapides et pains grilles reguliers."
   },
   {
@@ -416,7 +420,7 @@ module.exports = [
     badge: "Nettoyage",
     stock: 14,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/28/784721/1.jpg?0606",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/28/784721/1.jpg?0606"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/28/784721/1.jpg?0606"),
     description: "Aspirateur portable rechargeable par USB pour nettoyer rapidement voiture, bureau, clavier, canape et petites surfaces."
   },
   {
@@ -431,7 +435,7 @@ module.exports = [
     badge: "Air fryer",
     stock: 7,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/47/896721/1.jpg?6337",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/47/896721/1.jpg?6337"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/47/896721/1.jpg?6337"),
     description: "Friteuse a air 6 litres pour cuisiner avec moins d'huile, pratique pour frites, poulet, snacks et plats rapides."
   },
   {
@@ -446,7 +450,7 @@ module.exports = [
     badge: "3 en 1",
     stock: 6,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/74/007621/1.jpg?0004",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/74/007621/1.jpg?0004"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/74/007621/1.jpg?0004"),
     description: "Machine petit dejeuner 3 en 1 avec mini four, plaque et espace cafe, utile pour gagner de la place dans une petite cuisine."
   },
   {
@@ -461,7 +465,7 @@ module.exports = [
     badge: "Smart TV",
     stock: 7,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/68/066221/1.jpg?3464",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/68/066221/1.jpg?3464"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/68/066221/1.jpg?3464"),
     description: "Televiseur Smart Android 32 pouces pour profiter des applications, videos, chaines et contenus connectes dans une chambre, un salon ou un bureau."
   },
   {
@@ -476,7 +480,7 @@ module.exports = [
     badge: "43 pouces",
     stock: 5,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/78/066221/1.jpg?3818",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/78/066221/1.jpg?3818"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/78/066221/1.jpg?3818"),
     description: "Smart TV Android 43 pouces avec grand affichage, ideale pour streaming, films, sport, IPTV et divertissement familial."
   },
   {
@@ -491,7 +495,7 @@ module.exports = [
     badge: "4K",
     stock: 3,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/55/188221/1.jpg?8395",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/55/188221/1.jpg?8395"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/55/188221/1.jpg?8395"),
     description: "Televiseur Smart Android 55 pouces 4K pour une experience image plus immersive, adaptee aux films, jeux, matchs et contenus grand format."
   },
   {
@@ -506,7 +510,7 @@ module.exports = [
     badge: "Projecteur",
     stock: 6,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/20/434821/1.jpg?5755",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/20/434821/1.jpg?5755"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/20/434821/1.jpg?5755"),
     description: "Videoprojecteur compatible 4K avec WiFi et Android, pratique pour regarder films, series, presentations et contenus multimedia sur grand ecran."
   },
   {
@@ -521,7 +525,7 @@ module.exports = [
     badge: "Home cinema",
     stock: 6,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/14/032821/1.jpg?4246",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/14/032821/1.jpg?4246"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/14/032821/1.jpg?4246"),
     description: "Mini projecteur LED portable 1080P compatible HDMI, USB et smartphones selon adaptateur, ideal pour films, series et presentations."
   },
   {
@@ -536,7 +540,7 @@ module.exports = [
     badge: "Woofer",
     stock: 8,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/40/17159/1.jpg?4282",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/40/17159/1.jpg?4282"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/40/17159/1.jpg?4282"),
     description: "Systeme home cinema avec Bluetooth, USB, carte SD et caisson woofer pour renforcer le son de la television, des films et de la musique."
   },
   {
@@ -551,7 +555,7 @@ module.exports = [
     badge: "Soundbar",
     stock: 6,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/72/884821/1.jpg?9369",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/72/884821/1.jpg?9369"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/72/884821/1.jpg?9369"),
     description: "Barre de son stereo sans fil pour TV, PC et home cinema, avec son surround, entrees auxiliaires, radio FM et lecture multimedia."
   },
   {
@@ -566,7 +570,7 @@ module.exports = [
     badge: "Sony",
     stock: 4,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/54/050721/1.jpg?0693",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/54/050721/1.jpg?0693"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/54/050721/1.jpg?0693"),
     description: "Barre de son Sony Bluetooth 2 canaux pour ameliorer clairement le son de la television, des films, des emissions et de la musique."
   },
   {
@@ -581,7 +585,7 @@ module.exports = [
     badge: "Support",
     stock: 15,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/10/775721/1.jpg?7893",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/10/775721/1.jpg?7893"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/10/775721/1.jpg?7893"),
     description: "Support mural pivotant pour televiseurs LED de 14 a 42 pouces, utile pour fixer proprement un ecran et ajuster l'angle de vision."
   },
   {
@@ -596,7 +600,7 @@ module.exports = [
     badge: "HDMI",
     stock: 22,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/09/777221/1.jpg?6738",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/09/777221/1.jpg?6738"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/09/777221/1.jpg?6738"),
     description: "Cable HDMI 8K de 3 metres pour connecter TV, box, console, PC, projecteur ou decodeur avec transmission audio et video stable."
   },
   {
@@ -611,7 +615,7 @@ module.exports = [
     badge: "Projection",
     stock: 7,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/90/357121/1.jpg?2275",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/90/357121/1.jpg?2275"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/90/357121/1.jpg?2275"),
     description: "Ecran de projection portable 100 pouces au format 16:9, pratique pour creer un espace cinema, presentation ou projection a domicile."
   },
   {
@@ -626,7 +630,7 @@ module.exports = [
     badge: "Video",
     stock: 8,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/04/576721/1.jpg?5592",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/04/576721/1.jpg?5592"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/04/576721/1.jpg?5592"),
     description: "Lecteur DVD domestique pour lire films, supports video et contenus physiques sur television ou ecran compatible."
   },
   {
@@ -641,7 +645,7 @@ module.exports = [
     badge: "Clim",
     stock: 5,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/83/838221/1.jpg?5223",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/83/838221/1.jpg?5223"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/83/838221/1.jpg?5223"),
     description: "Climatiseur split Nexon 12000 BTU avec classe A++, adapte aux pieces moyennes et aux usages quotidiens pendant les periodes de forte chaleur."
   },
   {
@@ -656,7 +660,7 @@ module.exports = [
     badge: "Eco",
     stock: 6,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/46/310911/1.jpg?3657",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/46/310911/1.jpg?3657"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/46/310911/1.jpg?3657"),
     description: "Split Smart Technology 9000 BTU avec traitement anti-corrosion et fonction purification, pratique pour rafraichir une chambre ou un bureau."
   },
   {
@@ -671,7 +675,7 @@ module.exports = [
     badge: "12000 BTU",
     stock: 5,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/96/914721/1.jpg?0362",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/96/914721/1.jpg?0362"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/96/914721/1.jpg?0362"),
     description: "Climatiseur Bruhm split 1.5CV 12000 BTU au gaz R410A, concu pour offrir un refroidissement regulier dans les espaces de vie ou de travail."
   },
   {
@@ -686,7 +690,7 @@ module.exports = [
     badge: "Compact",
     stock: 7,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/26/411121/1.jpg?4453",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/26/411121/1.jpg?4453"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/26/411121/1.jpg?4453"),
     description: "Split Deska 9000 BTU 1.25CV, une solution compacte pour refroidir efficacement une petite piece, une chambre ou un espace bureau."
   },
   {
@@ -701,7 +705,7 @@ module.exports = [
     badge: "Premium",
     stock: 3,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/70/735721/1.jpg?6206",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/70/735721/1.jpg?6206"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/70/735721/1.jpg?6206"),
     description: "Climatiseur Samsung 12000 BTU avec technologie Double Inverter, pense pour un meilleur confort thermique et une utilisation plus stable."
   },
   {
@@ -716,7 +720,7 @@ module.exports = [
     badge: "Mobile",
     stock: 4,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/30/141321/1.jpg?3843",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/30/141321/1.jpg?3843"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/30/141321/1.jpg?3843"),
     description: "Climatiseur mobile Hisense 1.5CV 12000 BTU, pratique lorsque l'on veut rafraichir une piece sans installation murale classique."
   },
   {
@@ -731,7 +735,7 @@ module.exports = [
     badge: "Ventilateur",
     stock: 14,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/03/343911/1.jpg?8022",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/03/343911/1.jpg?8022"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/03/343911/1.jpg?8022"),
     description: "Ventilateur Binatone sur pied 16 pouces, simple et efficace pour ameliorer la circulation d'air dans une chambre, un salon ou un bureau."
   },
   {
@@ -746,7 +750,7 @@ module.exports = [
     badge: "Rechargeable",
     stock: 9,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/26/844221/1.jpg?6660",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/26/844221/1.jpg?6660"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/26/844221/1.jpg?6660"),
     description: "Ventilateur Roch rechargeable 18 pouces avec telecommande et veilleuse, utile pour garder de l'air meme en cas de coupure de courant."
   },
   {
@@ -761,7 +765,7 @@ module.exports = [
     badge: "3 vitesses",
     stock: 13,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/07/478821/1.jpg?9964",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/07/478821/1.jpg?9964"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/07/478821/1.jpg?9964"),
     description: "Ventilateur YAKI sur pied 18 pouces avec moteur 50W et 3 vitesses, adapte aux usages domestiques pendant les journees chaudes."
   },
   {
@@ -776,7 +780,7 @@ module.exports = [
     badge: "Mural",
     stock: 10,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/66/831121/1.jpg?1772",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/66/831121/1.jpg?1772"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/66/831121/1.jpg?1772"),
     description: "Ventilateur mural Roch 18 pouces avec telecommande, ideal pour gagner de l'espace tout en gardant une ventilation dirigee et pratique."
   },
   {
@@ -791,7 +795,7 @@ module.exports = [
     badge: "Double helices",
     stock: 11,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/83/658121/1.jpg?8656",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/83/658121/1.jpg?8656"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/83/658121/1.jpg?8656"),
     description: "Ventilateur Smart Technology 18 pouces a double helices, pratique pour brasser plus d'air dans une piece avec plusieurs niveaux de ventilation."
   },
   {
@@ -806,7 +810,7 @@ module.exports = [
     badge: "Solaire",
     stock: 7,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/80/754821/1.jpg?9712",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/80/754821/1.jpg?9712"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/80/754821/1.jpg?9712"),
     description: "Ventilateur solaire rechargeable sur pied 18 pouces avec panneau solaire, telecommande et port USB, utile pour les longues journees chaudes."
   },
   {
@@ -821,7 +825,7 @@ module.exports = [
     badge: "Air cooler",
     stock: 6,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/05/871821/1.jpg?8791",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/05/871821/1.jpg?8791"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/05/871821/1.jpg?8791"),
     description: "Rafraichisseur d'air portable 3-en-1 avec reservoir 8L, adapte a la maison ou au bureau pour une ventilation plus fraiche et mobile."
   },
   {
@@ -836,7 +840,7 @@ module.exports = [
     badge: "Mini",
     stock: 18,
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/67/071821/1.jpg?5804",
-    images: ["https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/67/071821/1.jpg?5804"],
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/67/071821/1.jpg?5804"),
     description: "Mini rafraichisseur d'air Air Flux avec humidificateur et jets de brumisation, pratique sur un bureau, une table de chevet ou un petit espace."
   }
 ];
