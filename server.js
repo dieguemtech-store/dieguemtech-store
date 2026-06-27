@@ -22,6 +22,7 @@ const deliveryOptions = {
 };
 const defaultPayDunyaMinimumAmount = 6000;
 const cashOnDeliveryProvider = "Paiement livraison";
+const waveProvider = "Wave";
 const wavePaymentUrl = process.env.WAVE_PAYMENT_URL || "https://pay.wave.com/m/M_sn_Y0u8_bUZ_dN-/c/sn/";
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -517,7 +518,7 @@ function validateOrder(customer, items, paymentProvider) {
   if (!Array.isArray(items) || items.length === 0 || items.length > 30) {
     return "Le panier est vide ou invalide.";
   }
-  if (!["PayDunya", "PayTech", cashOnDeliveryProvider].includes(paymentProvider)) {
+  if (!["PayDunya", "PayTech", waveProvider, cashOnDeliveryProvider].includes(paymentProvider)) {
     return "Moyen de paiement invalide.";
   }
   return null;
@@ -737,7 +738,7 @@ function getLocalBusinessStructuredData(baseUrl) {
     email: "contact@dieguemtech.com",
     priceRange: "FCFA",
     currenciesAccepted: "XOF",
-    paymentAccepted: "PayDunya, PayTech, paiement a la livraison, Mobile Money, paiement mobile",
+    paymentAccepted: "PayDunya, PayTech, Wave, paiement a la livraison, Mobile Money, paiement mobile",
     address: {
       "@type": "PostalAddress",
       addressLocality: "Dakar",
@@ -1422,7 +1423,7 @@ ${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
         <div class="seo-meta">
           <span>Disponibilite : <strong>${escapeHtml(stockLabel)}</strong>${Number(product.stock) > 0 ? ` (${Number(product.stock)} disponible${Number(product.stock) > 1 ? "s" : ""})` : ""}</span>
           <span>Livraison : Dakar, Pikine, Guediawaye, Rufisque et autres zones selon confirmation</span>
-          <span>Paiement : PayDunya, PayTech ou paiement a la livraison</span>
+          <span>Paiement : PayDunya, PayTech, Wave ou paiement a la livraison</span>
           <span>Support : conseil avant achat et suivi apres commande</span>
         </div>
         <div class="seo-description-card">
@@ -2032,7 +2033,7 @@ function buildAdminOrderText(order, request) {
     `Livraison: ${formatSeoPrice(getOrderDeliveryFee(order))}`,
     `Total a payer: ${formatSeoPrice(order.total)}`,
     `Paiement: ${formatPaymentProviderLabel(order.paymentProvider)}`,
-    isCashOnDeliveryOrder(order) ? `Paiement Wave: ${wavePaymentUrl}` : "",
+    usesWavePaymentLink(order) ? `Paiement Wave: ${wavePaymentUrl}` : "",
     "",
     "Articles:",
     ...getOrderItems(order).map(item => `- ${item.name} x${item.quantity} = ${formatSeoPrice(item.lineTotal)}`),
@@ -2049,7 +2050,7 @@ function buildCustomerOrderText(order, request) {
     `Sous-total produits: ${formatSeoPrice(getOrderSubtotal(order))}.`,
     `Livraison ${getOrderDeliveryZone(order)}: ${formatSeoPrice(getOrderDeliveryFee(order))}.`,
     `Total a payer: ${formatSeoPrice(order.total)}.`,
-    isCashOnDeliveryOrder(order) ? `Vous pouvez payer DieguemTech Store avec Wave en cliquant sur ce lien: ${wavePaymentUrl}` : "",
+    usesWavePaymentLink(order) ? `Vous pouvez payer DieguemTech Store avec Wave en cliquant sur ce lien: ${wavePaymentUrl}` : "",
     "Notre equipe confirme le stock, la livraison et le paiement avant expedition.",
     `Suivi: ${getPublicBaseUrl(request)}/#suivi`
   ].filter(Boolean).join("\n");
@@ -2083,7 +2084,7 @@ function buildOrderEmailHtml(order, request, audience) {
         <tr><td style="padding:8px 0;color:#777">Zone livraison</td><td style="padding:8px 0;text-align:right">${escapeHtml(getOrderDeliveryZone(order))}</td></tr>
         <tr><td style="padding:8px 0;color:#777">Adresse</td><td style="padding:8px 0;text-align:right">${escapeHtml(getOrderAddress(order))}</td></tr>
         <tr><td style="padding:8px 0;color:#777">Paiement</td><td style="padding:8px 0;text-align:right">${escapeHtml(formatPaymentProviderLabel(order.paymentProvider))}</td></tr>
-        ${isCashOnDeliveryOrder(order) ? `<tr><td style="padding:8px 0;color:#777">Wave</td><td style="padding:8px 0;text-align:right"><a href="${escapeHtml(wavePaymentUrl)}" style="color:#f68b1e;font-weight:700">Payer avec Wave</a></td></tr>` : ""}
+        ${usesWavePaymentLink(order) ? `<tr><td style="padding:8px 0;color:#777">Wave</td><td style="padding:8px 0;text-align:right"><a href="${escapeHtml(wavePaymentUrl)}" style="color:#f68b1e;font-weight:700">Payer avec Wave</a></td></tr>` : ""}
       </table>
       <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead><tr style="background:#fafafa"><th style="text-align:left;padding:10px">Produit</th><th style="text-align:center;padding:10px">Qte</th><th style="text-align:right;padding:10px">Total</th></tr></thead>
@@ -2149,11 +2150,13 @@ function getOrderDeliveryFee(order) {
 function formatPaymentProviderLabel(provider) {
   const value = String(provider || "").trim();
   if (value === cashOnDeliveryProvider) return "Paiement a la livraison";
+  if (value === waveProvider) return "Wave";
   return value || "A confirmer";
 }
 
-function isCashOnDeliveryOrder(order) {
-  return String(order.paymentProvider || "").trim() === cashOnDeliveryProvider;
+function usesWavePaymentLink(order) {
+  const provider = String(order.paymentProvider || "").trim();
+  return provider === waveProvider || provider === cashOnDeliveryProvider;
 }
 
 function getOrderSubtotal(order) {

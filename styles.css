@@ -93,6 +93,7 @@
 @media(max-width:760px){#productDetailContent{grid-template-columns:1fr}.product-detail-visual{min-height:260px;padding:30px}.product-detail-main{min-height:220px}.product-detail-info{padding:30px 24px}.product-detail-info h2{font-size:25px}.product-detail-bottom{align-items:stretch;flex-direction:column}.product-detail-actions{justify-content:stretch}.product-detail-bottom .button,.product-detail-actions{width:100%}}
 @media(max-width:760px){.logo-image{width:176px}.info-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:480px){.logo-image{width:43px}.footer-brand .logo-image{width:190px}.product-description{display:none}.product-image{max-height:125px}.product-detail-emoji{font-size:110px}.info-grid{grid-template-columns:1fr}}
-.payment-options{grid-template-columns:repeat(3,1fr)}
+.payment-options{grid-template-columns:repeat(4,1fr)}
 .checkout-warning a,.success-notification a{color:#f68b1e;font-weight:900;text-decoration:underline}
+@media(max-width:900px){.payment-options{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:480px){.payment-options{grid-template-columns:1fr}}

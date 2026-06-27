@@ -60,6 +60,7 @@ function getOrderDeliveryZone(order) {
 function formatPaymentProviderLabel(provider) {
   const value = String(provider || "").trim();
   if (value === "Paiement livraison") return "Paiement a la livraison";
+  if (value === "Wave") return "Wave";
   return value || "A confirmer";
 }
 
