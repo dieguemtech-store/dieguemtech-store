@@ -575,7 +575,6 @@ function hasPayDunyaConfig() {
 function getPayDunyaMissingConfig() {
   return [
     "PAYDUNYA_MASTER_KEY",
-    "PAYDUNYA_PUBLIC_KEY",
     "PAYDUNYA_PRIVATE_KEY",
     "PAYDUNYA_TOKEN"
   ].filter(name => !getPayDunyaConfigValue(name));
@@ -602,7 +601,6 @@ function getPayDunyaHeaders() {
   return {
     "Content-Type": "application/json",
     "PAYDUNYA-MASTER-KEY": getPayDunyaConfigValue("PAYDUNYA_MASTER_KEY"),
-    "PAYDUNYA-PUBLIC-KEY": getPayDunyaConfigValue("PAYDUNYA_PUBLIC_KEY"),
     "PAYDUNYA-PRIVATE-KEY": getPayDunyaConfigValue("PAYDUNYA_PRIVATE_KEY"),
     "PAYDUNYA-TOKEN": getPayDunyaConfigValue("PAYDUNYA_TOKEN")
   };
