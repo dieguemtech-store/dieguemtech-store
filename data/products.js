@@ -842,5 +842,21 @@ module.exports = [
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/67/071821/1.jpg?5804",
     images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/67/071821/1.jpg?5804"),
     description: "Mini rafraichisseur d'air Air Flux avec humidificateur et jets de brumisation, pratique sur un bureau, une table de chevet ou un petit espace."
+  },
+  {
+    id: 157,
+    name: "Patch cable reseau RJ45 FTP Cat6 1.5m",
+    category: "Accessoires",
+    subcategory: "Cables et connectique",
+    price: 1000,
+    oldPrice: null,
+    emoji: "DT",
+    rating: 4.2,
+    reviews: 6,
+    badge: "Prix mini",
+    stock: 30,
+    image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/46/319621/1.jpg?6666",
+    images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/46/319621/1.jpg?6666"),
+    description: "Cable reseau RJ45 FTP Cat6 de 1,5 metre, pratique pour connecter un ordinateur, une box internet, un routeur ou une TV connectee avec une liaison stable."
   }
 ];
