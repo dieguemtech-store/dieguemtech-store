@@ -57,6 +57,12 @@ function getOrderDeliveryZone(order) {
   return order.deliveryZone || "A confirmer";
 }
 
+function formatPaymentProviderLabel(provider) {
+  const value = String(provider || "").trim();
+  if (value === "Paiement livraison") return "Paiement a la livraison";
+  return value || "A confirmer";
+}
+
 function isOrderToPrepare(order) {
   return order.paymentStatus === "paid" && !["shipped", "delivered", "cancelled"].includes(order.orderStatus);
 }
@@ -192,7 +198,7 @@ function getFilteredOrders() {
   const payment = $("#paymentFilter").value;
   const dateFilter = $("#dateFilter").value;
   return orders.filter(order => {
-    const haystack = `${order.id} ${order.customerName} ${order.customerPhone} ${order.customerEmail || ""} ${getOrderDeliveryZone(order)} ${order.deliveryAddress} ${order.paymentProvider}`.toLowerCase();
+    const haystack = `${order.id} ${order.customerName} ${order.customerPhone} ${order.customerEmail || ""} ${getOrderDeliveryZone(order)} ${order.deliveryAddress} ${order.paymentProvider} ${formatPaymentProviderLabel(order.paymentProvider)}`.toLowerCase();
     const matchesSearch = !query || haystack.includes(query);
     const matchesStatus = !status || order.orderStatus === status;
     const matchesPayment = !payment || order.paymentStatus === payment;
@@ -359,7 +365,7 @@ function orderCard(order) {
         <div class="item-line delivery-line"><span>Sous-total</span><strong>${formatPrice(subtotal)}</strong></div>
         <div class="item-line delivery-line"><span>Livraison ${escapeHtml(getOrderDeliveryZone(order))}</span><strong>${formatPrice(deliveryFee)}</strong></div>
         <div class="order-total">${formatPrice(order.total)}</div>
-        <p>${escapeHtml(order.paymentProvider)} &middot; ${escapeHtml(order.currency)}</p>
+        <p>${escapeHtml(formatPaymentProviderLabel(order.paymentProvider))} &middot; ${escapeHtml(order.currency)}</p>
       </div>
       <div class="status-controls">
         <label>Statut commande
@@ -707,7 +713,7 @@ function exportOrdersCsv() {
       getOrderDeliveryFee(order),
       order.total,
       order.currency,
-      order.paymentProvider,
+      formatPaymentProviderLabel(order.paymentProvider),
       paymentStatuses[order.paymentStatus] || order.paymentStatus,
       orderStatuses[order.orderStatus] || order.orderStatus,
       (order.items || []).map(item => `${item.name} x${item.quantity}`).join(" | ")

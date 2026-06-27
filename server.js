@@ -21,6 +21,7 @@ const deliveryOptions = {
   "Autre zone Senegal": { zone: "Autre zone Senegal", label: "Autre zone au Senegal", fee: 5000 }
 };
 const defaultPayDunyaMinimumAmount = 6000;
+const cashOnDeliveryProvider = "Paiement livraison";
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -515,7 +516,7 @@ function validateOrder(customer, items, paymentProvider) {
   if (!Array.isArray(items) || items.length === 0 || items.length > 30) {
     return "Le panier est vide ou invalide.";
   }
-  if (!["PayDunya", "PayTech"].includes(paymentProvider)) {
+  if (!["PayDunya", "PayTech", cashOnDeliveryProvider].includes(paymentProvider)) {
     return "Moyen de paiement invalide.";
   }
   return null;
@@ -735,7 +736,7 @@ function getLocalBusinessStructuredData(baseUrl) {
     email: "contact@dieguemtech.com",
     priceRange: "FCFA",
     currenciesAccepted: "XOF",
-    paymentAccepted: "PayDunya, PayTech, Mobile Money, paiement mobile",
+    paymentAccepted: "PayDunya, PayTech, paiement a la livraison, Mobile Money, paiement mobile",
     address: {
       "@type": "PostalAddress",
       addressLocality: "Dakar",
@@ -1420,7 +1421,7 @@ ${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
         <div class="seo-meta">
           <span>Disponibilite : <strong>${escapeHtml(stockLabel)}</strong>${Number(product.stock) > 0 ? ` (${Number(product.stock)} disponible${Number(product.stock) > 1 ? "s" : ""})` : ""}</span>
           <span>Livraison : Dakar, Pikine, Guediawaye, Rufisque et autres zones selon confirmation</span>
-          <span>Paiement : PayDunya / PayTech selon disponibilite</span>
+          <span>Paiement : PayDunya, PayTech ou paiement a la livraison</span>
           <span>Support : conseil avant achat et suivi apres commande</span>
         </div>
         <div class="seo-description-card">
@@ -1442,7 +1443,7 @@ ${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
       <h2>Ce que DieguemTech Store vous apporte</h2>
       <div class="seo-service-grid">
         <article><b>Produit selectionne</b><p>Nous privilegions des produits fiables, utiles et adaptes aux besoins high-tech du quotidien.</p></article>
-        <article><b>Paiement securise</b><p>Paiement mobile et solutions locales selon la disponibilite des services actives.</p></article>
+        <article><b>Paiement flexible</b><p>Paiement mobile en ligne ou paiement a la livraison apres confirmation de la commande.</p></article>
         <article><b>Livraison rapide</b><p>Organisation de la livraison a Dakar, Pikine, Guediawaye, Rufisque et dans les autres zones apres confirmation.</p></article>
         <article><b>Support reactif</b><p>Assistance avant achat, confirmation du stock et suivi de commande par WhatsApp.</p></article>
       </div>
@@ -2029,7 +2030,7 @@ function buildAdminOrderText(order, request) {
     `Sous-total: ${formatSeoPrice(getOrderSubtotal(order))}`,
     `Livraison: ${formatSeoPrice(getOrderDeliveryFee(order))}`,
     `Total a payer: ${formatSeoPrice(order.total)}`,
-    `Paiement: ${order.paymentProvider}`,
+    `Paiement: ${formatPaymentProviderLabel(order.paymentProvider)}`,
     "",
     "Articles:",
     ...getOrderItems(order).map(item => `- ${item.name} x${item.quantity} = ${formatSeoPrice(item.lineTotal)}`),
@@ -2078,7 +2079,7 @@ function buildOrderEmailHtml(order, request, audience) {
         ${getOrderCustomerEmail(order) ? `<tr><td style="padding:8px 0;color:#777">Email</td><td style="padding:8px 0;text-align:right">${escapeHtml(getOrderCustomerEmail(order))}</td></tr>` : ""}
         <tr><td style="padding:8px 0;color:#777">Zone livraison</td><td style="padding:8px 0;text-align:right">${escapeHtml(getOrderDeliveryZone(order))}</td></tr>
         <tr><td style="padding:8px 0;color:#777">Adresse</td><td style="padding:8px 0;text-align:right">${escapeHtml(getOrderAddress(order))}</td></tr>
-        <tr><td style="padding:8px 0;color:#777">Paiement</td><td style="padding:8px 0;text-align:right">${escapeHtml(order.paymentProvider)}</td></tr>
+        <tr><td style="padding:8px 0;color:#777">Paiement</td><td style="padding:8px 0;text-align:right">${escapeHtml(formatPaymentProviderLabel(order.paymentProvider))}</td></tr>
       </table>
       <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead><tr style="background:#fafafa"><th style="text-align:left;padding:10px">Produit</th><th style="text-align:center;padding:10px">Qte</th><th style="text-align:right;padding:10px">Total</th></tr></thead>
@@ -2139,6 +2140,12 @@ function getOrderDeliveryZone(order) {
 
 function getOrderDeliveryFee(order) {
   return Number(order.deliveryFee || order.delivery_fee || 0);
+}
+
+function formatPaymentProviderLabel(provider) {
+  const value = String(provider || "").trim();
+  if (value === cashOnDeliveryProvider) return "Paiement a la livraison";
+  return value || "A confirmer";
 }
 
 function getOrderSubtotal(order) {

@@ -31,6 +31,7 @@ const deliveryOptions = {
   "Autre zone Senegal": { label: "Autre zone au Senegal", fee: 5000 }
 };
 const PAYDUNYA_MINIMUM_AMOUNT = 6000;
+const CASH_ON_DELIVERY_PROVIDER = "Paiement livraison";
 
 const $ = selector => document.querySelector(selector);
 const $$ = selector => document.querySelectorAll(selector);
@@ -73,6 +74,12 @@ function getProductImages(product){
 
 function getProductMainImage(product){
   return getProductImages(product)[0] || "";
+}
+
+function formatPaymentProviderLabel(provider){
+  const value = String(provider || "").trim();
+  if (value === CASH_ON_DELIVERY_PROVIDER) return "Paiement a la livraison";
+  return value || "A confirmer";
 }
 
 function getProductCategoryLabel(product){
@@ -357,7 +364,7 @@ function openProductDetail(id){
       <div class="product-detail-meta">
         <span>Stock disponible : <strong>${product.stock}</strong></span>
         <span>Livraison rapide a Dakar</span>
-        <span>Paiement securise PayDunya / PayTech</span>
+        <span>Paiement en ligne ou a la livraison</span>
       </div>
       <div class="product-detail-bottom">
         <span class="price"><strong>${formatPrice(product.price)}</strong>${product.oldPrice ? `<del>${formatPrice(product.oldPrice)}</del>` : ""}</span>
@@ -453,6 +460,7 @@ function trackingHtml(order) {
     <div class="tracking-statuses">
       <span class="tracking-badge">${orderStatuses[order.orderStatus] || escapeHtml(order.orderStatus)}</span>
       <span class="tracking-badge payment">${paymentStatuses[order.paymentStatus] || escapeHtml(order.paymentStatus)}</span>
+      <span class="tracking-badge payment">${escapeHtml(formatPaymentProviderLabel(order.paymentProvider))}</span>
       <span class="tracking-date">${new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(order.createdAt))}</span>
     </div>
     <div class="tracking-items">
@@ -506,7 +514,7 @@ function showOrderSuccess(result, customerPhone, provider) {
   $("#trackingForm").elements.orderId.value = orderId;
   $("#trackingForm").elements.phone.value = customerPhone;
   openModal($("#orderSuccessModal"));
-  showToast("Commande créée", `Numéro ${orderId} - paiement ${provider} en attente.`);
+  showToast("Commande creee", `Numero ${orderId} - ${formatPaymentProviderLabel(provider)} en attente.`);
 }
 
 async function copyOrderId() {
