@@ -32,6 +32,7 @@ const deliveryOptions = {
 };
 const PAYDUNYA_MINIMUM_AMOUNT = 6000;
 const CASH_ON_DELIVERY_PROVIDER = "Paiement livraison";
+const WAVE_PAYMENT_URL = "https://pay.wave.com/m/M_sn_Y0u8_bUZ_dN-/c/sn/";
 
 const $ = selector => document.querySelector(selector);
 const $$ = selector => document.querySelectorAll(selector);
@@ -278,7 +279,7 @@ function renderCheckoutSummary(){
     const showMinimumNotice = total > 0 && total < PAYDUNYA_MINIMUM_AMOUNT;
     minimumNotice.classList.toggle("active", showMinimumNotice);
     minimumNotice.innerHTML = showMinimumNotice
-      ? `Commande inferieure a ${formatPrice(PAYDUNYA_MINIMUM_AMOUNT)} : choisissez <strong>A la livraison</strong> ou commandez directement sur <a href="https://wa.me/221772177176?text=${encodeURIComponent("Bonjour DieguemTech Store, je veux commander un produit de moins de 6000 FCFA.")}" target="_blank" rel="noopener">WhatsApp</a>. PayDunya reste disponible a partir de ${formatPrice(PAYDUNYA_MINIMUM_AMOUNT)}. Total actuel : ${formatPrice(total)}.`
+      ? `Commande inferieure a ${formatPrice(PAYDUNYA_MINIMUM_AMOUNT)} : payez DieguemTech Store avec <a href="${WAVE_PAYMENT_URL}" target="_blank" rel="noopener">Wave</a>, choisissez <strong>A la livraison</strong> ou commandez directement sur <a href="https://wa.me/221772177176?text=${encodeURIComponent("Bonjour DieguemTech Store, je veux commander un produit de moins de 6000 FCFA.")}" target="_blank" rel="noopener">WhatsApp</a>. PayDunya reste disponible a partir de ${formatPrice(PAYDUNYA_MINIMUM_AMOUNT)}. Total actuel : ${formatPrice(total)}.`
       : "";
   }
   itemsBox.innerHTML = details.items.length
@@ -505,10 +506,20 @@ function showOrderSuccess(result, customerPhone, provider) {
   const orderId = result.orderId;
   const notifications = result.notifications || {};
   const customerNotified = notifications.customerEmail === "sent" || notifications.customerWhatsapp === "sent";
+  const isManualPayment = provider === CASH_ON_DELIVERY_PROVIDER;
+  const waveLink = $("#orderWaveLink");
   $("#successOrderId").textContent = orderId;
-  $("#successNotificationInfo").textContent = customerNotified
-    ? "Une confirmation vient aussi de vous etre envoyee."
-    : "Le support confirmera votre commande par WhatsApp ou telephone.";
+  if (waveLink) {
+    waveLink.href = WAVE_PAYMENT_URL;
+    waveLink.hidden = !isManualPayment;
+  }
+  if (isManualPayment) {
+    $("#successNotificationInfo").innerHTML = `Votre commande est enregistree. Vous pouvez payer DieguemTech Store avec <a href="${WAVE_PAYMENT_URL}" target="_blank" rel="noopener">Wave en cliquant ici</a>, puis envoyer la confirmation au support.`;
+  } else {
+    $("#successNotificationInfo").textContent = customerNotified
+      ? "Une confirmation vient aussi de vous etre envoyee."
+      : "Le support confirmera votre commande par WhatsApp ou telephone.";
+  }
   $("#orderWhatsappLink").href = `https://wa.me/221772177176?text=${encodeURIComponent(`Bonjour DieguemTech Store, je viens de passer la commande ${orderId}.`)}`;
   $("#trackingForm").elements.orderId.value = orderId;
   $("#trackingForm").elements.phone.value = customerPhone;
@@ -618,7 +629,7 @@ $("#checkoutForm").addEventListener("submit", async event => {
   if (provider === "PayDunya" && checkoutTotal < PAYDUNYA_MINIMUM_AMOUNT) {
     showToast(
       "Montant PayDunya trop bas",
-      `Choisissez A la livraison ou WhatsApp pour ce total de ${formatPrice(checkoutTotal)}.`
+      `Payez avec Wave, choisissez A la livraison ou WhatsApp pour ce total de ${formatPrice(checkoutTotal)}.`
     );
     return;
   }

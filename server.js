@@ -22,6 +22,7 @@ const deliveryOptions = {
 };
 const defaultPayDunyaMinimumAmount = 6000;
 const cashOnDeliveryProvider = "Paiement livraison";
+const wavePaymentUrl = process.env.WAVE_PAYMENT_URL || "https://pay.wave.com/m/M_sn_Y0u8_bUZ_dN-/c/sn/";
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -2031,6 +2032,7 @@ function buildAdminOrderText(order, request) {
     `Livraison: ${formatSeoPrice(getOrderDeliveryFee(order))}`,
     `Total a payer: ${formatSeoPrice(order.total)}`,
     `Paiement: ${formatPaymentProviderLabel(order.paymentProvider)}`,
+    isCashOnDeliveryOrder(order) ? `Paiement Wave: ${wavePaymentUrl}` : "",
     "",
     "Articles:",
     ...getOrderItems(order).map(item => `- ${item.name} x${item.quantity} = ${formatSeoPrice(item.lineTotal)}`),
@@ -2047,9 +2049,10 @@ function buildCustomerOrderText(order, request) {
     `Sous-total produits: ${formatSeoPrice(getOrderSubtotal(order))}.`,
     `Livraison ${getOrderDeliveryZone(order)}: ${formatSeoPrice(getOrderDeliveryFee(order))}.`,
     `Total a payer: ${formatSeoPrice(order.total)}.`,
+    isCashOnDeliveryOrder(order) ? `Vous pouvez payer DieguemTech Store avec Wave en cliquant sur ce lien: ${wavePaymentUrl}` : "",
     "Notre equipe confirme le stock, la livraison et le paiement avant expedition.",
     `Suivi: ${getPublicBaseUrl(request)}/#suivi`
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 }
 
 function buildOrderEmailHtml(order, request, audience) {
@@ -2080,6 +2083,7 @@ function buildOrderEmailHtml(order, request, audience) {
         <tr><td style="padding:8px 0;color:#777">Zone livraison</td><td style="padding:8px 0;text-align:right">${escapeHtml(getOrderDeliveryZone(order))}</td></tr>
         <tr><td style="padding:8px 0;color:#777">Adresse</td><td style="padding:8px 0;text-align:right">${escapeHtml(getOrderAddress(order))}</td></tr>
         <tr><td style="padding:8px 0;color:#777">Paiement</td><td style="padding:8px 0;text-align:right">${escapeHtml(formatPaymentProviderLabel(order.paymentProvider))}</td></tr>
+        ${isCashOnDeliveryOrder(order) ? `<tr><td style="padding:8px 0;color:#777">Wave</td><td style="padding:8px 0;text-align:right"><a href="${escapeHtml(wavePaymentUrl)}" style="color:#f68b1e;font-weight:700">Payer avec Wave</a></td></tr>` : ""}
       </table>
       <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead><tr style="background:#fafafa"><th style="text-align:left;padding:10px">Produit</th><th style="text-align:center;padding:10px">Qte</th><th style="text-align:right;padding:10px">Total</th></tr></thead>
@@ -2146,6 +2150,10 @@ function formatPaymentProviderLabel(provider) {
   const value = String(provider || "").trim();
   if (value === cashOnDeliveryProvider) return "Paiement a la livraison";
   return value || "A confirmer";
+}
+
+function isCashOnDeliveryOrder(order) {
+  return String(order.paymentProvider || "").trim() === cashOnDeliveryProvider;
 }
 
 function getOrderSubtotal(order) {
