@@ -47,6 +47,19 @@
       </div>
 
       <section id="ordersPanel">
+        <div class="notification-admin-card" id="emailStatusCard">
+          <div>
+            <span class="eyebrow">Notifications email</span>
+            <h2>Emails de commande</h2>
+            <p id="emailStatusText">Verification de la configuration email...</p>
+            <p class="notification-message" id="emailTestMessage"></p>
+          </div>
+          <div class="notification-actions">
+            <span class="notification-badge" id="emailStatusBadge">Verification</span>
+            <button type="button" id="testEmailButton">Tester l'email admin</button>
+          </div>
+        </div>
+
         <div class="stats-grid">
           <article><span>Total commandes</span><strong id="totalOrders">0</strong></article>
           <article><span>Aujourd'hui</span><strong id="todayOrders">0</strong><small id="todayRevenue">0 FCFA encaisses</small></article>

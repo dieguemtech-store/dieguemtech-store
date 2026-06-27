@@ -62,6 +62,10 @@ app.get("/api/paydunya/status", (request, response) => {
   });
 });
 
+app.get("/api/email/status", (request, response) => {
+  response.json(getEmailStatus());
+});
+
 app.post("/api/admin/login", (request, response) => {
   const { password } = request.body || {};
   if (!getAdminPassword()) {
@@ -71,6 +75,46 @@ app.post("/api/admin/login", (request, response) => {
     return response.status(401).json({ error: "Mot de passe admin invalide." });
   }
   response.json({ token: getAdminPassword() });
+});
+
+app.post("/api/admin/email/test", requireAdmin, async (request, response) => {
+  const adminEmail = getOrderAdminEmail();
+  if (!adminEmail) {
+    return response.status(400).json({
+      error: "Ajoutez ORDER_ADMIN_EMAIL dans Render pour recevoir les notifications admin.",
+      email: getEmailStatus()
+    });
+  }
+
+  try {
+    const status = await sendOrderEmail({
+      to: adminEmail,
+      subject: "Test email - DieguemTech Store",
+      text: "Ceci est un test de notification email DieguemTech Store. Si vous recevez ce message, les emails admin sont actifs.",
+      html: `<p>Ceci est un test de notification email <strong>DieguemTech Store</strong>.</p><p>Si vous recevez ce message, les emails admin sont actifs.</p>`
+    });
+
+    if (status !== "sent") {
+      return response.status(503).json({
+        error: "Email non envoye. La configuration Resend est incomplete.",
+        status,
+        email: getEmailStatus()
+      });
+    }
+
+    response.json({
+      status: "sent",
+      message: "Email test envoye a l'adresse admin.",
+      email: getEmailStatus()
+    });
+  } catch (error) {
+    response.status(502).json({
+      error: "Resend a refuse l'email de test.",
+      detail: getNotificationError(error),
+      hint: getEmailErrorHint(error),
+      email: getEmailStatus()
+    });
+  }
 });
 
 app.get("/api/admin/orders", requireAdmin, async (request, response, next) => {
@@ -1803,21 +1847,83 @@ async function runNotification(name, task) {
 }
 
 async function sendOrderEmail({ to, subject, text, html }) {
-  if (!process.env.RESEND_API_KEY || !process.env.ORDER_EMAIL_FROM) return "skipped";
+  const apiKey = getEmailConfigValue("RESEND_API_KEY");
+  const from = getEmailFrom();
+  const recipient = normalizeEmail(to);
+  if (!apiKey || !from || !recipient) return "skipped";
   await axios.post("https://api.resend.com/emails", {
-    from: process.env.ORDER_EMAIL_FROM,
-    to: [to],
+    from,
+    to: [recipient],
     subject,
     text,
     html
   }, {
     headers: {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json"
     },
     timeout: 10000
   });
   return "sent";
+}
+
+function getEmailStatus() {
+  const missing = getEmailMissingConfig();
+  const from = getEmailFrom();
+  return {
+    provider: "resend",
+    configured: missing.length === 0,
+    missing,
+    adminEmailConfigured: Boolean(getOrderAdminEmail()),
+    fromConfigured: Boolean(from),
+    fromDomain: getEmailDomain(from)
+  };
+}
+
+function getEmailMissingConfig() {
+  return [
+    "RESEND_API_KEY",
+    "ORDER_EMAIL_FROM",
+    "ORDER_ADMIN_EMAIL"
+  ].filter(name => {
+    if (name === "ORDER_ADMIN_EMAIL") return !getOrderAdminEmail();
+    return !getEmailConfigValue(name);
+  });
+}
+
+function getEmailConfigValue(name) {
+  return String(process.env[name] || "").trim();
+}
+
+function getEmailFrom() {
+  return getEmailConfigValue("ORDER_EMAIL_FROM");
+}
+
+function getOrderAdminEmail() {
+  return getEmailConfigValue("ORDER_ADMIN_EMAIL") || getEmailConfigValue("ADMIN_EMAIL");
+}
+
+function getEmailDomain(value) {
+  const match = String(value || "").match(/@([^>\s]+)>?$/);
+  return match ? match[1].toLowerCase() : "";
+}
+
+function getEmailErrorHint(error) {
+  const details = getNotificationError(error).toLowerCase();
+  const status = Number(error.response?.status || 0);
+  if (status === 401 || status === 403 || details.includes("api key")) {
+    return "Verifiez RESEND_API_KEY dans Render.";
+  }
+  if (details.includes("domain") || details.includes("verify") || details.includes("verified")) {
+    return "Verifiez le domaine expediteur dans Resend et utilisez une adresse ORDER_EMAIL_FROM avec un domaine valide, par exemple DieguemTech Store <commandes@dieguemtechstore.com>.";
+  }
+  if (details.includes("from")) {
+    return "Verifiez ORDER_EMAIL_FROM dans Render.";
+  }
+  if (details.includes("to") || details.includes("recipient")) {
+    return "Verifiez ORDER_ADMIN_EMAIL dans Render.";
+  }
+  return "Ouvrez les logs Render pour le detail complet, puis verifiez RESEND_API_KEY, ORDER_EMAIL_FROM et ORDER_ADMIN_EMAIL.";
 }
 
 async function sendOrderWhatsApp({ to, text, templateName, templateParams = [] }) {

@@ -77,7 +77,10 @@ async function api(path, options = {}) {
     headers
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || "Operation impossible.");
+  if (!response.ok) {
+    const message = [data.error, data.detail, data.hint].filter(Boolean).join(" - ");
+    throw new Error(message || "Operation impossible.");
+  }
   return data;
 }
 
@@ -89,7 +92,7 @@ async function login(password) {
   token = result.token;
   sessionStorage.setItem("dt-admin-token", token);
   showDashboard();
-  await loadOrders();
+  await Promise.all([loadOrders(), loadEmailStatus()]);
 }
 
 function logout() {
@@ -107,6 +110,59 @@ function showDashboard() {
 async function loadOrders() {
   orders = await api("/api/admin/orders");
   renderOrders();
+}
+
+async function loadEmailStatus() {
+  const card = $("#emailStatusCard");
+  if (!card) return;
+  try {
+    const status = await api("/api/email/status");
+    renderEmailStatus(status);
+  } catch (error) {
+    renderEmailStatus({ configured: false, missing: ["statut indisponible"], error: error.message });
+  }
+}
+
+function renderEmailStatus(status) {
+  const badge = $("#emailStatusBadge");
+  const text = $("#emailStatusText");
+  if (!badge || !text) return;
+  const missing = Array.isArray(status.missing) ? status.missing : [];
+  const ready = status.configured === true;
+  badge.classList.toggle("ok", ready);
+  badge.classList.toggle("error", !ready);
+  badge.textContent = ready ? "Actif" : "A configurer";
+  if (ready) {
+    text.textContent = `Resend est configure. Domaine expediteur: ${status.fromDomain || "non detecte"}.`;
+    return;
+  }
+  text.textContent = status.error
+    ? `Statut email indisponible: ${status.error}`
+    : `Variables manquantes dans Render: ${missing.join(", ") || "configuration incomplete"}.`;
+}
+
+async function testAdminEmail() {
+  const button = $("#testEmailButton");
+  const message = $("#emailTestMessage");
+  if (!button || !message) return;
+  button.disabled = true;
+  message.classList.remove("error", "success");
+  message.textContent = "Envoi du test email...";
+  try {
+    const result = await api("/api/admin/email/test", {
+      method: "POST",
+      body: JSON.stringify({})
+    });
+    renderEmailStatus(result.email);
+    message.classList.add("success");
+    message.textContent = result.message || "Email test envoye.";
+  } catch (error) {
+    await loadEmailStatus();
+    message.classList.add("error");
+    message.textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
 }
 
 async function loadProducts() {
@@ -756,6 +812,9 @@ $("#loginForm").addEventListener("submit", async event => {
 $("#logoutButton").addEventListener("click", logout);
 $("#refreshOrders").addEventListener("click", loadOrders);
 $("#exportOrders").addEventListener("click", exportOrdersCsv);
+$("#testEmailButton").addEventListener("click", () => {
+  testAdminEmail().catch(error => window.alert(error.message));
+});
 $("#orderSearch").addEventListener("input", renderOrders);
 $("#statusFilter").addEventListener("change", renderOrders);
 $("#paymentFilter").addEventListener("change", renderOrders);
@@ -854,5 +913,5 @@ document.addEventListener("keydown", event => {
 
 if (token) {
   showDashboard();
-  loadOrders().catch(() => logout());
+  Promise.all([loadOrders(), loadEmailStatus()]).catch(() => logout());
 }
