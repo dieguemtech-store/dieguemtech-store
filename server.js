@@ -914,7 +914,6 @@ ${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
   <link rel="shortcut icon" href="/assets/favicon.svg">
   <link rel="apple-touch-icon" href="/assets/logo-mark.svg">
-  <link rel="manifest" href="/site.webmanifest">
   <title>${escapeHtml(pageTitle)}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1217,7 +1216,6 @@ ${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
   <link rel="shortcut icon" href="/assets/favicon.svg">
   <link rel="apple-touch-icon" href="/assets/logo-mark.svg">
-  <link rel="manifest" href="/site.webmanifest">
   <title>${escapeHtml(title)}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

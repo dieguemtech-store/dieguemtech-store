@@ -1,89 +1,16 @@
-const CACHE_NAME = "dieguemtech-store-v2";
-const APP_SHELL = [
-  "/",
-  "/?source=pwa",
-  "/index.html",
-  "/offline.html",
-  "/styles.css",
-  "/app.js",
-  "/site.webmanifest",
-  "/assets/logo.svg",
-  "/assets/logo-mark.svg",
-  "/assets/favicon.svg",
-  "/assets/hero-tech.png"
-];
+const LEGACY_CACHE_PREFIX = "dieguemtech-store";
 
 self.addEventListener("install", event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(APP_SHELL))
-      .then(() => self.skipWaiting())
-  );
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys()
       .then(keys => Promise.all(keys
-        .filter(key => key !== CACHE_NAME)
+        .filter(key => key.startsWith(LEGACY_CACHE_PREFIX))
         .map(key => caches.delete(key))
       ))
-      .then(() => self.clients.claim())
+      .then(() => self.registration.unregister())
   );
 });
-
-self.addEventListener("fetch", event => {
-  const { request } = event;
-  if (request.method !== "GET") return;
-
-  const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith("/api/") || url.pathname === "/admin.html") return;
-
-  if (request.mode === "navigate") {
-    event.respondWith(networkFirstPage(request));
-    return;
-  }
-
-  if (["/styles.css", "/app.js", "/site.webmanifest"].includes(url.pathname)) {
-    event.respondWith(networkFirstAsset(request));
-    return;
-  }
-
-  event.respondWith(cacheFirstAsset(request));
-});
-
-async function networkFirstPage(request) {
-  const cache = await caches.open(CACHE_NAME);
-  try {
-    const response = await fetch(request);
-    if (response.ok) cache.put(request, response.clone());
-    return response;
-  } catch (error) {
-    const cached = await cache.match(request);
-    return cached || cache.match("/offline.html");
-  }
-}
-
-async function cacheFirstAsset(request) {
-  const cache = await caches.open(CACHE_NAME);
-  const cached = await cache.match(request);
-  if (cached) return cached;
-
-  const response = await fetch(request);
-  if (response.ok) cache.put(request, response.clone());
-  return response;
-}
-
-async function networkFirstAsset(request) {
-  const cache = await caches.open(CACHE_NAME);
-  try {
-    const response = await fetch(request);
-    if (response.ok) cache.put(request, response.clone());
-    return response;
-  } catch (error) {
-    const cached = await cache.match(request);
-    if (cached) return cached;
-    throw error;
-  }
-}
