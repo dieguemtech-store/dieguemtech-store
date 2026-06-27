@@ -20,6 +20,7 @@ const deliveryOptions = {
   Mbour: { zone: "Mbour", label: "Mbour", fee: 4000 },
   "Autre zone Senegal": { zone: "Autre zone Senegal", label: "Autre zone au Senegal", fee: 5000 }
 };
+const defaultPayDunyaMinimumAmount = 6000;
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -58,6 +59,7 @@ app.get("/api/paydunya/status", (request, response) => {
   response.json({
     configured: hasPayDunyaConfig(),
     mode: getPayDunyaMode(),
+    minimumAmount: getPayDunyaMinimumAmount(),
     missing: getPayDunyaMissingConfig()
   });
 });
@@ -286,6 +288,13 @@ app.post("/api/orders", async (request, response, next) => {
       preparedItems.push({ id, quantity });
     }
 
+    const estimatedOrder = await estimateOrderBeforePayment(preparedItems, delivery);
+    if (paymentProvider === "PayDunya" && estimatedOrder.total < getPayDunyaMinimumAmount()) {
+      return response.status(400).json({
+        error: `PayDunya accepte les paiements a partir de ${formatSeoPrice(getPayDunyaMinimumAmount())}. Total actuel: ${formatSeoPrice(estimatedOrder.total)}. Ajoutez un produit ou choisissez un autre moyen de paiement.`
+      });
+    }
+
     const orderInput = {
       id: `DT-${Date.now()}-${crypto.randomInt(100, 999)}`,
       customer: {
@@ -512,6 +521,33 @@ function validateOrder(customer, items, paymentProvider) {
   return null;
 }
 
+async function estimateOrderBeforePayment(items, delivery) {
+  const normalizedItems = [];
+  for (const item of items) {
+    const product = await database.getProduct(item.id);
+    if (!product) {
+      const error = new Error(`Produit ${item.id} introuvable.`);
+      error.status = 400;
+      throw error;
+    }
+    if (item.quantity > Number(product.stock || 0)) {
+      const error = new Error(`Stock insuffisant pour ${product.name}.`);
+      error.status = 409;
+      throw error;
+    }
+    const lineTotal = Number(product.price || 0) * item.quantity;
+    normalizedItems.push({ ...item, product, lineTotal });
+  }
+  const subtotal = normalizedItems.reduce((sum, item) => sum + item.lineTotal, 0);
+  const deliveryFee = Number(delivery?.fee || 0);
+  return {
+    items: normalizedItems,
+    subtotal,
+    deliveryFee,
+    total: subtotal + deliveryFee
+  };
+}
+
 function validateProductUpdate(product) {
   if (!product.name?.trim()) return "Le nom du produit est requis.";
   if (!product.category?.trim()) return "La categorie est requise.";
@@ -633,6 +669,13 @@ function getPayDunyaMode() {
   if (["prod", "production", "live"].includes(mode)) return "live";
   if (["test", "sandbox", "testing"].includes(mode)) return "test";
   return "test";
+}
+
+function getPayDunyaMinimumAmount() {
+  const amount = Number(process.env.PAYDUNYA_MIN_AMOUNT || defaultPayDunyaMinimumAmount);
+  return Number.isFinite(amount) && amount > 0
+    ? Math.round(amount)
+    : defaultPayDunyaMinimumAmount;
 }
 
 function getPayDunyaApiBaseUrl() {

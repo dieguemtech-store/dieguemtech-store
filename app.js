@@ -30,6 +30,7 @@ const deliveryOptions = {
   Mbour: { label: "Mbour", fee: 4000 },
   "Autre zone Senegal": { label: "Autre zone au Senegal", fee: 5000 }
 };
+const PAYDUNYA_MINIMUM_AMOUNT = 6000;
 
 const $ = selector => document.querySelector(selector);
 const $$ = selector => document.querySelectorAll(selector);
@@ -265,6 +266,15 @@ function renderCheckoutSummary(){
   $("#checkoutDeliveryFee").textContent = delivery ? formatPrice(deliveryFee) : "Choisir zone";
   $("#checkoutGrandTotal").textContent = formatPrice(total);
   if ($("#checkoutTotal")) $("#checkoutTotal").textContent = formatPrice(total);
+  const minimumNotice = $("#paydunyaMinimumNotice");
+  if (minimumNotice) {
+    const selectedProvider = $(".payment-options button.selected")?.dataset.payment;
+    const showMinimumNotice = selectedProvider === "PayDunya" && total > 0 && total < PAYDUNYA_MINIMUM_AMOUNT;
+    minimumNotice.classList.toggle("active", showMinimumNotice);
+    minimumNotice.textContent = showMinimumNotice
+      ? `PayDunya accepte les paiements a partir de ${formatPrice(PAYDUNYA_MINIMUM_AMOUNT)}. Total actuel: ${formatPrice(total)}. Ajoutez un produit ou choisissez un autre moyen de paiement.`
+      : "";
+  }
   itemsBox.innerHTML = details.items.length
     ? details.items.map(({ product, quantity, lineTotal }) => `<div class="checkout-item">
         <div class="checkout-item-visual">${cartItemVisual(product)}</div>
@@ -577,6 +587,7 @@ $$(".payment-options button").forEach(button => button.addEventListener("click",
   });
   button.classList.add("selected");
   button.setAttribute("aria-pressed", "true");
+  renderCheckoutSummary();
 }));
 $("#checkoutForm select[name='deliveryZone']").addEventListener("change", renderCheckoutSummary);
 $("#checkoutForm").addEventListener("submit", async event => {
@@ -595,6 +606,15 @@ $("#checkoutForm").addEventListener("submit", async event => {
   const provider = $(".payment-options button.selected").dataset.payment;
   const customerPhone = String(formData.get("customerPhone") || "").trim();
   const deliveryZone = String(formData.get("deliveryZone") || "").trim();
+  const delivery = getDeliveryOption(deliveryZone);
+  const checkoutTotal = getCartDetails().total + Number(delivery?.fee || 0);
+  if (provider === "PayDunya" && checkoutTotal < PAYDUNYA_MINIMUM_AMOUNT) {
+    showToast(
+      "Montant PayDunya trop bas",
+      `PayDunya commence a ${formatPrice(PAYDUNYA_MINIMUM_AMOUNT)}. Total actuel: ${formatPrice(checkoutTotal)}.`
+    );
+    return;
+  }
   const deliveryNote = String(formData.get("deliveryNote") || "").trim();
   const deliveryAddress = [
     String(formData.get("deliveryAddress") || "").trim(),
