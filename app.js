@@ -275,11 +275,10 @@ function renderCheckoutSummary(){
   if ($("#checkoutTotal")) $("#checkoutTotal").textContent = formatPrice(total);
   const minimumNotice = $("#paydunyaMinimumNotice");
   if (minimumNotice) {
-    const selectedProvider = $(".payment-options button.selected")?.dataset.payment;
-    const showMinimumNotice = selectedProvider === "PayDunya" && total > 0 && total < PAYDUNYA_MINIMUM_AMOUNT;
+    const showMinimumNotice = total > 0 && total < PAYDUNYA_MINIMUM_AMOUNT;
     minimumNotice.classList.toggle("active", showMinimumNotice);
-    minimumNotice.textContent = showMinimumNotice
-      ? `PayDunya accepte les paiements a partir de ${formatPrice(PAYDUNYA_MINIMUM_AMOUNT)}. Total actuel: ${formatPrice(total)}. Ajoutez un produit ou choisissez un autre moyen de paiement.`
+    minimumNotice.innerHTML = showMinimumNotice
+      ? `Commande inferieure a ${formatPrice(PAYDUNYA_MINIMUM_AMOUNT)} : choisissez <strong>A la livraison</strong> ou commandez directement sur <a href="https://wa.me/221772177176?text=${encodeURIComponent("Bonjour DieguemTech Store, je veux commander un produit de moins de 6000 FCFA.")}" target="_blank" rel="noopener">WhatsApp</a>. PayDunya reste disponible a partir de ${formatPrice(PAYDUNYA_MINIMUM_AMOUNT)}. Total actuel : ${formatPrice(total)}.`
       : "";
   }
   itemsBox.innerHTML = details.items.length
@@ -619,7 +618,7 @@ $("#checkoutForm").addEventListener("submit", async event => {
   if (provider === "PayDunya" && checkoutTotal < PAYDUNYA_MINIMUM_AMOUNT) {
     showToast(
       "Montant PayDunya trop bas",
-      `PayDunya commence a ${formatPrice(PAYDUNYA_MINIMUM_AMOUNT)}. Total actuel: ${formatPrice(checkoutTotal)}.`
+      `Choisissez A la livraison ou WhatsApp pour ce total de ${formatPrice(checkoutTotal)}.`
     );
     return;
   }

@@ -94,4 +94,5 @@
 @media(max-width:760px){.logo-image{width:176px}.info-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:480px){.logo-image{width:43px}.footer-brand .logo-image{width:190px}.product-description{display:none}.product-image{max-height:125px}.product-detail-emoji{font-size:110px}.info-grid{grid-template-columns:1fr}}
 .payment-options{grid-template-columns:repeat(3,1fr)}
+.checkout-warning a{color:#f68b1e;font-weight:900;text-decoration:underline}
 @media(max-width:480px){.payment-options{grid-template-columns:1fr}}
