@@ -578,7 +578,11 @@ function getPayDunyaMissingConfig() {
     "PAYDUNYA_PUBLIC_KEY",
     "PAYDUNYA_PRIVATE_KEY",
     "PAYDUNYA_TOKEN"
-  ].filter(name => !String(process.env[name] || "").trim());
+  ].filter(name => !getPayDunyaConfigValue(name));
+}
+
+function getPayDunyaConfigValue(name) {
+  return String(process.env[name] || "").trim();
 }
 
 function getPayDunyaMode() {
@@ -597,10 +601,10 @@ function getPayDunyaApiBaseUrl() {
 function getPayDunyaHeaders() {
   return {
     "Content-Type": "application/json",
-    "PAYDUNYA-MASTER-KEY": process.env.PAYDUNYA_MASTER_KEY,
-    "PAYDUNYA-PUBLIC-KEY": process.env.PAYDUNYA_PUBLIC_KEY,
-    "PAYDUNYA-PRIVATE-KEY": process.env.PAYDUNYA_PRIVATE_KEY,
-    "PAYDUNYA-TOKEN": process.env.PAYDUNYA_TOKEN
+    "PAYDUNYA-MASTER-KEY": getPayDunyaConfigValue("PAYDUNYA_MASTER_KEY"),
+    "PAYDUNYA-PUBLIC-KEY": getPayDunyaConfigValue("PAYDUNYA_PUBLIC_KEY"),
+    "PAYDUNYA-PRIVATE-KEY": getPayDunyaConfigValue("PAYDUNYA_PRIVATE_KEY"),
+    "PAYDUNYA-TOKEN": getPayDunyaConfigValue("PAYDUNYA_TOKEN")
   };
 }
 
