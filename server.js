@@ -2140,7 +2140,7 @@ function getPayDunyaRedirectUrl(data) {
     data?.checkout_url,
     data?.url
   ];
-  const direct = candidates.find(value => typeof value === "string" && /^https?:\/\/.+paydunya/i.test(value));
+  const direct = candidates.find(isPayDunyaUrl);
   if (direct) return direct;
   return findPayDunyaUrlInObject(data);
 }
@@ -2148,13 +2148,25 @@ function getPayDunyaRedirectUrl(data) {
 function findPayDunyaUrlInObject(value) {
   if (!value || typeof value !== "object") return null;
   for (const item of Object.values(value)) {
-    if (typeof item === "string" && /^https?:\/\/.+paydunya/i.test(item)) return item;
+    if (isPayDunyaUrl(item)) return item;
     if (item && typeof item === "object") {
       const nested = findPayDunyaUrlInObject(item);
       if (nested) return nested;
     }
   }
   return null;
+}
+
+function isPayDunyaUrl(value) {
+  if (typeof value !== "string") return false;
+  try {
+    const url = new URL(value.trim());
+    const hostname = url.hostname.toLowerCase();
+    return ["http:", "https:"].includes(url.protocol)
+      && (hostname === "paydunya.com" || hostname.endsWith(".paydunya.com"));
+  } catch (error) {
+    return false;
+  }
 }
 
 function parsePayDunyaData(value) {
