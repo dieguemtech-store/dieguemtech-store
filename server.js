@@ -57,7 +57,8 @@ app.get("/api/paytech/status", (request, response) => {
 app.get("/api/paydunya/status", (request, response) => {
   response.json({
     configured: hasPayDunyaConfig(),
-    mode: getPayDunyaMode()
+    mode: getPayDunyaMode(),
+    missing: getPayDunyaMissingConfig()
   });
 });
 
@@ -223,7 +224,7 @@ app.post("/api/orders", async (request, response, next) => {
     }
     if (paymentProvider === "PayDunya" && !hasPayDunyaConfig()) {
       return response.status(503).json({
-        error: "PayDunya n'est pas encore configure. Ajoutez PAYDUNYA_MASTER_KEY, PAYDUNYA_PRIVATE_KEY et PAYDUNYA_TOKEN dans Render."
+        error: `PayDunya n'est pas encore configure. Variable(s) manquante(s) dans Render: ${getPayDunyaMissingConfig().join(", ")}.`
       });
     }
     const delivery = getDeliveryOption(customer.deliveryZone);
@@ -568,7 +569,16 @@ function getPaymentStatuses() {
 }
 
 function hasPayDunyaConfig() {
-  return Boolean(process.env.PAYDUNYA_MASTER_KEY && process.env.PAYDUNYA_PRIVATE_KEY && process.env.PAYDUNYA_TOKEN);
+  return getPayDunyaMissingConfig().length === 0;
+}
+
+function getPayDunyaMissingConfig() {
+  return [
+    "PAYDUNYA_MASTER_KEY",
+    "PAYDUNYA_PUBLIC_KEY",
+    "PAYDUNYA_PRIVATE_KEY",
+    "PAYDUNYA_TOKEN"
+  ].filter(name => !String(process.env[name] || "").trim());
 }
 
 function getPayDunyaMode() {
@@ -588,6 +598,7 @@ function getPayDunyaHeaders() {
   return {
     "Content-Type": "application/json",
     "PAYDUNYA-MASTER-KEY": process.env.PAYDUNYA_MASTER_KEY,
+    "PAYDUNYA-PUBLIC-KEY": process.env.PAYDUNYA_PUBLIC_KEY,
     "PAYDUNYA-PRIVATE-KEY": process.env.PAYDUNYA_PRIVATE_KEY,
     "PAYDUNYA-TOKEN": process.env.PAYDUNYA_TOKEN
   };
