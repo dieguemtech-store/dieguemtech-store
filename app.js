@@ -621,7 +621,7 @@ $("#checkoutForm").addEventListener("submit", async event => {
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "La commande n'a pas pu etre creee.");
-    if (provider === "PayTech" && result.redirect_url) {
+    if (result.redirect_url) {
       window.location.href = result.redirect_url;
       return;
     }

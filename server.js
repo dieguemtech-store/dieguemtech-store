@@ -37,6 +37,7 @@ const upload = multer({
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
 app.use(express.json({ limit: "100kb" }));
+app.use(express.urlencoded({ extended: true, limit: "100kb" }));
 
 app.get("/api/health", (request, response) => {
   response.json({
@@ -50,6 +51,13 @@ app.get("/api/paytech/status", (request, response) => {
   response.json({
     configured: hasPayTechConfig(),
     mode: getPayTechMode()
+  });
+});
+
+app.get("/api/paydunya/status", (request, response) => {
+  response.json({
+    configured: hasPayDunyaConfig(),
+    mode: getPayDunyaMode()
   });
 });
 
@@ -213,6 +221,11 @@ app.post("/api/orders", async (request, response, next) => {
         error: "PayTech n'est pas encore configure. Ajoutez PAYTECH_API_KEY et PAYTECH_API_SECRET dans Render."
       });
     }
+    if (paymentProvider === "PayDunya" && !hasPayDunyaConfig()) {
+      return response.status(503).json({
+        error: "PayDunya n'est pas encore configure. Ajoutez PAYDUNYA_MASTER_KEY, PAYDUNYA_PRIVATE_KEY et PAYDUNYA_TOKEN dans Render."
+      });
+    }
     const delivery = getDeliveryOption(customer.deliveryZone);
 
     const preparedItems = [];
@@ -259,6 +272,24 @@ app.post("/api/orders", async (request, response, next) => {
         deliveryZone: order.deliveryZone,
         deliveryFee: order.deliveryFee,
         redirect_url: payment.redirectUrl,
+        notifications
+      });
+    }
+
+    if (paymentProvider === "PayDunya") {
+      const payment = await createPayDunyaPayment(order, request);
+      const notifications = await notifyOrderCreated(order, request);
+      return response.status(201).json({
+        orderId: order.id,
+        total: order.total,
+        currency: order.currency,
+        paymentProvider: order.paymentProvider,
+        paymentStatus: "pending",
+        subtotal: order.subtotal,
+        deliveryZone: order.deliveryZone,
+        deliveryFee: order.deliveryFee,
+        redirect_url: payment.redirectUrl,
+        payment_token: payment.token,
         notifications
       });
     }
@@ -321,12 +352,61 @@ app.post("/api/paytech/ipn", (request, response) => {
   response.status(200).send("OK");
 });
 
+app.post("/api/paydunya/ipn", async (request, response, next) => {
+  try {
+    const data = parsePayDunyaData(request.body?.data || request.body);
+    if (!verifyPayDunyaHash(data?.hash)) {
+      return response.status(403).send("Invalid PayDunya hash");
+    }
+
+    const update = await updateOrderFromPayDunyaData(data);
+    console.log("Notification PayDunya:", {
+      orderId: update.orderId,
+      status: data?.status,
+      paymentStatus: update.paymentStatus,
+      orderUpdated: Boolean(update.order)
+    });
+    response.status(200).send("OK");
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.get("/payment-success", (request, response) => {
   response.send(renderPaymentPage(
     "Paiement en cours de confirmation",
     "Merci pour votre commande. Nous avons recu le retour PayTech et votre paiement sera confirme automatiquement.",
     "success"
   ));
+});
+
+app.get("/payment-success/paydunya", async (request, response, next) => {
+  try {
+    const token = String(request.query.token || "").trim();
+    if (!token) {
+      return response.send(renderPaymentPage(
+        "Paiement en cours de confirmation",
+        "Merci pour votre commande. PayDunya confirmera automatiquement le paiement des que la transaction sera finalisee.",
+        "success"
+      ));
+    }
+
+    const data = await confirmPayDunyaInvoice(token);
+    const update = await updateOrderFromPayDunyaData(data);
+    const isPaid = update.paymentStatus === "paid";
+    const isFailed = update.paymentStatus === "failed";
+    response.send(renderPaymentPage(
+      isPaid ? "Paiement confirme" : isFailed ? "Paiement non confirme" : "Paiement en cours de confirmation",
+      isPaid
+        ? "Merci pour votre commande. Votre paiement PayDunya a ete confirme."
+        : isFailed
+          ? "Le paiement PayDunya n'a pas ete finalise. Vous pouvez revenir a la boutique et reessayer."
+          : "Merci pour votre commande. Le paiement PayDunya est encore en cours de confirmation.",
+      isPaid ? "success" : isFailed ? "cancel" : "pending"
+    ));
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.get("/payment-cancel", (request, response) => {
@@ -485,6 +565,32 @@ function getOrderStatuses() {
 
 function getPaymentStatuses() {
   return ["pending", "paid", "failed", "refunded"];
+}
+
+function hasPayDunyaConfig() {
+  return Boolean(process.env.PAYDUNYA_MASTER_KEY && process.env.PAYDUNYA_PRIVATE_KEY && process.env.PAYDUNYA_TOKEN);
+}
+
+function getPayDunyaMode() {
+  const mode = String(process.env.PAYDUNYA_MODE || "test").trim().toLowerCase();
+  if (["prod", "production", "live"].includes(mode)) return "live";
+  if (["test", "sandbox", "testing"].includes(mode)) return "test";
+  return "test";
+}
+
+function getPayDunyaApiBaseUrl() {
+  return getPayDunyaMode() === "live"
+    ? "https://app.paydunya.com/api/v1"
+    : "https://app.paydunya.com/sandbox-api/v1";
+}
+
+function getPayDunyaHeaders() {
+  return {
+    "Content-Type": "application/json",
+    "PAYDUNYA-MASTER-KEY": process.env.PAYDUNYA_MASTER_KEY,
+    "PAYDUNYA-PRIVATE-KEY": process.env.PAYDUNYA_PRIVATE_KEY,
+    "PAYDUNYA-TOKEN": process.env.PAYDUNYA_TOKEN
+  };
 }
 
 function hasPayTechConfig() {
@@ -1893,6 +1999,217 @@ function getNotificationError(error) {
   const data = error.response?.data;
   if (!data) return error.message;
   if (typeof data === "string") return data.slice(0, 250);
+  return JSON.stringify(data).slice(0, 250);
+}
+
+async function createPayDunyaPayment(order, request) {
+  const payload = buildPayDunyaPayload(order, request);
+
+  try {
+    const paydunyaResponse = await axios.post(
+      `${getPayDunyaApiBaseUrl()}/checkout-invoice/create`,
+      payload,
+      {
+        headers: getPayDunyaHeaders(),
+        timeout: 15000
+      }
+    );
+
+    const data = paydunyaResponse.data || {};
+    const redirectUrl = getPayDunyaRedirectUrl(data);
+    if (data.response_code !== "00" || !redirectUrl) {
+      const error = new Error(`PayDunya n'a pas renvoye de lien de paiement. Reponse: ${JSON.stringify(data).slice(0, 250)}`);
+      error.status = 502;
+      throw error;
+    }
+    return {
+      redirectUrl,
+      token: typeof data.token === "string" ? data.token : ""
+    };
+  } catch (error) {
+    if (error.status && !error.isAxiosError) throw error;
+    const details = getPayDunyaErrorDetails(error);
+    const paymentError = new Error(`PayDunya a refuse la demande de paiement.${details ? ` Detail: ${details}` : ""}`);
+    paymentError.status = 502;
+    paymentError.cause = error;
+    throw paymentError;
+  }
+}
+
+function buildPayDunyaPayload(order, request) {
+  const baseUrl = getBaseUrl(request);
+  const customerEmail = getOrderCustomerEmail(order);
+  const customer = {
+    name: getOrderCustomerName(order),
+    phone: getOrderCustomerPhone(order)
+  };
+  if (customerEmail) customer.email = customerEmail;
+
+  const items = {};
+  getOrderItems(order).forEach((item, index) => {
+    items[`item_${index}`] = {
+      name: truncateText(item.name || `Produit ${item.productId || index + 1}`, 90),
+      quantity: Number(item.quantity || 1),
+      unit_price: Number(item.unitPrice || 0),
+      total_price: Number(item.lineTotal || 0),
+      description: ""
+    };
+  });
+
+  const invoice = {
+    total_amount: Number(order.total || 0),
+    description: `Commande ${order.id} - DieguemTech Store`,
+    customer
+  };
+  if (Object.keys(items).length) invoice.items = items;
+
+  const deliveryFee = getOrderDeliveryFee(order);
+  if (deliveryFee > 0) {
+    invoice.taxes = {
+      tax_0: {
+        name: `Livraison ${getOrderDeliveryZone(order)}`,
+        amount: deliveryFee
+      }
+    };
+  }
+
+  return {
+    invoice,
+    store: {
+      name: process.env.PAYDUNYA_STORE_NAME || "DieguemTech Store"
+    },
+    custom_data: {
+      order_id: order.id,
+      source: "dieguemtech-store"
+    },
+    actions: {
+      cancel_url: `${baseUrl}/payment-cancel`,
+      return_url: `${baseUrl}/payment-success/paydunya`,
+      callback_url: `${baseUrl}/api/paydunya/ipn`
+    }
+  };
+}
+
+async function confirmPayDunyaInvoice(token) {
+  try {
+    const paydunyaResponse = await axios.get(
+      `${getPayDunyaApiBaseUrl()}/checkout-invoice/confirm/${encodeURIComponent(token)}`,
+      {
+        headers: getPayDunyaHeaders(),
+        timeout: 15000
+      }
+    );
+
+    const data = paydunyaResponse.data || {};
+    if (data.response_code !== "00") {
+      const error = new Error(`PayDunya n'a pas confirme la facture. Reponse: ${JSON.stringify(data).slice(0, 250)}`);
+      error.status = 502;
+      throw error;
+    }
+    if (!verifyPayDunyaHash(data.hash)) {
+      const error = new Error("La confirmation PayDunya a echoue: hash invalide.");
+      error.status = 502;
+      throw error;
+    }
+    return data;
+  } catch (error) {
+    if (error.status && !error.isAxiosError) throw error;
+    const details = getPayDunyaErrorDetails(error);
+    const paymentError = new Error(`Impossible de confirmer le paiement PayDunya.${details ? ` Detail: ${details}` : ""}`);
+    paymentError.status = 502;
+    paymentError.cause = error;
+    throw paymentError;
+  }
+}
+
+function getPayDunyaRedirectUrl(data) {
+  const candidates = [
+    data?.response_text,
+    data?.invoice_url,
+    data?.checkout_url,
+    data?.url
+  ];
+  const direct = candidates.find(value => typeof value === "string" && /^https?:\/\/.+paydunya/i.test(value));
+  if (direct) return direct;
+  return findPayDunyaUrlInObject(data);
+}
+
+function findPayDunyaUrlInObject(value) {
+  if (!value || typeof value !== "object") return null;
+  for (const item of Object.values(value)) {
+    if (typeof item === "string" && /^https?:\/\/.+paydunya/i.test(item)) return item;
+    if (item && typeof item === "object") {
+      const nested = findPayDunyaUrlInObject(item);
+      if (nested) return nested;
+    }
+  }
+  return null;
+}
+
+function parsePayDunyaData(value) {
+  if (!value) return {};
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value);
+    } catch (error) {
+      return {};
+    }
+  }
+  return value;
+}
+
+function verifyPayDunyaHash(hash) {
+  if (!hasPayDunyaConfig() || !hash) return false;
+  const expected = crypto.createHash("sha512").update(process.env.PAYDUNYA_MASTER_KEY).digest("hex");
+  const received = String(hash || "").trim().toLowerCase();
+  if (received.length !== expected.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(received), Buffer.from(expected));
+}
+
+async function updateOrderFromPayDunyaData(data) {
+  const orderId = getPayDunyaOrderId(data);
+  const paymentStatus = getPayDunyaPaymentStatus(data?.status);
+  const orderStatus = paymentStatus === "paid"
+    ? "paid"
+    : paymentStatus === "failed"
+      ? "cancelled"
+      : null;
+  const order = orderId
+    ? await database.updateOrderStatus(orderId, { orderStatus, paymentStatus })
+    : null;
+  return { orderId, paymentStatus, order };
+}
+
+function getPayDunyaOrderId(data) {
+  const customData = data?.custom_data || data?.invoice?.custom_data || {};
+  const orderId = customData.order_id || customData.orderId || customData.ref_command;
+  if (orderId) return String(orderId).trim().toUpperCase();
+  const description = String(data?.invoice?.description || "");
+  const match = description.match(/DT-\d+-\d+/i);
+  return match ? match[0].toUpperCase() : "";
+}
+
+function getPayDunyaPaymentStatus(status) {
+  const normalized = String(status || "").trim().toLowerCase();
+  if (normalized === "completed") return "paid";
+  if (["cancelled", "canceled", "failed"].includes(normalized)) return "failed";
+  return "pending";
+}
+
+function getPayDunyaErrorDetails(error) {
+  const data = error.response?.data;
+  if (!data) return error.message;
+  if (typeof data === "string") return data.slice(0, 250);
+  const candidates = [
+    data.response_text,
+    data.message,
+    data.error,
+    data.errors,
+    data.description
+  ].filter(Boolean);
+  if (candidates.length) {
+    return candidates.map(item => typeof item === "string" ? item : JSON.stringify(item)).join(" | ").slice(0, 250);
+  }
   return JSON.stringify(data).slice(0, 250);
 }
 
