@@ -1,6 +1,4 @@
-const jumiaGallery = image => [300, 500, 680, 900].map(size =>
-  image.replace(/fit-in\/\d+x\d+/i, `fit-in/${size}x${size}`)
-);
+const jumiaGallery = image => [image];
 
 module.exports = [
   {

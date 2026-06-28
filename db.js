@@ -456,8 +456,7 @@ function normalizeImageList(images, primaryImage = "") {
       .map(normalizeProductImagePath)
       .filter(Boolean)
   )];
-  addJumiaGalleryVariants(normalizedImages);
-  return normalizedImages.slice(0, 8);
+  return removeJumiaDuplicateVariants(normalizedImages).slice(0, 8);
 }
 
 function normalizeProductImagePath(image) {
@@ -470,21 +469,21 @@ function normalizeProductImagePath(image) {
   return value;
 }
 
-function addJumiaGalleryVariants(images) {
-  if (images.length >= 4) return;
-  const jumiaImage = images.find(image => /^https?:\/\/sn\.jumia\.is\//i.test(image) && /fit-in\/\d+x\d+/i.test(image));
-  if (!jumiaImage) return;
-
-  for (const image of getJumiaGalleryVariants(jumiaImage)) {
-    if (!images.includes(image)) images.push(image);
-    if (images.length >= 4) return;
-  }
+function removeJumiaDuplicateVariants(images) {
+  const seen = new Set();
+  return images.filter(image => {
+    const key = getJumiaVariantKey(image);
+    if (!key) return true;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
-function getJumiaGalleryVariants(image) {
-  return [300, 500, 680, 900].map(size =>
-    image.replace(/fit-in\/\d+x\d+/i, `fit-in/${size}x${size}`)
-  );
+function getJumiaVariantKey(image) {
+  const value = String(image || "");
+  if (!/^https?:\/\/sn\.jumia\.is\//i.test(value)) return "";
+  return value.replace(/fit-in\/\d+x\d+/i, "fit-in/SIZE");
 }
 
 function normalizeProductRow(product) {
