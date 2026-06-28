@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=20260628-backup">
+  <link rel="stylesheet" href="admin.css?v=20260628-ads">
 </head>
 <body>
   <main class="admin-shell">
@@ -45,6 +45,7 @@
         <button class="active" data-admin-tab="orders">Commandes</button>
         <button data-admin-tab="products">Produits</button>
         <button data-admin-tab="analytics">Analytics</button>
+        <button data-admin-tab="ads">Publicités</button>
         <button data-admin-tab="backup">Sauvegarde</button>
       </div>
 
@@ -213,6 +214,37 @@
           </article>
         </div>
       </section>
+
+      <section id="adsPanel" hidden>
+        <div class="notification-admin-card ads-card">
+          <div>
+            <span class="eyebrow">Publicités</span>
+            <h2>Pixels publicitaires</h2>
+            <p>Connectez Meta, TikTok et Google pour mesurer les visites, ajouts panier et commandes issues des campagnes.</p>
+            <p class="notification-message" id="adsStatus">Verification des pixels...</p>
+          </div>
+          <div class="notification-actions">
+            <button type="button" id="refreshAdsStatus">Actualiser pixels</button>
+          </div>
+        </div>
+
+        <div class="analytics-grid ads-grid">
+          <article class="analytics-card">
+            <h3>Etat des plateformes</h3>
+            <div class="ads-status-list" id="adsStatusList"></div>
+          </article>
+          <article class="analytics-card">
+            <h3>Variables Render a ajouter</h3>
+            <div class="backup-list">
+              <span>META_PIXEL_ID : ID du pixel Facebook / Instagram</span>
+              <span>TIKTOK_PIXEL_ID : ID du pixel TikTok</span>
+              <span>GOOGLE_TAG_MANAGER_ID : ID GTM, exemple GTM-XXXXXXX</span>
+              <span>GOOGLE_ADS_ID : ID Google Ads, exemple AW-XXXXXXXXX</span>
+              <span>GOOGLE_ADS_LEAD_LABEL : label conversion lead, optionnel</span>
+            </div>
+          </article>
+        </div>
+      </section>
     </section>
   </main>
 
@@ -228,6 +260,6 @@
       <form id="productForm"></form>
     </section>
   </div>
-  <script src="admin.js?v=20260628-backup"></script>
+  <script src="admin.js?v=20260628-ads"></script>
 </body>
 </html>

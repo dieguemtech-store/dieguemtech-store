@@ -63,6 +63,8 @@ const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, character =>
   "'": "&#039;"
 }[character]));
 const ANALYTICS_SESSION_KEY = "dt-analytics-session";
+let marketingConfig = null;
+let marketingTrackingReady = false;
 
 function getAnalyticsSessionId(){
   let sessionId = sessionStorage.getItem(ANALYTICS_SESSION_KEY);
@@ -83,6 +85,7 @@ function trackAnalytics(eventName, data = {}){
       ...data,
       metadata: data.metadata || {}
     };
+    trackMarketingEvent(payload);
     const body = JSON.stringify(payload);
     if (navigator.sendBeacon) {
       const sent = navigator.sendBeacon("/api/analytics", new Blob([body], { type: "application/json" }));
@@ -111,6 +114,179 @@ function trackProductAnalytics(eventName, product, extra = {}){
       ...extra.metadata
     }
   });
+}
+
+async function initializeMarketingTracking(){
+  try {
+    const response = await fetch("/api/marketing/config", { cache: "no-store" });
+    if (!response.ok) throw new Error("Configuration marketing indisponible.");
+    marketingConfig = await response.json();
+    loadMetaPixel(marketingConfig.metaPixelId);
+    loadTikTokPixel(marketingConfig.tiktokPixelId);
+    loadGoogleMarketing(marketingConfig);
+    marketingTrackingReady = true;
+  } catch (error) {
+    marketingConfig = { configured: {} };
+    marketingTrackingReady = false;
+  }
+}
+
+function loadMetaPixel(pixelId){
+  if (!pixelId || window.fbq) return;
+  window.fbq = function(){ window.fbq.callMethod ? window.fbq.callMethod.apply(window.fbq, arguments) : window.fbq.queue.push(arguments); };
+  if (!window._fbq) window._fbq = window.fbq;
+  window.fbq.push = window.fbq;
+  window.fbq.loaded = true;
+  window.fbq.version = "2.0";
+  window.fbq.queue = [];
+  insertMarketingScript("https://connect.facebook.net/en_US/fbevents.js");
+  window.fbq("init", pixelId);
+}
+
+function loadTikTokPixel(pixelId){
+  if (!pixelId || window.ttq) return;
+  window.TiktokAnalyticsObject = "ttq";
+  const ttq = window.ttq = window.ttq || [];
+  ttq.methods = ["page", "track", "identify", "instances", "debug", "on", "off", "once", "ready", "alias", "group", "enableCookie", "disableCookie", "holdConsent", "revokeConsent", "grantConsent"];
+  ttq.setAndDefer = function(target, method){
+    target[method] = function(){
+      target.push([method].concat(Array.prototype.slice.call(arguments, 0)));
+    };
+  };
+  ttq.methods.forEach(method => ttq.setAndDefer(ttq, method));
+  ttq.load = function(id){
+    ttq._i = ttq._i || {};
+    ttq._i[id] = [];
+    ttq._i[id]._u = "https://analytics.tiktok.com/i18n/pixel/events.js";
+    ttq._t = ttq._t || {};
+    ttq._t[id] = Date.now();
+    ttq._o = ttq._o || {};
+    ttq._o[id] = {};
+    insertMarketingScript("https://analytics.tiktok.com/i18n/pixel/events.js?sdkid=" + encodeURIComponent(id) + "&lib=ttq");
+  };
+  ttq.load(pixelId);
+}
+
+function loadGoogleMarketing(config = {}){
+  window.dataLayer = window.dataLayer || [];
+  if (config.googleTagManagerId && !window.dtGtmLoaded) {
+    window.dtGtmLoaded = true;
+    window.dataLayer.push({ "gtm.start": Date.now(), event: "gtm.js" });
+    insertMarketingScript("https://www.googletagmanager.com/gtm.js?id=" + encodeURIComponent(config.googleTagManagerId));
+  }
+  if (config.googleAdsId && !window.dtGoogleAdsLoaded) {
+    window.dtGoogleAdsLoaded = true;
+    window.gtag = window.gtag || function(){ window.dataLayer.push(arguments); };
+    insertMarketingScript("https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent(config.googleAdsId));
+    window.gtag("js", new Date());
+    window.gtag("config", config.googleAdsId);
+  }
+}
+
+function insertMarketingScript(src){
+  if (document.querySelector(`script[src="${src}"]`)) return;
+  const script = document.createElement("script");
+  script.async = true;
+  script.src = src;
+  const firstScript = document.getElementsByTagName("script")[0];
+  firstScript?.parentNode ? firstScript.parentNode.insertBefore(script, firstScript) : document.head.appendChild(script);
+}
+
+function trackMarketingEvent(payload){
+  if (!marketingTrackingReady || !marketingConfig) return;
+  const mapped = mapMarketingEvent(payload);
+  if (!mapped) return;
+  const data = buildMarketingEventData(payload);
+
+  if (marketingConfig.metaPixelId && window.fbq && mapped.meta) {
+    window.fbq("track", mapped.meta, data.meta);
+  }
+  if (marketingConfig.tiktokPixelId && window.ttq && mapped.tiktok) {
+    if (payload.eventName === "page_view" && typeof window.ttq.page === "function") {
+      window.ttq.page();
+    } else {
+      window.ttq.track(mapped.tiktok, data.tiktok);
+    }
+  }
+  if (window.dataLayer) {
+    window.dataLayer.push({ event: `dt_${payload.eventName}`, ...data.gtm });
+  }
+  if (marketingConfig.googleAdsId && window.gtag && mapped.google) {
+    window.gtag("event", mapped.google, data.google);
+  }
+  if (payload.eventName === "order_created" && marketingConfig.googleAdsId && marketingConfig.googleAdsLeadLabel && window.gtag) {
+    window.gtag("event", "conversion", {
+      send_to: `${marketingConfig.googleAdsId}/${marketingConfig.googleAdsLeadLabel}`,
+      value: data.google.value || 0,
+      currency: "XOF",
+      transaction_id: payload.metadata?.orderId || ""
+    });
+  }
+}
+
+function mapMarketingEvent(payload){
+  return {
+    page_view: { meta: "PageView", tiktok: "PageView", google: "page_view" },
+    product_view: { meta: "ViewContent", tiktok: "ViewContent", google: "view_item" },
+    search: { meta: "Search", tiktok: "Search", google: "search" },
+    add_to_cart: { meta: "AddToCart", tiktok: "AddToCart", google: "add_to_cart" },
+    wishlist_toggle: { meta: "AddToWishlist", tiktok: "AddToWishlist", google: "add_to_wishlist" },
+    checkout_open: { meta: "InitiateCheckout", tiktok: "InitiateCheckout", google: "begin_checkout" },
+    checkout_submit: { meta: "InitiateCheckout", tiktok: "InitiateCheckout", google: "begin_checkout" },
+    order_created: { meta: "Lead", tiktok: "SubmitForm", google: "generate_lead" }
+  }[payload.eventName];
+}
+
+function buildMarketingEventData(payload){
+  const metadata = payload.metadata || {};
+  const value = Number(payload.value || 0);
+  const productId = payload.productId ? String(payload.productId) : undefined;
+  const items = productId ? [{
+    item_id: productId,
+    item_name: payload.productName || "",
+    item_category: payload.category || "",
+    price: value || undefined,
+    quantity: Number(metadata.quantity || metadata.itemCount || 1)
+  }] : [];
+  const common = {
+    value,
+    currency: "XOF",
+    content_ids: productId ? [productId] : undefined,
+    content_name: payload.productName || metadata.query || document.title,
+    content_category: payload.category || "",
+    search_string: metadata.query || "",
+    num_items: Number(metadata.itemCount || metadata.quantity || 0) || undefined,
+    order_id: metadata.orderId || ""
+  };
+  return {
+    meta: common,
+    tiktok: {
+      content_id: productId,
+      content_name: common.content_name,
+      content_category: common.content_category,
+      value,
+      currency: "XOF",
+      query: metadata.query || ""
+    },
+    google: {
+      value,
+      currency: "XOF",
+      search_term: metadata.query || "",
+      transaction_id: metadata.orderId || "",
+      items
+    },
+    gtm: {
+      event_name: payload.eventName,
+      value,
+      currency: "XOF",
+      product_id: productId || "",
+      product_name: payload.productName || "",
+      category: payload.category || "",
+      query: metadata.query || "",
+      order_id: metadata.orderId || "",
+      item_count: Number(metadata.itemCount || metadata.quantity || 0) || 0
+    }
+  };
 }
 
 function slugify(value){
@@ -921,6 +1097,7 @@ async function initializeStore(){
     renderCart();
     renderWishlist();
     persist();
+    await initializeMarketingTracking();
     trackAnalytics("page_view", {
       metadata: {
         title: document.title,

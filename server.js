@@ -79,6 +79,11 @@ app.get("/api/email/status", (request, response) => {
   response.json(getEmailStatus());
 });
 
+app.get("/api/marketing/config", (request, response) => {
+  response.set("Cache-Control", "no-store");
+  response.json(getMarketingConfig());
+});
+
 app.post("/api/analytics", async (request, response, next) => {
   try {
     const eventName = String(request.body?.eventName || request.body?.name || "").trim();
@@ -684,6 +689,29 @@ function getOrderStatuses() {
 
 function getPaymentStatuses() {
   return ["pending", "paid", "failed", "refunded"];
+}
+
+function getMarketingConfig() {
+  const config = {
+    metaPixelId: getPublicConfigValue("META_PIXEL_ID"),
+    tiktokPixelId: getPublicConfigValue("TIKTOK_PIXEL_ID"),
+    googleTagManagerId: getPublicConfigValue("GOOGLE_TAG_MANAGER_ID"),
+    googleAdsId: getPublicConfigValue("GOOGLE_ADS_ID"),
+    googleAdsLeadLabel: getPublicConfigValue("GOOGLE_ADS_LEAD_LABEL")
+  };
+  return {
+    ...config,
+    configured: {
+      meta: Boolean(config.metaPixelId),
+      tiktok: Boolean(config.tiktokPixelId),
+      googleTagManager: Boolean(config.googleTagManagerId),
+      googleAds: Boolean(config.googleAdsId)
+    }
+  };
+}
+
+function getPublicConfigValue(name) {
+  return String(process.env[name] || "").trim();
 }
 
 function canonicalDomainRedirect(request, response, next) {

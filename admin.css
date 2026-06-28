@@ -37,4 +37,11 @@
 .backup-list{display:grid;gap:10px}
 .backup-list span{background:#fff8e9;border:1px solid rgba(246,139,30,.18);border-radius:12px;color:#6b5a43;font-size:13px;font-weight:800;padding:12px}
 .backup-card .notification-actions select{min-width:190px}
+.ads-status-list{display:grid;gap:10px}
+.ads-status-row{display:flex;align-items:center;justify-content:space-between;gap:14px;border:1px solid var(--line);border-radius:13px;padding:12px;background:#fafafa}
+.ads-status-row strong{display:block;color:var(--ink);font-size:13px}
+.ads-status-row span{display:block;color:#777;font-size:12px;margin-top:4px}
+.ads-status-row b{border-radius:999px;padding:6px 10px;font-size:11px;white-space:nowrap}
+.ads-status-row.ready b{background:#eaf8f1;color:var(--green)}
+.ads-status-row.missing b{background:#fff0ef;color:var(--red)}
 @media(max-width:650px){.admin-tabs{grid-template-columns:repeat(2,1fr)}.analytics-timeline{min-height:180px}.analytics-day{height:140px}.backup-card .notification-actions select{min-width:0;width:100%}}

@@ -17,6 +17,7 @@ const paymentStatuses = {
 let orders = [];
 let products = [];
 let analytics = null;
+let marketingStatus = null;
 let token = sessionStorage.getItem("dt-admin-token") || "";
 
 const $ = selector => document.querySelector(selector);
@@ -269,6 +270,51 @@ function renderAnalyticsTimeline(timeline) {
       <small>${escapeHtml(label)}</small>
     </div>`;
   }).join("");
+}
+
+async function loadMarketingStatus() {
+  const status = $("#adsStatus");
+  if (status) {
+    status.classList.remove("error", "success");
+    status.textContent = "Verification des pixels...";
+  }
+  marketingStatus = await api("/api/marketing/config");
+  renderMarketingStatus();
+}
+
+function renderMarketingStatus() {
+  const container = $("#adsStatusList");
+  const status = $("#adsStatus");
+  if (!container || !marketingStatus) return;
+  const rows = [
+    ["Meta Pixel", marketingStatus.configured?.meta, "META_PIXEL_ID", marketingStatus.metaPixelId],
+    ["TikTok Pixel", marketingStatus.configured?.tiktok, "TIKTOK_PIXEL_ID", marketingStatus.tiktokPixelId],
+    ["Google Tag Manager", marketingStatus.configured?.googleTagManager, "GOOGLE_TAG_MANAGER_ID", marketingStatus.googleTagManagerId],
+    ["Google Ads", marketingStatus.configured?.googleAds, "GOOGLE_ADS_ID", marketingStatus.googleAdsId],
+    ["Conversion Google Lead", Boolean(marketingStatus.googleAdsLeadLabel), "GOOGLE_ADS_LEAD_LABEL", marketingStatus.googleAdsLeadLabel]
+  ];
+  container.innerHTML = rows.map(([label, ready, variableName, value]) => `
+    <div class="ads-status-row ${ready ? "ready" : "missing"}">
+      <div>
+        <strong>${escapeHtml(label)}</strong>
+        <span>${escapeHtml(variableName)}${value ? ` - ${escapeHtml(maskTrackingId(value))}` : ""}</span>
+      </div>
+      <b>${ready ? "Actif" : "A configurer"}</b>
+    </div>
+  `).join("");
+  const activeCount = rows.filter(([, ready]) => ready).length;
+  if (status) {
+    status.classList.add(activeCount ? "success" : "error");
+    status.textContent = activeCount
+      ? `${activeCount} configuration${activeCount > 1 ? "s" : ""} publicitaire${activeCount > 1 ? "s" : ""} active${activeCount > 1 ? "s" : ""}.`
+      : "Aucun pixel publicitaire n'est encore configure dans Render.";
+  }
+}
+
+function maskTrackingId(value) {
+  const text = String(value || "");
+  if (text.length <= 6) return text;
+  return `${text.slice(0, 4)}...${text.slice(-3)}`;
 }
 
 function renderStats() {
@@ -967,6 +1013,15 @@ $("#productStatusFilter").addEventListener("change", renderProducts);
 $("#productFeaturedFilter").addEventListener("change", renderProducts);
 $("#addProductButton").addEventListener("click", openCreateProductModal);
 $("#downloadBackup").addEventListener("click", downloadBackup);
+$("#refreshAdsStatus").addEventListener("click", () => {
+  loadMarketingStatus().catch(error => {
+    const status = $("#adsStatus");
+    if (status) {
+      status.classList.add("error");
+      status.textContent = error.message;
+    }
+  });
+});
 $("#refreshAnalytics").addEventListener("click", () => {
   loadAnalytics().catch(error => {
     const status = $("#analyticsStatus");
@@ -1064,9 +1119,11 @@ document.querySelectorAll("[data-admin-tab]").forEach(button => {
     $("#ordersPanel").hidden = selectedTab !== "orders";
     $("#productsPanel").hidden = selectedTab !== "products";
     $("#analyticsPanel").hidden = selectedTab !== "analytics";
+    $("#adsPanel").hidden = selectedTab !== "ads";
     $("#backupPanel").hidden = selectedTab !== "backup";
     if (selectedTab === "products" && products.length === 0) await loadProducts();
     if (selectedTab === "analytics" && !analytics) await loadAnalytics();
+    if (selectedTab === "ads" && !marketingStatus) await loadMarketingStatus();
   });
 });
 
