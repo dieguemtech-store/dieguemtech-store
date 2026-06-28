@@ -51,13 +51,6 @@ app.get("/api/health", (request, response) => {
   });
 });
 
-app.get("/api/paytech/status", (request, response) => {
-  response.json({
-    configured: hasPayTechConfig(),
-    mode: getPayTechMode()
-  });
-});
-
 app.get("/api/paydunya/status", (request, response) => {
   response.json({
     configured: hasPayDunyaConfig(),
@@ -266,11 +259,6 @@ app.post("/api/orders", async (request, response, next) => {
     const validationError = validateOrder(customer, items, paymentProvider);
     if (validationError) return response.status(400).json({ error: validationError });
 
-    if (paymentProvider === "PayTech" && !hasPayTechConfig()) {
-      return response.status(503).json({
-        error: "PayTech n'est pas encore configure. Ajoutez PAYTECH_API_KEY et PAYTECH_API_SECRET dans Render."
-      });
-    }
     if (paymentProvider === "PayDunya" && !hasPayDunyaConfig()) {
       return response.status(503).json({
         error: `PayDunya n'est pas encore configure. Variable(s) manquante(s) dans Render: ${getPayDunyaMissingConfig().join(", ")}.`
@@ -315,23 +303,6 @@ app.post("/api/orders", async (request, response, next) => {
     const order = database.hasDatabase
       ? await database.createOrder(orderInput)
       : await createLocalOrder(orderInput);
-
-    if (paymentProvider === "PayTech") {
-      const payment = await createPayTechPayment(order, request);
-      const notifications = await notifyOrderCreated(order, request);
-      return response.status(201).json({
-        orderId: order.id,
-        total: order.total,
-        currency: order.currency,
-        paymentProvider: order.paymentProvider,
-        paymentStatus: "pending",
-        subtotal: order.subtotal,
-        deliveryZone: order.deliveryZone,
-        deliveryFee: order.deliveryFee,
-        redirect_url: payment.redirectUrl,
-        notifications
-      });
-    }
 
     if (paymentProvider === "PayDunya") {
       const payment = await createPayDunyaPayment(order, request);
@@ -399,16 +370,6 @@ app.post("/api/orders/track", async (request, response, next) => {
   }
 });
 
-app.post("/api/paytech/ipn", (request, response) => {
-  console.log("Notification PayTech:", {
-    type_event: request.body?.type_event,
-    ref_command: request.body?.ref_command,
-    payment_method: request.body?.payment_method,
-    item_price: request.body?.item_price
-  });
-  response.status(200).send("OK");
-});
-
 app.post("/api/paydunya/ipn", async (request, response, next) => {
   try {
     const data = parsePayDunyaData(request.body?.data || request.body);
@@ -427,14 +388,6 @@ app.post("/api/paydunya/ipn", async (request, response, next) => {
   } catch (error) {
     next(error);
   }
-});
-
-app.get("/payment-success", (request, response) => {
-  response.send(renderPaymentPage(
-    "Paiement en cours de confirmation",
-    "Merci pour votre commande. Nous avons recu le retour PayTech et votre paiement sera confirme automatiquement.",
-    "success"
-  ));
 });
 
 app.get("/payment-success/paydunya", async (request, response, next) => {
@@ -518,7 +471,7 @@ function validateOrder(customer, items, paymentProvider) {
   if (!Array.isArray(items) || items.length === 0 || items.length > 30) {
     return "Le panier est vide ou invalide.";
   }
-  if (!["PayDunya", "PayTech", waveProvider, cashOnDeliveryProvider].includes(paymentProvider)) {
+  if (!["PayDunya", waveProvider, cashOnDeliveryProvider].includes(paymentProvider)) {
     return "Moyen de paiement invalide.";
   }
   return null;
@@ -696,17 +649,6 @@ function getPayDunyaHeaders() {
   };
 }
 
-function hasPayTechConfig() {
-  return Boolean(process.env.PAYTECH_API_KEY && process.env.PAYTECH_API_SECRET);
-}
-
-function getPayTechMode() {
-  const mode = String(process.env.PAYTECH_MODE || "test").trim().toLowerCase();
-  if (["prod", "production", "live"].includes(mode)) return "prod";
-  if (["test", "sandbox", "testing"].includes(mode)) return "test";
-  return "test";
-}
-
 function getBaseUrl(request) {
   if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, "");
   const host = request.get("host");
@@ -738,7 +680,7 @@ function getLocalBusinessStructuredData(baseUrl) {
     email: "contact@dieguemtech.com",
     priceRange: "FCFA",
     currenciesAccepted: "XOF",
-    paymentAccepted: "PayDunya, PayTech, Wave, paiement a la livraison, Mobile Money, paiement mobile",
+    paymentAccepted: "PayDunya, Wave, paiement a la livraison, Mobile Money, paiement mobile",
     address: {
       "@type": "PostalAddress",
       addressLocality: "Dakar",
@@ -1423,7 +1365,7 @@ ${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
         <div class="seo-meta">
           <span>Disponibilite : <strong>${escapeHtml(stockLabel)}</strong>${Number(product.stock) > 0 ? ` (${Number(product.stock)} disponible${Number(product.stock) > 1 ? "s" : ""})` : ""}</span>
           <span>Livraison : Dakar, Pikine, Guediawaye, Rufisque et autres zones selon confirmation</span>
-          <span>Paiement : PayDunya, PayTech, Wave ou paiement a la livraison</span>
+          <span>Paiement : PayDunya, Wave ou paiement a la livraison</span>
           <span>Support : conseil avant achat et suivi apres commande</span>
         </div>
         <div class="seo-description-card">
@@ -2396,102 +2338,6 @@ function getPayDunyaErrorDetails(error) {
     data.error,
     data.errors,
     data.description
-  ].filter(Boolean);
-  if (candidates.length) {
-    return candidates.map(item => typeof item === "string" ? item : JSON.stringify(item)).join(" | ").slice(0, 250);
-  }
-  return JSON.stringify(data).slice(0, 250);
-}
-
-async function createPayTechPayment(order, request) {
-  const baseUrl = getBaseUrl(request);
-  const payload = {
-    item_name: "Commande DieguemTech",
-    item_price: order.total,
-    currency: "XOF",
-    ref_command: order.id,
-    command_name: `Commande ${order.id}`,
-    env: getPayTechMode(),
-    success_url: `${baseUrl}/payment-success`,
-    cancel_url: `${baseUrl}/payment-cancel`,
-    ipn_url: `${baseUrl}/api/paytech/ipn`
-  };
-
-  try {
-    const paytechResponse = await axios.post(
-      "https://paytech.sn/api/payment/request-payment",
-      payload,
-      {
-        headers: {
-          API_KEY: process.env.PAYTECH_API_KEY,
-          API_SECRET: process.env.PAYTECH_API_SECRET
-        },
-        timeout: 15000
-      }
-    );
-
-    const data = paytechResponse.data || {};
-    const redirectUrl = getPayTechRedirectUrl(data);
-    if (!redirectUrl) {
-      const error = new Error(`PayTech n'a pas renvoye de lien de paiement. Reponse: ${JSON.stringify(data).slice(0, 250)}`);
-      error.status = 502;
-      throw error;
-    }
-    return { redirectUrl };
-  } catch (error) {
-    if (error.status && !error.isAxiosError) throw error;
-    const details = getPayTechErrorDetails(error);
-    const paymentError = new Error(`PayTech a refuse la demande de paiement.${details ? ` Detail: ${details}` : ""}`);
-    paymentError.status = 502;
-    paymentError.cause = error;
-    throw paymentError;
-  }
-}
-
-function getPayTechRedirectUrl(data) {
-  const directKeys = [
-    "redirect_url",
-    "redirectUrl",
-    "payment_url",
-    "paymentUrl",
-    "url",
-    "link"
-  ];
-  for (const key of directKeys) {
-    if (typeof data?.[key] === "string" && /^https?:\/\//.test(data[key])) {
-      return data[key];
-    }
-  }
-  const nested = findUrlInObject(data);
-  if (nested) return nested;
-  if (typeof data?.token === "string" && data.token.trim()) {
-    return `https://paytech.sn/payment/checkout/${encodeURIComponent(data.token.trim())}`;
-  }
-  return null;
-}
-
-function findUrlInObject(value) {
-  if (!value || typeof value !== "object") return null;
-  for (const item of Object.values(value)) {
-    if (typeof item === "string" && /^https?:\/\/.+paytech/i.test(item)) return item;
-    if (item && typeof item === "object") {
-      const nested = findUrlInObject(item);
-      if (nested) return nested;
-    }
-  }
-  return null;
-}
-
-function getPayTechErrorDetails(error) {
-  const data = error.response?.data;
-  if (!data) return error.message;
-  if (typeof data === "string") return data.slice(0, 250);
-  const candidates = [
-    data.message,
-    data.error,
-    data.errors,
-    data.detail,
-    data.response_text
   ].filter(Boolean);
   if (candidates.length) {
     return candidates.map(item => typeof item === "string" ? item : JSON.stringify(item)).join(" | ").slice(0, 250);
