@@ -57,6 +57,7 @@ async function initializeDatabase() {
       payment_provider TEXT NOT NULL,
       payment_status TEXT NOT NULL DEFAULT 'pending',
       order_status TEXT NOT NULL DEFAULT 'pending',
+      attribution JSONB NOT NULL DEFAULT '{}'::jsonb,
       paid_notification_sent_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
@@ -110,6 +111,7 @@ async function initializeDatabase() {
       ADD COLUMN IF NOT EXISTS delivery_zone TEXT,
       ADD COLUMN IF NOT EXISTS subtotal INTEGER NOT NULL DEFAULT 0,
       ADD COLUMN IF NOT EXISTS delivery_fee INTEGER NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS attribution JSONB NOT NULL DEFAULT '{}'::jsonb,
       ADD COLUMN IF NOT EXISTS paid_notification_sent_at TIMESTAMPTZ;
 
     UPDATE orders
@@ -540,8 +542,8 @@ async function createOrder(orderInput) {
     await client.query(`
       INSERT INTO orders (
         id, customer_name, customer_phone, customer_email, delivery_zone, delivery_address, subtotal, delivery_fee, total,
-        currency, payment_provider, payment_status, order_status
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+        currency, payment_provider, payment_status, order_status, attribution
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14::jsonb)
     `, [
       orderInput.id,
       orderInput.customer.name,
@@ -555,7 +557,8 @@ async function createOrder(orderInput) {
       "XOF",
       orderInput.paymentProvider,
       "pending",
-      "pending"
+      "pending",
+      JSON.stringify(normalizeOrderAttribution(orderInput.attribution))
     ]);
 
     for (const item of normalizedItems) {
@@ -578,7 +581,7 @@ async function createOrder(orderInput) {
     }
 
     await client.query("COMMIT");
-    return { ...orderInput, items: normalizedItems, subtotal, deliveryFee, total, currency: "XOF" };
+    return { ...orderInput, attribution: normalizeOrderAttribution(orderInput.attribution), items: normalizedItems, subtotal, deliveryFee, total, currency: "XOF" };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
@@ -605,6 +608,7 @@ async function getOrders() {
       o.payment_provider AS "paymentProvider",
       o.payment_status AS "paymentStatus",
       o.order_status AS "orderStatus",
+      o.attribution,
       o.paid_notification_sent_at AS "paidNotificationSentAt",
       o.created_at AS "createdAt",
       COALESCE(
@@ -649,6 +653,7 @@ async function getOrder(id) {
       o.payment_provider AS "paymentProvider",
       o.payment_status AS "paymentStatus",
       o.order_status AS "orderStatus",
+      o.attribution,
       o.paid_notification_sent_at AS "paidNotificationSentAt",
       o.created_at AS "createdAt",
       COALESCE(
@@ -695,6 +700,7 @@ async function updateOrderStatus(id, { orderStatus, paymentStatus }) {
       payment_provider AS "paymentProvider",
       payment_status AS "paymentStatus",
       order_status AS "orderStatus",
+      attribution,
       paid_notification_sent_at AS "paidNotificationSentAt",
       created_at AS "createdAt"
   `, [id, orderStatus || null, paymentStatus || null]);
@@ -863,6 +869,21 @@ function normalizeAnalyticsEvent(eventInput = {}) {
   };
 }
 
+function normalizeOrderAttribution(attribution = {}) {
+  if (!isPlainObject(attribution)) return {};
+  return {
+    source: limitedString(attribution.source, 80),
+    medium: limitedString(attribution.medium, 80),
+    campaign: limitedString(attribution.campaign, 120),
+    content: limitedString(attribution.content, 120),
+    term: limitedString(attribution.term, 120),
+    clickId: limitedString(attribution.clickId, 160),
+    clickType: limitedString(attribution.clickType, 40),
+    landingPage: limitedString(attribution.landingPage, 240),
+    capturedAt: limitedString(attribution.capturedAt, 40)
+  };
+}
+
 function clampAnalyticsDays(days) {
   const value = Number(days);
   if (!Number.isFinite(value)) return 30;
@@ -872,6 +893,11 @@ function clampAnalyticsDays(days) {
 function nullableString(value) {
   const text = String(value || "").trim();
   return text || null;
+}
+
+function limitedString(value, maxLength = 120) {
+  const text = nullableString(value);
+  return text ? text.slice(0, maxLength) : "";
 }
 
 function isPlainObject(value) {

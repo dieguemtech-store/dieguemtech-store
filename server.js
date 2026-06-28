@@ -341,7 +341,7 @@ app.get("/categorie/:categorySlug/:subcategorySlug", renderCategorySeoRoute);
 
 app.post("/api/orders", async (request, response, next) => {
   try {
-    const { customer, items, paymentProvider } = request.body;
+    const { customer, items, paymentProvider, attribution } = request.body;
     const validationError = validateOrder(customer, items, paymentProvider);
     if (validationError) return response.status(400).json({ error: validationError });
 
@@ -383,7 +383,8 @@ app.post("/api/orders", async (request, response, next) => {
       deliveryZone: delivery.zone,
       deliveryFee: delivery.fee,
       items: preparedItems,
-      paymentProvider
+      paymentProvider,
+      attribution: normalizeOrderAttribution(attribution)
     };
 
     const order = database.hasDatabase
@@ -562,6 +563,21 @@ function validateOrder(customer, items, paymentProvider) {
     return "Moyen de paiement invalide.";
   }
   return null;
+}
+
+function normalizeOrderAttribution(attribution = {}) {
+  if (!attribution || typeof attribution !== "object" || Array.isArray(attribution)) return {};
+  return {
+    source: cleanAnalyticsString(attribution.source, 80) || "",
+    medium: cleanAnalyticsString(attribution.medium, 80) || "",
+    campaign: cleanAnalyticsString(attribution.campaign, 120) || "",
+    content: cleanAnalyticsString(attribution.content, 120) || "",
+    term: cleanAnalyticsString(attribution.term, 120) || "",
+    clickId: cleanAnalyticsString(attribution.clickId, 160) || "",
+    clickType: cleanAnalyticsString(attribution.clickType, 40) || "",
+    landingPage: cleanAnalyticsString(attribution.landingPage, 240) || "",
+    capturedAt: cleanAnalyticsString(attribution.capturedAt, 40) || ""
+  };
 }
 
 async function estimateOrderBeforePayment(items, delivery) {
@@ -841,6 +857,8 @@ function buildAnalyticsSummary(events = [], days = 30) {
   const topSearches = new Map();
   const topPages = new Map();
   const topCategories = new Map();
+  const topCampaignSources = new Map();
+  const topCampaigns = new Map();
 
   for (const event of events) {
     const eventName = event.eventName || event.event_name;
@@ -872,6 +890,14 @@ function buildAnalyticsSummary(events = [], days = 30) {
     if (event.category) {
       incrementCounter(topCategories, event.category, 1);
     }
+    const campaignSource = cleanAnalyticsString(metadata.campaignSource, 90);
+    const campaignName = cleanAnalyticsString(metadata.campaignName, 120);
+    if (campaignSource) {
+      incrementCounter(topCampaignSources, campaignSource, eventName === "order_created" ? 4 : 1);
+    }
+    if (campaignName) {
+      incrementCounter(topCampaigns, campaignName, eventName === "order_created" ? 4 : 1);
+    }
   }
 
   metrics.uniqueSessions = sessions.size;
@@ -887,6 +913,8 @@ function buildAnalyticsSummary(events = [], days = 30) {
     topSearches: mapToSimpleList(topSearches).slice(0, 8),
     topPages: mapToSimpleList(topPages).slice(0, 8),
     topCategories: mapToSimpleList(topCategories).slice(0, 8),
+    topCampaignSources: mapToSimpleList(topCampaignSources).slice(0, 8),
+    topCampaigns: mapToSimpleList(topCampaigns).slice(0, 8),
     timeline: buildAnalyticsTimeline(events, days)
   };
 }
@@ -2821,6 +2849,7 @@ async function createLocalOrder(orderInput) {
     customerEmail: orderInput.customer.email || "",
     deliveryZone: orderInput.deliveryZone,
     deliveryAddress: orderInput.customer.address,
+    attribution: normalizeOrderAttribution(orderInput.attribution),
     items: normalizedItems,
     subtotal: normalizedItems.reduce((sum, item) => sum + item.lineTotal, 0),
     deliveryFee: Number(orderInput.deliveryFee || 0),

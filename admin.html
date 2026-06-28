@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=20260628-ads">
+  <link rel="stylesheet" href="admin.css?v=20260628-campaigns">
 </head>
 <body>
   <main class="admin-shell">
@@ -173,6 +173,14 @@
             <h3>Categories actives</h3>
             <div id="analyticsTopCategories"></div>
           </article>
+          <article class="analytics-card">
+            <h3>Sources publicitaires</h3>
+            <div id="analyticsTopCampaignSources"></div>
+          </article>
+          <article class="analytics-card">
+            <h3>Campagnes rentables</h3>
+            <div id="analyticsTopCampaigns"></div>
+          </article>
         </div>
 
         <article class="analytics-card analytics-timeline-card">
@@ -243,6 +251,15 @@
               <span>GOOGLE_ADS_LEAD_LABEL : label conversion lead, optionnel</span>
             </div>
           </article>
+          <article class="analytics-card">
+            <h3>Liens UTM a utiliser</h3>
+            <div class="backup-list">
+              <span>Facebook : https://dieguemtechstore.com/?utm_source=facebook&utm_medium=cpc&utm_campaign=promo_hightech</span>
+              <span>TikTok : https://dieguemtechstore.com/?utm_source=tiktok&utm_medium=cpc&utm_campaign=video_gadgets</span>
+              <span>Google : https://dieguemtechstore.com/?utm_source=google&utm_medium=search&utm_campaign=achat_hightech_dakar</span>
+              <span>WhatsApp : https://dieguemtechstore.com/?utm_source=whatsapp&utm_medium=message&utm_campaign=partage_client</span>
+            </div>
+          </article>
         </div>
       </section>
     </section>
@@ -260,6 +277,6 @@
       <form id="productForm"></form>
     </section>
   </div>
-  <script src="admin.js?v=20260628-ads"></script>
+  <script src="admin.js?v=20260628-campaigns"></script>
 </body>
 </html>

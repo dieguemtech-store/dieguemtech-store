@@ -44,4 +44,5 @@
 .ads-status-row b{border-radius:999px;padding:6px 10px;font-size:11px;white-space:nowrap}
 .ads-status-row.ready b{background:#eaf8f1;color:var(--green)}
 .ads-status-row.missing b{background:#fff0ef;color:var(--red)}
+.order-alert.marketing{border-color:rgba(79,70,229,.18);background:#eef2ff;color:#4f46e5}
 @media(max-width:650px){.admin-tabs{grid-template-columns:repeat(2,1fr)}.analytics-timeline{min-height:180px}.analytics-day{height:140px}.backup-card .notification-actions select{min-width:0;width:100%}}

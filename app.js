@@ -63,6 +63,8 @@ const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, character =>
   "'": "&#039;"
 }[character]));
 const ANALYTICS_SESSION_KEY = "dt-analytics-session";
+const CAMPAIGN_ATTRIBUTION_KEY = "dt-campaign-attribution";
+const CAMPAIGN_ATTRIBUTION_TTL = 30 * 24 * 60 * 60 * 1000;
 let marketingConfig = null;
 let marketingTrackingReady = false;
 
@@ -83,7 +85,10 @@ function trackAnalytics(eventName, data = {}){
       referrer: document.referrer,
       sessionId: getAnalyticsSessionId(),
       ...data,
-      metadata: data.metadata || {}
+      metadata: {
+        ...getCampaignMetadata(),
+        ...(data.metadata || {})
+      }
     };
     trackMarketingEvent(payload);
     const body = JSON.stringify(payload);
@@ -100,6 +105,93 @@ function trackAnalytics(eventName, data = {}){
   } catch (error) {
     // Analytics should never interrupt a customer action.
   }
+}
+
+function captureCampaignAttribution(){
+  const params = new URLSearchParams(window.location.search);
+  const attribution = {
+    source: readCampaignValue(params, ["utm_source"]),
+    medium: readCampaignValue(params, ["utm_medium"]),
+    campaign: readCampaignValue(params, ["utm_campaign"]),
+    content: readCampaignValue(params, ["utm_content"]),
+    term: readCampaignValue(params, ["utm_term"]),
+    clickId: readCampaignValue(params, ["fbclid", "gclid", "ttclid", "msclkid"]),
+    clickType: getCampaignClickType(params)
+  };
+  const hasCampaignSignal = Object.values(attribution).some(Boolean);
+  if (!hasCampaignSignal) return getCampaignAttribution();
+
+  const record = {
+    ...attribution,
+    landingPage: `${window.location.pathname}${window.location.search}`.slice(0, 240),
+    referrer: document.referrer || "",
+    capturedAt: new Date().toISOString()
+  };
+  localStorage.setItem(CAMPAIGN_ATTRIBUTION_KEY, JSON.stringify(record));
+  return record;
+}
+
+function getCampaignAttribution(){
+  try {
+    const record = JSON.parse(localStorage.getItem(CAMPAIGN_ATTRIBUTION_KEY) || "null");
+    if (!record || typeof record !== "object") return null;
+    const capturedAt = new Date(record.capturedAt || 0).getTime();
+    if (!capturedAt || Date.now() - capturedAt > CAMPAIGN_ATTRIBUTION_TTL) {
+      localStorage.removeItem(CAMPAIGN_ATTRIBUTION_KEY);
+      return null;
+    }
+    return record;
+  } catch (error) {
+    localStorage.removeItem(CAMPAIGN_ATTRIBUTION_KEY);
+    return null;
+  }
+}
+
+function getCampaignMetadata(){
+  const attribution = getCampaignAttribution();
+  if (!attribution) return {};
+  return {
+    campaignSource: attribution.source || attribution.clickType || "",
+    campaignMedium: attribution.medium || "",
+    campaignName: attribution.campaign || "",
+    campaignContent: attribution.content || "",
+    campaignTerm: attribution.term || "",
+    campaignClickType: attribution.clickType || "",
+    campaignClickId: attribution.clickId || "",
+    campaignLandingPage: attribution.landingPage || ""
+  };
+}
+
+function getOrderAttribution(){
+  const attribution = getCampaignAttribution();
+  if (!attribution) return null;
+  return {
+    source: attribution.source || attribution.clickType || "",
+    medium: attribution.medium || "",
+    campaign: attribution.campaign || "",
+    content: attribution.content || "",
+    term: attribution.term || "",
+    clickId: attribution.clickId || "",
+    clickType: attribution.clickType || "",
+    landingPage: attribution.landingPage || "",
+    capturedAt: attribution.capturedAt || ""
+  };
+}
+
+function readCampaignValue(params, names){
+  for (const name of names) {
+    const value = String(params.get(name) || "").trim();
+    if (value) return value.slice(0, 120);
+  }
+  return "";
+}
+
+function getCampaignClickType(params){
+  if (params.has("fbclid")) return "meta";
+  if (params.has("gclid")) return "google";
+  if (params.has("ttclid")) return "tiktok";
+  if (params.has("msclkid")) return "microsoft";
+  return "";
 }
 
 function trackProductAnalytics(eventName, product, extra = {}){
@@ -256,7 +348,10 @@ function buildMarketingEventData(payload){
     content_category: payload.category || "",
     search_string: metadata.query || "",
     num_items: Number(metadata.itemCount || metadata.quantity || 0) || undefined,
-    order_id: metadata.orderId || ""
+    order_id: metadata.orderId || "",
+    campaign_source: metadata.campaignSource || "",
+    campaign_medium: metadata.campaignMedium || "",
+    campaign_name: metadata.campaignName || ""
   };
   return {
     meta: common,
@@ -266,13 +361,17 @@ function buildMarketingEventData(payload){
       content_category: common.content_category,
       value,
       currency: "XOF",
-      query: metadata.query || ""
+      query: metadata.query || "",
+      campaign_name: metadata.campaignName || ""
     },
     google: {
       value,
       currency: "XOF",
       search_term: metadata.query || "",
       transaction_id: metadata.orderId || "",
+      source: metadata.campaignSource || "",
+      medium: metadata.campaignMedium || "",
+      campaign: metadata.campaignName || "",
       items
     },
     gtm: {
@@ -284,7 +383,13 @@ function buildMarketingEventData(payload){
       category: payload.category || "",
       query: metadata.query || "",
       order_id: metadata.orderId || "",
-      item_count: Number(metadata.itemCount || metadata.quantity || 0) || 0
+      item_count: Number(metadata.itemCount || metadata.quantity || 0) || 0,
+      campaign_source: metadata.campaignSource || "",
+      campaign_medium: metadata.campaignMedium || "",
+      campaign_name: metadata.campaignName || "",
+      campaign_content: metadata.campaignContent || "",
+      campaign_term: metadata.campaignTerm || "",
+      campaign_click_id: metadata.campaignClickId || ""
     }
   };
 }
@@ -1030,7 +1135,8 @@ $("#checkoutForm").addEventListener("submit", async event => {
           deliveryZone
         },
         items: cart.map(item => ({ id: item.id, quantity: item.qty })),
-        paymentProvider: provider
+        paymentProvider: provider,
+        attribution: getOrderAttribution()
       })
     });
     const result = await response.json();
@@ -1083,6 +1189,7 @@ function getInitialSearch(){
 
 async function initializeStore(){
   try {
+    captureCampaignAttribution();
     const response = await fetch("/api/products");
     if (!response.ok) throw new Error("Catalogue indisponible.");
     products = sortProductsForStore(await response.json());

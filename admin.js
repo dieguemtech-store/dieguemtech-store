@@ -208,6 +208,8 @@ function renderAnalytics() {
   renderAnalyticsList("#analyticsTopSearches", analytics.topSearches || [], "Aucune recherche suivie pour le moment.");
   renderAnalyticsList("#analyticsTopPages", analytics.topPages || [], "Aucune page suivie pour le moment.");
   renderAnalyticsList("#analyticsTopCategories", analytics.topCategories || [], "Aucune categorie suivie pour le moment.");
+  renderAnalyticsList("#analyticsTopCampaignSources", analytics.topCampaignSources || [], "Aucune source publicitaire suivie pour le moment.");
+  renderAnalyticsList("#analyticsTopCampaigns", analytics.topCampaigns || [], "Aucune campagne suivie pour le moment.");
   renderAnalyticsTimeline(analytics.timeline || []);
 
   const status = $("#analyticsStatus");
@@ -338,7 +340,8 @@ function getFilteredOrders() {
   const payment = $("#paymentFilter").value;
   const dateFilter = $("#dateFilter").value;
   return orders.filter(order => {
-    const haystack = `${order.id} ${order.customerName} ${order.customerPhone} ${order.customerEmail || ""} ${getOrderDeliveryZone(order)} ${order.deliveryAddress} ${order.paymentProvider} ${formatPaymentProviderLabel(order.paymentProvider)}`.toLowerCase();
+    const attribution = getOrderAttribution(order);
+    const haystack = `${order.id} ${order.customerName} ${order.customerPhone} ${order.customerEmail || ""} ${getOrderDeliveryZone(order)} ${order.deliveryAddress} ${order.paymentProvider} ${formatPaymentProviderLabel(order.paymentProvider)} ${attribution.source} ${attribution.medium} ${attribution.campaign} ${attribution.clickId}`.toLowerCase();
     const matchesSearch = !query || haystack.includes(query);
     const matchesStatus = !status || order.orderStatus === status;
     const matchesPayment = !payment || order.paymentStatus === payment;
@@ -484,6 +487,7 @@ function orderCard(order) {
       </div>
     </div>
     ${orderAttentionHtml(order)}
+    ${orderAttributionHtml(order)}
     ${orderProgressHtml(order)}
     <div class="order-actions">
       <button type="button" data-view-order="${order.id}">Voir detail</button>
@@ -535,6 +539,30 @@ function orderAttentionHtml(order) {
     return `<div class="order-alert success">Paiement confirme. Cette commande peut etre preparee.</div>`;
   }
   return "";
+}
+
+function orderAttributionHtml(order) {
+  const attribution = getOrderAttribution(order);
+  if (!attribution.source && !attribution.campaign && !attribution.medium) return "";
+  const parts = [
+    attribution.source ? `Source: ${attribution.source}` : "",
+    attribution.medium ? `Canal: ${attribution.medium}` : "",
+    attribution.campaign ? `Campagne: ${attribution.campaign}` : ""
+  ].filter(Boolean);
+  return `<div class="order-alert marketing">${escapeHtml(parts.join(" - "))}</div>`;
+}
+
+function getOrderAttribution(order) {
+  const attribution = order?.attribution && typeof order.attribution === "object" ? order.attribution : {};
+  return {
+    source: String(attribution.source || attribution.clickType || "").trim(),
+    medium: String(attribution.medium || "").trim(),
+    campaign: String(attribution.campaign || "").trim(),
+    content: String(attribution.content || "").trim(),
+    term: String(attribution.term || "").trim(),
+    clickId: String(attribution.clickId || "").trim(),
+    landingPage: String(attribution.landingPage || "").trim()
+  };
 }
 
 function orderProgressHtml(order) {
@@ -840,24 +868,30 @@ function exportOrdersCsv() {
     return;
   }
   const rows = [
-    ["Commande", "Date", "Client", "Telephone", "Email", "Zone livraison", "Adresse", "Sous-total", "Frais livraison", "Total", "Devise", "Paiement", "Statut paiement", "Statut commande", "Produits"],
-    ...filtered.map(order => [
-      order.id,
-      formatDate(order.createdAt),
-      order.customerName,
-      order.customerPhone,
-      order.customerEmail || "",
-      getOrderDeliveryZone(order),
-      order.deliveryAddress,
-      getOrderSubtotal(order),
-      getOrderDeliveryFee(order),
-      order.total,
-      order.currency,
-      formatPaymentProviderLabel(order.paymentProvider),
-      paymentStatuses[order.paymentStatus] || order.paymentStatus,
-      orderStatuses[order.orderStatus] || order.orderStatus,
-      (order.items || []).map(item => `${item.name} x${item.quantity}`).join(" | ")
-    ])
+    ["Commande", "Date", "Client", "Telephone", "Email", "Zone livraison", "Adresse", "Sous-total", "Frais livraison", "Total", "Devise", "Paiement", "Statut paiement", "Statut commande", "Source pub", "Campagne pub", "Canal pub", "Produits"],
+    ...filtered.map(order => {
+      const attribution = getOrderAttribution(order);
+      return [
+        order.id,
+        formatDate(order.createdAt),
+        order.customerName,
+        order.customerPhone,
+        order.customerEmail || "",
+        getOrderDeliveryZone(order),
+        order.deliveryAddress,
+        getOrderSubtotal(order),
+        getOrderDeliveryFee(order),
+        order.total,
+        order.currency,
+        formatPaymentProviderLabel(order.paymentProvider),
+        paymentStatuses[order.paymentStatus] || order.paymentStatus,
+        orderStatuses[order.orderStatus] || order.orderStatus,
+        attribution.source,
+        attribution.campaign,
+        attribution.medium,
+        (order.items || []).map(item => `${item.name} x${item.quantity}`).join(" | ")
+      ];
+    })
   ];
   const csv = rows.map(row => row.map(csvCell).join(";")).join("\r\n");
   const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
