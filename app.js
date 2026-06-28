@@ -517,9 +517,12 @@ function showToast(title = "Produit ajouté", text = "Votre panier a été mis �
   showToast.timer = setTimeout(() => toast.classList.remove("active"), 2600);
 }
 
-function showCartChoiceToast(product){
+let cartChoiceClosesOverlay = false;
+
+function showCartChoiceToast(product, options = {}){
   const toast = $("#cartChoiceToast");
   if (!toast) return;
+  cartChoiceClosesOverlay = Boolean(options.closeOnContinue);
   $("#toast")?.classList.remove("active");
   toast.querySelector("strong").textContent = "Produit ajouté";
   toast.querySelector("small").textContent = `${product.name} est dans votre panier. Que voulez-vous faire ?`;
@@ -816,8 +819,10 @@ document.addEventListener("click", event => {
 
   if (cartButton) {
     const product = addToCart(Number(cartButton.dataset.cart));
-    if (product && cartButton.dataset.askCartChoice === "true") {
-      showCartChoiceToast(product);
+    if (product) {
+      showCartChoiceToast(product, {
+        closeOnContinue: cartButton.dataset.askCartChoice === "true"
+      });
     }
     return;
   }
@@ -1067,7 +1072,9 @@ $("#goToCartToast").addEventListener("click", () => {
 });
 $("#continueShoppingToast").addEventListener("click", () => {
   hideCartChoiceToast();
-  closeAll();
+  if (cartChoiceClosesOverlay) {
+    closeAll();
+  }
 });
 $("#wishlistButton").addEventListener("click", () => {
   renderWishlist();
