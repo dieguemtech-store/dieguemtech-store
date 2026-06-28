@@ -16,9 +16,11 @@ const paymentStatuses = {
 
 let orders = [];
 let products = [];
+let analytics = null;
 let token = sessionStorage.getItem("dt-admin-token") || "";
 
 const $ = selector => document.querySelector(selector);
+const formatNumber = value => new Intl.NumberFormat("fr-FR").format(Number(value || 0));
 const formatPrice = value => `${new Intl.NumberFormat("fr-FR").format(Number(value || 0))} FCFA`;
 const formatDate = value => new Intl.DateTimeFormat("fr-FR", {
   dateStyle: "medium",
@@ -176,6 +178,97 @@ async function loadProducts() {
   products = await api("/api/admin/products");
   renderProductCategories();
   renderProducts();
+}
+
+async function loadAnalytics() {
+  const status = $("#analyticsStatus");
+  if (status) {
+    status.classList.remove("error", "success");
+    status.textContent = "Chargement des statistiques...";
+  }
+  const days = $("#analyticsRange")?.value || "30";
+  analytics = await api(`/api/admin/analytics?days=${encodeURIComponent(days)}`);
+  renderAnalytics();
+}
+
+function renderAnalytics() {
+  if (!analytics) return;
+  const metrics = analytics.metrics || {};
+  $("#analyticsVisitors").textContent = formatNumber(metrics.uniqueSessions);
+  $("#analyticsPageViews").textContent = formatNumber(metrics.pageViews);
+  $("#analyticsProductViews").textContent = formatNumber(metrics.productViews);
+  $("#analyticsCartAdds").textContent = formatNumber(metrics.cartAdds);
+  $("#analyticsCheckoutOpens").textContent = formatNumber(metrics.checkoutOpens);
+  $("#analyticsOrders").textContent = formatNumber(metrics.ordersCreated);
+  $("#analyticsConversion").textContent = `${formatNumber(metrics.conversionRate)}%`;
+  $("#analyticsRevenue").textContent = formatPrice(metrics.trackedRevenue);
+
+  renderAnalyticsProducts(analytics.topProducts || []);
+  renderAnalyticsList("#analyticsTopSearches", analytics.topSearches || [], "Aucune recherche suivie pour le moment.");
+  renderAnalyticsList("#analyticsTopPages", analytics.topPages || [], "Aucune page suivie pour le moment.");
+  renderAnalyticsList("#analyticsTopCategories", analytics.topCategories || [], "Aucune categorie suivie pour le moment.");
+  renderAnalyticsTimeline(analytics.timeline || []);
+
+  const status = $("#analyticsStatus");
+  if (status) {
+    status.classList.add("success");
+    status.textContent = `Derniere mise a jour : ${formatDate(analytics.generatedAt)} - periode ${analytics.days} jours.`;
+  }
+}
+
+function renderAnalyticsProducts(list) {
+  const container = $("#analyticsTopProducts");
+  if (!container) return;
+  if (!list.length) {
+    container.innerHTML = `<p class="analytics-empty">Aucun produit consulte pour le moment.</p>`;
+    return;
+  }
+  container.innerHTML = list.map(item => `
+    <div class="analytics-row">
+      <div>
+        <strong>${escapeHtml(item.label)}</strong>
+        <span>${formatNumber(item.views)} vue${item.views > 1 ? "s" : ""} produit - ${formatNumber(item.cartAdds)} ajout${item.cartAdds > 1 ? "s" : ""} panier</span>
+      </div>
+      <b>${formatNumber(item.score)}</b>
+    </div>
+  `).join("");
+}
+
+function renderAnalyticsList(selector, list, emptyText) {
+  const container = $(selector);
+  if (!container) return;
+  if (!list.length) {
+    container.innerHTML = `<p class="analytics-empty">${escapeHtml(emptyText)}</p>`;
+    return;
+  }
+  container.innerHTML = list.map(item => `
+    <div class="analytics-row">
+      <div>
+        <strong>${escapeHtml(item.label)}</strong>
+        <span>${formatNumber(item.count)} interaction${item.count > 1 ? "s" : ""}</span>
+      </div>
+      <b>${formatNumber(item.count)}</b>
+    </div>
+  `).join("");
+}
+
+function renderAnalyticsTimeline(timeline) {
+  const container = $("#analyticsTimeline");
+  if (!container) return;
+  if (!timeline.length) {
+    container.innerHTML = `<p class="analytics-empty">Aucune activite a afficher.</p>`;
+    return;
+  }
+  const maxValue = Math.max(1, ...timeline.map(day => Number(day.pageViews || 0) + Number(day.cartAdds || 0) + Number(day.ordersCreated || 0)));
+  container.innerHTML = timeline.map(day => {
+    const total = Number(day.pageViews || 0) + Number(day.cartAdds || 0) + Number(day.ordersCreated || 0);
+    const height = Math.max(6, Math.round((total / maxValue) * 100));
+    const label = new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short" }).format(new Date(day.date));
+    return `<div class="analytics-day" title="${escapeHtml(label)} : ${formatNumber(day.pageViews)} vues, ${formatNumber(day.cartAdds)} paniers, ${formatNumber(day.ordersCreated)} commandes">
+      <span style="height:${height}%"></span>
+      <small>${escapeHtml(label)}</small>
+    </div>`;
+  }).join("");
 }
 
 function renderStats() {
@@ -831,6 +924,24 @@ $("#productCategoryFilter").addEventListener("change", renderProducts);
 $("#productStatusFilter").addEventListener("change", renderProducts);
 $("#productFeaturedFilter").addEventListener("change", renderProducts);
 $("#addProductButton").addEventListener("click", openCreateProductModal);
+$("#refreshAnalytics").addEventListener("click", () => {
+  loadAnalytics().catch(error => {
+    const status = $("#analyticsStatus");
+    if (status) {
+      status.classList.add("error");
+      status.textContent = error.message;
+    }
+  });
+});
+$("#analyticsRange").addEventListener("change", () => {
+  loadAnalytics().catch(error => {
+    const status = $("#analyticsStatus");
+    if (status) {
+      status.classList.add("error");
+      status.textContent = error.message;
+    }
+  });
+});
 
 document.addEventListener("change", event => {
   handleStatusChange(event).catch(error => window.alert(error.message));
@@ -906,10 +1017,12 @@ $("#productForm").addEventListener("submit", async event => {
 document.querySelectorAll("[data-admin-tab]").forEach(button => {
   button.addEventListener("click", async () => {
     document.querySelectorAll("[data-admin-tab]").forEach(tab => tab.classList.toggle("active", tab === button));
-    const showProducts = button.dataset.adminTab === "products";
-    $("#ordersPanel").hidden = showProducts;
-    $("#productsPanel").hidden = !showProducts;
-    if (showProducts && products.length === 0) await loadProducts();
+    const selectedTab = button.dataset.adminTab;
+    $("#ordersPanel").hidden = selectedTab !== "orders";
+    $("#productsPanel").hidden = selectedTab !== "products";
+    $("#analyticsPanel").hidden = selectedTab !== "analytics";
+    if (selectedTab === "products" && products.length === 0) await loadProducts();
+    if (selectedTab === "analytics" && !analytics) await loadAnalytics();
   });
 });
 

@@ -24,6 +24,20 @@ const defaultPayDunyaMinimumAmount = 6000;
 const cashOnDeliveryProvider = "Paiement livraison";
 const waveProvider = "Wave";
 const wavePaymentUrl = process.env.WAVE_PAYMENT_URL || "https://pay.wave.com/m/M_sn_Y0u8_bUZ_dN-/c/sn/";
+const analyticsEventNames = new Set([
+  "page_view",
+  "product_view",
+  "category_view",
+  "search",
+  "add_to_cart",
+  "wishlist_toggle",
+  "cart_open",
+  "checkout_open",
+  "payment_selected",
+  "checkout_submit",
+  "order_created",
+  "order_track"
+]);
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -62,6 +76,34 @@ app.get("/api/paydunya/status", (request, response) => {
 
 app.get("/api/email/status", (request, response) => {
   response.json(getEmailStatus());
+});
+
+app.post("/api/analytics", async (request, response, next) => {
+  try {
+    const eventName = String(request.body?.eventName || request.body?.name || "").trim();
+    if (!analyticsEventNames.has(eventName)) {
+      return response.status(400).json({ error: "Evenement analytics invalide." });
+    }
+
+    const productId = Number(request.body?.productId);
+    const value = Number(request.body?.value);
+    await database.recordAnalyticsEvent({
+      eventName,
+      path: cleanAnalyticsString(request.body?.path, 240) || cleanAnalyticsPath(request),
+      productId: Number.isInteger(productId) && productId > 0 ? productId : null,
+      productName: cleanAnalyticsString(request.body?.productName, 180),
+      category: cleanAnalyticsString(request.body?.category, 120),
+      value: Number.isFinite(value) && value > 0 ? Math.round(value) : 0,
+      metadata: normalizeAnalyticsMetadata(request.body?.metadata),
+      sessionId: cleanAnalyticsString(request.body?.sessionId, 100),
+      referrer: cleanAnalyticsString(request.body?.referrer || request.get("referer"), 500),
+      userAgent: cleanAnalyticsString(request.get("user-agent"), 500)
+    });
+
+    response.status(202).json({ ok: true });
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.post("/api/admin/login", (request, response) => {
@@ -118,6 +160,16 @@ app.post("/api/admin/email/test", requireAdmin, async (request, response) => {
 app.get("/api/admin/orders", requireAdmin, async (request, response, next) => {
   try {
     response.json(await database.getOrders());
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/api/admin/analytics", requireAdmin, async (request, response, next) => {
+  try {
+    const days = getAnalyticsRangeDays(request.query.days);
+    const events = await database.getAnalyticsEvents(days);
+    response.json(buildAnalyticsSummary(events, days));
   } catch (error) {
     next(error);
   }
@@ -606,6 +658,190 @@ function getOrderStatuses() {
 
 function getPaymentStatuses() {
   return ["pending", "paid", "failed", "refunded"];
+}
+
+function cleanAnalyticsString(value, maxLength = 240) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  return text ? text.slice(0, maxLength) : null;
+}
+
+function cleanAnalyticsPath(request) {
+  const referer = String(request.get("referer") || "");
+  try {
+    const url = new URL(referer);
+    return `${url.pathname}${url.search}`.slice(0, 240);
+  } catch (error) {
+    return null;
+  }
+}
+
+function normalizeAnalyticsMetadata(metadata) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return {};
+  const normalized = {};
+  for (const [key, value] of Object.entries(metadata).slice(0, 20)) {
+    const safeKey = cleanAnalyticsString(key, 60);
+    if (!safeKey) continue;
+    if (typeof value === "number" && Number.isFinite(value)) {
+      normalized[safeKey] = Math.round(value * 100) / 100;
+    } else if (typeof value === "boolean") {
+      normalized[safeKey] = value;
+    } else if (Array.isArray(value)) {
+      normalized[safeKey] = value
+        .slice(0, 10)
+        .map(item => cleanAnalyticsString(item, 80))
+        .filter(Boolean);
+    } else {
+      normalized[safeKey] = cleanAnalyticsString(value, 180);
+    }
+  }
+  return normalized;
+}
+
+function getAnalyticsRangeDays(value) {
+  const days = Number(value || 30);
+  if (!Number.isFinite(days)) return 30;
+  return Math.min(365, Math.max(1, Math.round(days)));
+}
+
+function buildAnalyticsSummary(events = [], days = 30) {
+  const metrics = {
+    totalEvents: 0,
+    uniqueSessions: 0,
+    pageViews: 0,
+    productViews: 0,
+    categoryViews: 0,
+    searches: 0,
+    cartAdds: 0,
+    checkoutOpens: 0,
+    checkoutSubmits: 0,
+    ordersCreated: 0,
+    trackedRevenue: 0,
+    conversionRate: 0
+  };
+  const sessions = new Set();
+  const topProducts = new Map();
+  const topSearches = new Map();
+  const topPages = new Map();
+  const topCategories = new Map();
+
+  for (const event of events) {
+    const eventName = event.eventName || event.event_name;
+    const metadata = event.metadata && typeof event.metadata === "object" ? event.metadata : {};
+    metrics.totalEvents += 1;
+    if (event.sessionId) sessions.add(event.sessionId);
+
+    if (eventName === "page_view") {
+      metrics.pageViews += 1;
+      incrementCounter(topPages, normalizeAnalyticsPathLabel(event.path), 1);
+    }
+    if (eventName === "product_view") metrics.productViews += 1;
+    if (eventName === "category_view") metrics.categoryViews += 1;
+    if (eventName === "search") {
+      metrics.searches += 1;
+      incrementCounter(topSearches, cleanAnalyticsString(metadata.query, 90), 1);
+    }
+    if (eventName === "add_to_cart") metrics.cartAdds += 1;
+    if (eventName === "checkout_open") metrics.checkoutOpens += 1;
+    if (eventName === "checkout_submit") metrics.checkoutSubmits += 1;
+    if (eventName === "order_created") {
+      metrics.ordersCreated += 1;
+      metrics.trackedRevenue += Number(event.value || 0);
+    }
+
+    if (["product_view", "add_to_cart"].includes(eventName)) {
+      incrementProductAnalytics(topProducts, event, eventName);
+    }
+    if (event.category) {
+      incrementCounter(topCategories, event.category, 1);
+    }
+  }
+
+  metrics.uniqueSessions = sessions.size;
+  metrics.conversionRate = metrics.checkoutOpens
+    ? Math.round((metrics.ordersCreated / metrics.checkoutOpens) * 1000) / 10
+    : 0;
+
+  return {
+    days,
+    generatedAt: new Date().toISOString(),
+    metrics,
+    topProducts: mapToAnalyticsList(topProducts, ["views", "cartAdds"]).slice(0, 8),
+    topSearches: mapToSimpleList(topSearches).slice(0, 8),
+    topPages: mapToSimpleList(topPages).slice(0, 8),
+    topCategories: mapToSimpleList(topCategories).slice(0, 8),
+    timeline: buildAnalyticsTimeline(events, days)
+  };
+}
+
+function incrementProductAnalytics(map, event, eventName) {
+  const label = cleanAnalyticsString(event.productName, 120) || (event.productId ? `Produit #${event.productId}` : null);
+  if (!label) return;
+  const key = `${event.productId || ""}:${label}`;
+  const current = map.get(key) || {
+    label,
+    productId: event.productId || null,
+    views: 0,
+    cartAdds: 0,
+    score: 0
+  };
+  if (eventName === "product_view") current.views += 1;
+  if (eventName === "add_to_cart") current.cartAdds += 1;
+  current.score = current.views + current.cartAdds * 2;
+  map.set(key, current);
+}
+
+function incrementCounter(map, label, amount = 1) {
+  if (!label) return;
+  const key = String(label);
+  map.set(key, (map.get(key) || 0) + amount);
+}
+
+function mapToSimpleList(map) {
+  return Array.from(map.entries())
+    .map(([label, count]) => ({ label, count }))
+    .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label));
+}
+
+function mapToAnalyticsList(map, fields = []) {
+  return Array.from(map.values())
+    .sort((left, right) => right.score - left.score || left.label.localeCompare(right.label))
+    .map(item => fields.reduce((entry, field) => ({ ...entry, [field]: item[field] || 0 }), {
+      label: item.label,
+      productId: item.productId,
+      score: item.score
+    }));
+}
+
+function normalizeAnalyticsPathLabel(pathValue) {
+  const pathText = cleanAnalyticsString(pathValue, 180);
+  if (!pathText) return "/";
+  if (pathText === "/") return "Accueil";
+  return pathText;
+}
+
+function buildAnalyticsTimeline(events, days) {
+  const safeDays = Math.min(90, getAnalyticsRangeDays(days));
+  const today = new Date();
+  const buckets = new Map();
+  for (let index = safeDays - 1; index >= 0; index -= 1) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - index);
+    const key = date.toISOString().slice(0, 10);
+    buckets.set(key, { date: key, pageViews: 0, cartAdds: 0, ordersCreated: 0 });
+  }
+
+  for (const event of events) {
+    const date = new Date(event.createdAt);
+    if (Number.isNaN(date.getTime())) continue;
+    const key = date.toISOString().slice(0, 10);
+    const bucket = buckets.get(key);
+    if (!bucket) continue;
+    if (event.eventName === "page_view") bucket.pageViews += 1;
+    if (event.eventName === "add_to_cart") bucket.cartAdds += 1;
+    if (event.eventName === "order_created") bucket.ordersCreated += 1;
+  }
+
+  return Array.from(buckets.values());
 }
 
 function hasPayDunyaConfig() {

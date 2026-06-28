@@ -62,6 +62,56 @@ const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, character =>
   '"': "&quot;",
   "'": "&#039;"
 }[character]));
+const ANALYTICS_SESSION_KEY = "dt-analytics-session";
+
+function getAnalyticsSessionId(){
+  let sessionId = sessionStorage.getItem(ANALYTICS_SESSION_KEY);
+  if (!sessionId) {
+    sessionId = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    sessionStorage.setItem(ANALYTICS_SESSION_KEY, sessionId);
+  }
+  return sessionId;
+}
+
+function trackAnalytics(eventName, data = {}){
+  try {
+    const payload = {
+      eventName,
+      path: `${window.location.pathname}${window.location.search}`,
+      referrer: document.referrer,
+      sessionId: getAnalyticsSessionId(),
+      ...data,
+      metadata: data.metadata || {}
+    };
+    const body = JSON.stringify(payload);
+    if (navigator.sendBeacon) {
+      const sent = navigator.sendBeacon("/api/analytics", new Blob([body], { type: "application/json" }));
+      if (sent) return;
+    }
+    fetch("/api/analytics", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+      keepalive: true
+    }).catch(() => {});
+  } catch (error) {
+    // Analytics should never interrupt a customer action.
+  }
+}
+
+function trackProductAnalytics(eventName, product, extra = {}){
+  if (!product) return;
+  trackAnalytics(eventName, {
+    productId: product.id,
+    productName: product.name,
+    category: product.category,
+    value: extra.value ?? product.price ?? 0,
+    metadata: {
+      subcategory: product.subcategory || "",
+      ...extra.metadata
+    }
+  });
+}
 
 function slugify(value){
   return String(value || "")
@@ -122,7 +172,7 @@ function productCard(product){
   const liked = wishlist.includes(product.id);
   const badgeClass = product.badge.includes("%") ? "discount-badge" : "new-badge";
   const description = getProductDescription(product);
-  return `<article class="product-card" data-product-page-card="${productUrl(product)}" tabindex="0" role="link" aria-label="Ouvrir la page de ${escapeHtml(product.name)}">
+  return `<article class="product-card" data-product-page-card="${productUrl(product)}" data-product-id="${product.id}" tabindex="0" role="link" aria-label="Ouvrir la page de ${escapeHtml(product.name)}">
     <div class="product-visual">
       <span class="${badgeClass}">${escapeHtml(product.badge)}</span>
       ${product.featured === true ? `<span class="featured-badge">Vedette</span>` : ""}
@@ -139,7 +189,7 @@ function productCard(product){
       <div class="product-bottom">
         <span class="price"><strong>${formatPrice(product.price)}</strong>${product.oldPrice ? `<del>${formatPrice(product.oldPrice)}</del>` : ""}</span>
         <div class="product-actions">
-          <a class="product-page-link" href="${productUrl(product)}" data-product-page aria-label="Voir la page de ${escapeHtml(product.name)}">Voir</a>
+          <a class="product-page-link" href="${productUrl(product)}" data-product-page data-product-id="${product.id}" aria-label="Voir la page de ${escapeHtml(product.name)}">Voir</a>
           <button class="add-cart" data-cart="${product.id}" aria-label="Ajouter ${escapeHtml(product.name)} au panier"><svg><use href="#icon-cart"></use></svg></button>
         </div>
       </div>
@@ -194,9 +244,15 @@ function addToCart(id){
   persist();
   renderCart();
   showToast("Produit ajouté", `${product.name} est dans votre panier.`);
+  trackProductAnalytics("add_to_cart", product, {
+    value: product.price,
+    metadata: { quantity: cart.find(entry => entry.id === id)?.qty || 1 }
+  });
 }
 
 function toggleWishlist(id){
+  const product = products.find(entry => entry.id === id);
+  const wasInWishlist = wishlist.includes(id);
   wishlist = wishlist.includes(id) ? wishlist.filter(item => item !== id) : [...wishlist, id];
   persist();
   renderProducts($("#searchInput").value);
@@ -205,6 +261,11 @@ function toggleWishlist(id){
     wishlist.includes(id) ? "Ajouté aux favoris" : "Retiré des favoris",
     wishlist.includes(id) ? "Vous pourrez le retrouver facilement." : "Votre liste de souhaits a été mise à jour."
   );
+  if (product) {
+    trackProductAnalytics("wishlist_toggle", product, {
+      metadata: { action: wasInWishlist ? "remove" : "add" }
+    });
+  }
 }
 
 function cartItemVisual(product){
@@ -398,6 +459,9 @@ function productDetailVisual(product){
 function openProductDetail(id){
   const product = products.find(entry => entry.id === Number(id));
   if (!product) return;
+  trackProductAnalytics("product_view", product, {
+    metadata: { source: "modal" }
+  });
   $("#productDetailContent").innerHTML = `
     ${productDetailVisual(product)}
     <div class="product-detail-info">
@@ -442,7 +506,13 @@ document.addEventListener("click", event => {
     $$(".product-detail-thumb").forEach(button => button.classList.toggle("active", button === detailImageButton));
     return;
   }
-  if (productPageLink) return;
+  if (productPageLink) {
+    const product = products.find(entry => entry.id === Number(productPageLink.dataset.productId));
+    trackProductAnalytics("product_view", product, {
+      metadata: { source: "product_link" }
+    });
+    return;
+  }
 
   if (cartButton) {
     addToCart(Number(cartButton.dataset.cart));
@@ -475,19 +545,35 @@ document.addEventListener("click", event => {
     visibleCount = 12;
     $$("#productTabs button").forEach(button => button.classList.toggle("active", button.dataset.filter === activeFilter));
     renderProducts();
+    trackAnalytics("category_view", {
+      category: activeFilter,
+      metadata: {
+        source: filterButton.closest(".category-card") ? "home_category" : "navigation"
+      }
+    });
     if (filterButton.closest(".category-card") || filterButton.closest(".nav-inner")) {
       setTimeout(() => $("#boutique").scrollIntoView(), 50);
     }
     $("#mainNav").classList.remove("open");
     return;
   }
-  if (productPageCard) window.location.href = productPageCard.dataset.productPageCard;
+  if (productPageCard) {
+    const product = products.find(entry => entry.id === Number(productPageCard.dataset.productId));
+    trackProductAnalytics("product_view", product, {
+      metadata: { source: "product_card" }
+    });
+    window.location.href = productPageCard.dataset.productPageCard;
+  }
 });
 
 document.addEventListener("keydown", event => {
   const productPageCard = event.target.closest?.("[data-product-page-card]");
   if (productPageCard && (event.key === "Enter" || event.key === " ")) {
     event.preventDefault();
+    const product = products.find(entry => entry.id === Number(productPageCard.dataset.productId));
+    trackProductAnalytics("product_view", product, {
+      metadata: { source: "product_card_keyboard" }
+    });
     window.location.href = productPageCard.dataset.productPageCard;
   }
 });
@@ -521,6 +607,9 @@ async function trackOrder(form) {
   resultBox.hidden = false;
   resultBox.innerHTML = `<p class="tracking-message">Recherche de la commande...</p>`;
   const formData = new FormData(form);
+  trackAnalytics("order_track", {
+    metadata: { status: "submit", hasOrderId: Boolean(String(formData.get("orderId") || "").trim()) }
+  });
   try {
     const response = await fetch("/api/orders/track", {
       method: "POST",
@@ -532,8 +621,14 @@ async function trackOrder(form) {
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "Commande introuvable.");
+    trackAnalytics("order_track", {
+      metadata: { status: "found", paymentStatus: result.paymentStatus, orderStatus: result.orderStatus }
+    });
     resultBox.innerHTML = trackingHtml(result);
   } catch (error) {
+    trackAnalytics("order_track", {
+      metadata: { status: "not_found" }
+    });
     resultBox.innerHTML = `<p class="tracking-message error">${escapeHtml(error.message)}</p>`;
   }
 }
@@ -620,6 +715,10 @@ $("#searchForm").addEventListener("submit", event => {
   const query = $("#searchInput").value;
   updateSearchUrl(query);
   renderProducts(query);
+  trackAnalytics("search", {
+    value: query.trim().length,
+    metadata: { query: query.trim() }
+  });
   $("#boutique").scrollIntoView();
 });
 $("#searchInput").addEventListener("input", event => {
@@ -651,6 +750,11 @@ $("#trackOrderLink").addEventListener("click", event => {
 });
 $("#cartButton").addEventListener("click", () => {
   renderCart();
+  const details = getCartDetails();
+  trackAnalytics("cart_open", {
+    value: details.total,
+    metadata: { itemCount: details.count, lineCount: details.items.length }
+  });
   openDrawer($("#cartDrawer"));
 });
 $("#wishlistButton").addEventListener("click", () => {
@@ -667,6 +771,11 @@ $("#checkoutButton").addEventListener("click", () => {
     return;
   }
   renderCheckoutSummary();
+  const details = getCartDetails();
+  trackAnalytics("checkout_open", {
+    value: details.total,
+    metadata: { itemCount: details.count, lineCount: details.items.length }
+  });
   openModal($("#checkoutModal"));
 });
 $$(".payment-options button").forEach(button => button.addEventListener("click", () => {
@@ -677,6 +786,16 @@ $$(".payment-options button").forEach(button => button.addEventListener("click",
   button.classList.add("selected");
   button.setAttribute("aria-pressed", "true");
   renderCheckoutSummary();
+  const details = getCartDetails();
+  const delivery = getSelectedDeliveryOption();
+  trackAnalytics("payment_selected", {
+    value: details.total + Number(delivery?.fee || 0),
+    metadata: {
+      provider: button.dataset.payment,
+      itemCount: details.count,
+      deliveryZone: $("#checkoutForm select[name='deliveryZone']")?.value || ""
+    }
+  });
 }));
 $("#checkoutForm select[name='deliveryZone']").addEventListener("change", renderCheckoutSummary);
 $("#checkoutForm").addEventListener("submit", async event => {
@@ -696,7 +815,8 @@ $("#checkoutForm").addEventListener("submit", async event => {
   const customerPhone = String(formData.get("customerPhone") || "").trim();
   const deliveryZone = String(formData.get("deliveryZone") || "").trim();
   const delivery = getDeliveryOption(deliveryZone);
-  const checkoutTotal = getCartDetails().total + Number(delivery?.fee || 0);
+  const checkoutDetails = getCartDetails();
+  const checkoutTotal = checkoutDetails.total + Number(delivery?.fee || 0);
   if (provider === "PayDunya" && checkoutTotal < PAYDUNYA_MINIMUM_AMOUNT) {
     showToast(
       "Montant PayDunya trop bas",
@@ -712,6 +832,15 @@ $("#checkoutForm").addEventListener("submit", async event => {
   const payButton = $("#payButton");
   payButton.disabled = true;
   payButton.textContent = "Creation de la commande...";
+  trackAnalytics("checkout_submit", {
+    value: checkoutTotal,
+    metadata: {
+      provider,
+      itemCount: checkoutDetails.count,
+      lineCount: checkoutDetails.items.length,
+      deliveryZone
+    }
+  });
   try {
     const response = await fetch("/api/orders", {
       method: "POST",
@@ -730,6 +859,16 @@ $("#checkoutForm").addEventListener("submit", async event => {
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "La commande n'a pas pu etre creee.");
+    trackAnalytics("order_created", {
+      value: Number(result.total || checkoutTotal),
+      metadata: {
+        provider,
+        orderId: result.orderId,
+        paymentStatus: result.paymentStatus,
+        itemCount: checkoutDetails.count,
+        deliveryZone: result.deliveryZone || deliveryZone
+      }
+    });
     if (result.redirect_url) {
       window.location.href = result.redirect_url;
       return;
@@ -782,6 +921,18 @@ async function initializeStore(){
     renderCart();
     renderWishlist();
     persist();
+    trackAnalytics("page_view", {
+      metadata: {
+        title: document.title,
+        initialSearch: initialSearch || ""
+      }
+    });
+    if (initialSearch) {
+      trackAnalytics("search", {
+        value: initialSearch.length,
+        metadata: { query: initialSearch, source: "url" }
+      });
+    }
   } catch (error) {
     $("#productsGrid").innerHTML = "";
     $("#emptyState").style.display = "block";

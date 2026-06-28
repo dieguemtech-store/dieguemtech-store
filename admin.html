@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="admin.css?v=20260628-analytics">
 </head>
 <body>
   <main class="admin-shell">
@@ -44,6 +44,7 @@
       <div class="admin-tabs">
         <button class="active" data-admin-tab="orders">Commandes</button>
         <button data-admin-tab="products">Produits</button>
+        <button data-admin-tab="analytics">Analytics</button>
       </div>
 
       <section id="ordersPanel">
@@ -123,6 +124,60 @@
         <div class="products-admin-list" id="productsAdminList"></div>
         <p class="empty" id="emptyProducts" hidden>Aucun produit trouve.</p>
       </section>
+
+      <section id="analyticsPanel" hidden>
+        <div class="notification-admin-card analytics-head">
+          <div>
+            <span class="eyebrow">Suivi boutique</span>
+            <h2>Analytics DieguemTech</h2>
+            <p>Suivez les visites, recherches, produits consultes, ajouts panier et commandes creees.</p>
+            <p class="notification-message" id="analyticsStatus"></p>
+          </div>
+          <div class="notification-actions">
+            <select id="analyticsRange" aria-label="Periode analytics">
+              <option value="7">7 jours</option>
+              <option value="30" selected>30 jours</option>
+              <option value="90">90 jours</option>
+            </select>
+            <button type="button" id="refreshAnalytics">Actualiser analytics</button>
+          </div>
+        </div>
+
+        <div class="stats-grid analytics-stats">
+          <article><span>Sessions</span><strong id="analyticsVisitors">0</strong></article>
+          <article><span>Pages vues</span><strong id="analyticsPageViews">0</strong></article>
+          <article><span>Vues produits</span><strong id="analyticsProductViews">0</strong></article>
+          <article><span>Ajouts panier</span><strong id="analyticsCartAdds">0</strong></article>
+          <article><span>Checkouts ouverts</span><strong id="analyticsCheckoutOpens">0</strong></article>
+          <article><span>Commandes creees</span><strong id="analyticsOrders">0</strong></article>
+          <article><span>Conversion checkout</span><strong id="analyticsConversion">0%</strong></article>
+          <article><span>Revenu suivi</span><strong id="analyticsRevenue">0 FCFA</strong></article>
+        </div>
+
+        <div class="analytics-grid">
+          <article class="analytics-card">
+            <h3>Produits les plus consultes</h3>
+            <div id="analyticsTopProducts"></div>
+          </article>
+          <article class="analytics-card">
+            <h3>Recherches clients</h3>
+            <div id="analyticsTopSearches"></div>
+          </article>
+          <article class="analytics-card">
+            <h3>Pages visitees</h3>
+            <div id="analyticsTopPages"></div>
+          </article>
+          <article class="analytics-card">
+            <h3>Categories actives</h3>
+            <div id="analyticsTopCategories"></div>
+          </article>
+        </div>
+
+        <article class="analytics-card analytics-timeline-card">
+          <h3>Activite quotidienne</h3>
+          <div class="analytics-timeline" id="analyticsTimeline"></div>
+        </article>
+      </section>
     </section>
   </main>
 
@@ -138,6 +193,6 @@
       <form id="productForm"></form>
     </section>
   </div>
-  <script src="admin.js"></script>
+  <script src="admin.js?v=20260628-analytics"></script>
 </body>
 </html>

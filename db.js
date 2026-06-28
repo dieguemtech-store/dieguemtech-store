@@ -1,4 +1,6 @@
 const { Pool } = require("pg");
+const fs = require("node:fs/promises");
+const path = require("node:path");
 const seedProducts = require("./data/products");
 
 const pool = process.env.DATABASE_URL
@@ -11,6 +13,7 @@ const pool = process.env.DATABASE_URL
   : null;
 const localUploads = new Map();
 const legacyStarterProductIds = Array.from({ length: 14 }, (_, index) => index + 1);
+const localAnalyticsFile = path.join(__dirname, "data", "analytics.json");
 
 async function initializeDatabase() {
   if (!pool) {
@@ -77,10 +80,28 @@ async function initializeDatabase() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS analytics_events (
+      id BIGSERIAL PRIMARY KEY,
+      event_name TEXT NOT NULL,
+      path TEXT,
+      product_id INTEGER,
+      product_name TEXT,
+      category TEXT,
+      value INTEGER NOT NULL DEFAULT 0 CHECK (value >= 0),
+      metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+      session_id TEXT,
+      referrer TEXT,
+      user_agent TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
     CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
     CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
     CREATE INDEX IF NOT EXISTS idx_product_uploads_created_at ON product_uploads(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_analytics_events_created_at ON analytics_events(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_analytics_events_name ON analytics_events(event_name);
+    CREATE INDEX IF NOT EXISTS idx_analytics_events_product_id ON analytics_events(product_id);
   `);
 
   await pool.query(`
@@ -731,6 +752,132 @@ async function markLocalPaidNotificationSent(id) {
   return order;
 }
 
+async function recordAnalyticsEvent(eventInput) {
+  const event = normalizeAnalyticsEvent(eventInput);
+  if (!event.eventName) return null;
+
+  if (!pool) return recordLocalAnalyticsEvent(event);
+
+  const result = await pool.query(`
+    INSERT INTO analytics_events (
+      event_name, path, product_id, product_name, category, value, metadata, session_id, referrer, user_agent
+    )
+    VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10)
+    RETURNING
+      id,
+      event_name AS "eventName",
+      path,
+      product_id AS "productId",
+      product_name AS "productName",
+      category,
+      value,
+      metadata,
+      session_id AS "sessionId",
+      referrer,
+      user_agent AS "userAgent",
+      created_at AS "createdAt"
+  `, [
+    event.eventName,
+    event.path,
+    event.productId,
+    event.productName,
+    event.category,
+    event.value,
+    JSON.stringify(event.metadata),
+    event.sessionId,
+    event.referrer,
+    event.userAgent
+  ]);
+  return result.rows[0] || null;
+}
+
+async function getAnalyticsEvents(days = 30) {
+  const safeDays = clampAnalyticsDays(days);
+  if (!pool) {
+    const cutoff = Date.now() - safeDays * 24 * 60 * 60 * 1000;
+    return (await getLocalAnalyticsEvents())
+      .filter(event => new Date(event.createdAt).getTime() >= cutoff)
+      .sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt))
+      .slice(0, 10000);
+  }
+
+  const result = await pool.query(`
+    SELECT
+      id,
+      event_name AS "eventName",
+      path,
+      product_id AS "productId",
+      product_name AS "productName",
+      category,
+      value,
+      metadata,
+      session_id AS "sessionId",
+      referrer,
+      user_agent AS "userAgent",
+      created_at AS "createdAt"
+    FROM analytics_events
+    WHERE created_at >= NOW() - ($1::int * INTERVAL '1 day')
+    ORDER BY created_at DESC
+    LIMIT 10000
+  `, [safeDays]);
+  return result.rows;
+}
+
+async function recordLocalAnalyticsEvent(event) {
+  const record = {
+    ...event,
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    createdAt: new Date().toISOString()
+  };
+  const events = await getLocalAnalyticsEvents();
+  events.push(record);
+  await fs.mkdir(path.dirname(localAnalyticsFile), { recursive: true });
+  await fs.writeFile(localAnalyticsFile, JSON.stringify(events.slice(-10000), null, 2));
+  return record;
+}
+
+async function getLocalAnalyticsEvents() {
+  try {
+    const events = JSON.parse(await fs.readFile(localAnalyticsFile, "utf8"));
+    return Array.isArray(events) ? events : [];
+  } catch (error) {
+    if (error.code === "ENOENT") return [];
+    throw error;
+  }
+}
+
+function normalizeAnalyticsEvent(eventInput = {}) {
+  const productId = Number(eventInput.productId);
+  const value = Number(eventInput.value);
+  return {
+    eventName: String(eventInput.eventName || "").trim(),
+    path: nullableString(eventInput.path),
+    productId: Number.isInteger(productId) && productId > 0 ? productId : null,
+    productName: nullableString(eventInput.productName),
+    category: nullableString(eventInput.category),
+    value: Number.isFinite(value) && value > 0 ? Math.round(value) : 0,
+    metadata: isPlainObject(eventInput.metadata) ? eventInput.metadata : {},
+    sessionId: nullableString(eventInput.sessionId),
+    referrer: nullableString(eventInput.referrer),
+    userAgent: nullableString(eventInput.userAgent)
+  };
+}
+
+function clampAnalyticsDays(days) {
+  const value = Number(days);
+  if (!Number.isFinite(value)) return 30;
+  return Math.min(365, Math.max(1, Math.round(value)));
+}
+
+function nullableString(value) {
+  const text = String(value || "").trim();
+  return text || null;
+}
+
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
 function orderError(message, status) {
   const error = new Error(message);
   error.status = status;
@@ -752,5 +899,7 @@ module.exports = {
   getOrders,
   getOrder,
   updateOrderStatus,
-  markPaidNotificationSent
+  markPaidNotificationSent,
+  recordAnalyticsEvent,
+  getAnalyticsEvents
 };
