@@ -517,9 +517,27 @@ function showToast(title = "Produit ajouté", text = "Votre panier a été mis �
   showToast.timer = setTimeout(() => toast.classList.remove("active"), 2600);
 }
 
+function showCartChoiceToast(product){
+  const toast = $("#cartChoiceToast");
+  if (!toast) return;
+  $("#toast")?.classList.remove("active");
+  toast.querySelector("strong").textContent = "Produit ajouté";
+  toast.querySelector("small").textContent = `${product.name} est dans votre panier. Que voulez-vous faire ?`;
+  toast.classList.add("active");
+  clearTimeout(showCartChoiceToast.timer);
+  showCartChoiceToast.timer = setTimeout(() => toast.classList.remove("active"), 6500);
+}
+
+function hideCartChoiceToast(){
+  const toast = $("#cartChoiceToast");
+  if (!toast) return;
+  toast.classList.remove("active");
+  clearTimeout(showCartChoiceToast.timer);
+}
+
 function addToCart(id){
   const product = products.find(entry => entry.id === id);
-  if (!product) return;
+  if (!product) return null;
   const item = cart.find(entry => entry.id === id);
   item ? item.qty++ : cart.push({ id, qty: 1 });
   persist();
@@ -529,6 +547,7 @@ function addToCart(id){
     value: product.price,
     metadata: { quantity: cart.find(entry => entry.id === id)?.qty || 1 }
   });
+  return product;
 }
 
 function toggleWishlist(id){
@@ -759,7 +778,7 @@ function openProductDetail(id){
         <span class="price"><strong>${formatPrice(product.price)}</strong>${product.oldPrice ? `<del>${formatPrice(product.oldPrice)}</del>` : ""}</span>
         <div class="product-detail-actions">
           <a class="button outline" href="${productUrl(product)}">Page produit</a>
-          <button class="button primary" data-cart="${product.id}" data-open-cart-after-add="true">Commander</button>
+          <button class="button primary" data-cart="${product.id}" data-ask-cart-choice="true">Commander</button>
         </div>
       </div>
     </div>
@@ -796,9 +815,9 @@ document.addEventListener("click", event => {
   }
 
   if (cartButton) {
-    addToCart(Number(cartButton.dataset.cart));
-    if (cartButton.dataset.openCartAfterAdd === "true") {
-      openDrawer($("#cartDrawer"));
+    const product = addToCart(Number(cartButton.dataset.cart));
+    if (product && cartButton.dataset.askCartChoice === "true") {
+      showCartChoiceToast(product);
     }
     return;
   }
@@ -1040,6 +1059,15 @@ $("#cartButton").addEventListener("click", () => {
     metadata: { itemCount: details.count, lineCount: details.items.length }
   });
   openDrawer($("#cartDrawer"));
+});
+$("#goToCartToast").addEventListener("click", () => {
+  hideCartChoiceToast();
+  renderCart();
+  openDrawer($("#cartDrawer"));
+});
+$("#continueShoppingToast").addEventListener("click", () => {
+  hideCartChoiceToast();
+  closeAll();
 });
 $("#wishlistButton").addEventListener("click", () => {
   renderWishlist();

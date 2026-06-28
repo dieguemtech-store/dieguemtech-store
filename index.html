@@ -44,7 +44,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260628-campaigns">
+  <link rel="stylesheet" href="styles.css?v=20260628-cart-choice">
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -640,6 +640,14 @@
   </div>
 
   <div class="toast" id="toast"><span>✓</span><p><strong>Produit ajouté</strong><small>Votre panier a été mis à jour.</small></p></div>
+  <div class="toast cart-choice-toast" id="cartChoiceToast" aria-live="polite">
+    <span>✓</span>
+    <p><strong>Produit ajouté</strong><small>Voulez-vous aller au panier ou continuer vos achats ?</small></p>
+    <div class="toast-actions">
+      <button type="button" id="goToCartToast">Voir le panier</button>
+      <button type="button" class="ghost" id="continueShoppingToast">Continuer</button>
+    </div>
+  </div>
 
   <div class="modal product-detail-modal" id="productDetailModal" aria-hidden="true">
     <button class="modal-close" aria-label="Fermer">×</button>
@@ -660,6 +668,6 @@
     <symbol id="icon-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
     <symbol id="icon-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
   </svg>
-  <script src="app.js?v=20260628-campaigns"></script>
+  <script src="app.js?v=20260628-cart-choice"></script>
 </body>
 </html>

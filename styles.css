@@ -93,6 +93,12 @@
 @media(max-width:760px){#productDetailContent{grid-template-columns:1fr}.product-detail-visual{min-height:260px;padding:30px}.product-detail-main{min-height:220px}.product-detail-info{padding:30px 24px}.product-detail-info h2{font-size:25px}.product-detail-bottom{align-items:stretch;flex-direction:column}.product-detail-actions{justify-content:stretch}.product-detail-bottom .button,.product-detail-actions{width:100%}}
 @media(max-width:760px){.logo-image{width:176px}.info-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:480px){.logo-image{width:43px}.footer-brand .logo-image{width:190px}.product-description{display:none}.product-image{max-height:125px}.product-detail-emoji{font-size:110px}.info-grid{grid-template-columns:1fr}}
+.cart-choice-toast{align-items:flex-start;max-width:390px}
+.cart-choice-toast p{min-width:0;flex:1}
+.toast-actions{display:flex;gap:8px;margin-left:4px}
+.toast-actions button{border:0;border-radius:7px;background:var(--orange);color:#fff;font-weight:800;font-size:11px;padding:9px 11px;white-space:nowrap}
+.toast-actions button.ghost{background:#3a3a3d;color:#fff}
+@media(max-width:520px){.cart-choice-toast{display:grid;grid-template-columns:27px 1fr;align-items:start}.cart-choice-toast .toast-actions{grid-column:1/-1;margin-left:0;width:100%;display:grid;grid-template-columns:1fr 1fr}.toast-actions button{width:100%}}
 .payment-options{grid-template-columns:repeat(3,1fr)}
 .checkout-warning a,.success-notification a{color:#f68b1e;font-weight:900;text-decoration:underline}
 .payment-guide{background:#fffaf4;border:1px solid rgba(246,139,30,.24);border-radius:14px;padding:13px 14px;margin-top:12px;color:#5f4a32}
