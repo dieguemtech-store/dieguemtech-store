@@ -140,13 +140,6 @@ async function initializeDatabase() {
       AND image <> ''
       AND images = '[]'::jsonb;
 
-    UPDATE products
-    SET images = CASE
-      WHEN image IS NOT NULL AND image <> '' THEN jsonb_build_array(image)
-      WHEN jsonb_array_length(images) > 0 THEN jsonb_build_array(images->>0)
-      ELSE '[]'::jsonb
-    END
-    WHERE jsonb_array_length(images) > 1;
   `);
 
   const values = [];
@@ -464,7 +457,7 @@ function normalizeImageList(images, primaryImage = "") {
       .map(normalizeProductImagePath)
       .filter(Boolean)
   )];
-  return removeJumiaDuplicateVariants(normalizedImages).slice(0, 1);
+  return removeJumiaDuplicateVariants(normalizedImages).slice(0, 8);
 }
 
 function normalizeProductImagePath(image) {
