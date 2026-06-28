@@ -456,7 +456,7 @@ function normalizeImageList(images, primaryImage = "") {
       .map(normalizeProductImagePath)
       .filter(Boolean)
   )];
-  return removeJumiaDuplicateVariants(normalizedImages).slice(0, 8);
+  return removeJumiaDuplicateVariants(normalizedImages).slice(0, 1);
 }
 
 function normalizeProductImagePath(image) {
