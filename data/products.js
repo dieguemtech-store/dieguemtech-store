@@ -527,6 +527,27 @@ module.exports = [
     description: "Mini projecteur LED portable 1080P compatible HDMI, USB et smartphones selon adaptateur, ideal pour films, series et presentations."
   },
   {
+    id: 158,
+    name: "Mini Projecteur Android Intelligent 720P WiFi 6",
+    category: "TV & Home Cinema",
+    subcategory: "Projecteurs",
+    price: 40000,
+    oldPrice: null,
+    emoji: "DT",
+    rating: 4.6,
+    reviews: 9,
+    badge: "Android 11",
+    stock: 8,
+    image: "/assets/products/mini-projecteur-android-intelligent-main.jpeg",
+    images: [
+      "/assets/products/mini-projecteur-android-intelligent-main.jpeg",
+      "/assets/products/mini-projecteur-android-intelligent-overview.jpeg",
+      "/assets/products/mini-projecteur-android-intelligent-wifi.jpeg",
+      "/assets/products/mini-projecteur-android-intelligent-audio.jpeg"
+    ],
+    description: "Mini projecteur Android intelligent portable avec systeme Android 11, resolution native 1280x720P, support 4K, WiFi 6 compatible 2.4G/5G, Bluetooth 5.0 et partage d'ecran. Il projette de 38 a 200 pouces avec correction trapezoidale environ +/-60 degres et mise au point manuelle. Format compact, haut-parleur HIFI stereo integre, ventilation silencieuse, 8GB de stockage, 1GB de RAM, connectiques HDMI, USB et audio. Ideal pour cinema maison, jeux video, presentations et education."
+  },
+  {
     id: 136,
     name: "Jerry Power Home Cinema Bluetooth USB SD",
     category: "TV & Home Cinema",
