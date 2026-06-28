@@ -40,7 +40,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260628-paid-emails">
+  <link rel="stylesheet" href="styles.css?v=20260628-order-experience">
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -575,6 +575,7 @@
               <button type="button" data-payment="Wave" aria-pressed="false">Wave <small>Paiement mobile</small></button>
               <button type="button" data-payment="Paiement livraison" aria-pressed="false">A la livraison <small>Confirmation WhatsApp</small></button>
             </div>
+            <div class="payment-guide" id="paymentGuide" aria-live="polite"></div>
             <p class="checkout-warning" id="paydunyaMinimumNotice" aria-live="polite"></p>
             <p class="checkout-security">Paiement flexible. En ligne avec PayDunya, avec Wave, ou a la livraison apres confirmation par l'equipe.</p>
           </div>
@@ -591,6 +592,7 @@
           <div class="checkout-total-lines">
             <div><span>Sous-total</span><strong id="checkoutSubtotal">0 FCFA</strong></div>
             <div><span id="checkoutDeliveryLabel">Livraison</span><strong id="checkoutDeliveryFee">Choisir zone</strong></div>
+            <div><span>Paiement choisi</span><strong id="checkoutPaymentMethod">PayDunya</strong></div>
             <div class="checkout-total"><span>Total a payer</span><strong id="checkoutGrandTotal">0 FCFA</strong></div>
           </div>
         </div>
@@ -618,6 +620,7 @@
       <span>Numéro de commande</span>
       <strong id="successOrderId">DT-...</strong>
     </div>
+    <div class="success-order-summary" id="successOrderSummary" hidden></div>
     <p class="success-notification" id="successNotificationInfo">Le support confirmera votre commande.</p>
     <div class="success-next-steps">
       <div><b>1</b><span>Confirmation du stock</span></div>
@@ -653,6 +656,6 @@
     <symbol id="icon-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
     <symbol id="icon-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
   </svg>
-  <script src="app.js?v=20260628-paid-emails"></script>
+  <script src="app.js?v=20260628-order-experience"></script>
 </body>
 </html>

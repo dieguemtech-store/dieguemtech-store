@@ -34,6 +34,23 @@ const PAYDUNYA_MINIMUM_AMOUNT = 6000;
 const CASH_ON_DELIVERY_PROVIDER = "Paiement livraison";
 const WAVE_PROVIDER = "Wave";
 const WAVE_PAYMENT_URL = "https://pay.wave.com/m/M_sn_Y0u8_bUZ_dN-/c/sn/";
+const paymentGuides = {
+  PayDunya: {
+    title: "Paiement en ligne securise",
+    text: "Apres confirmation, vous serez redirige vers PayDunya pour payer. L'email de commande part seulement apres confirmation du paiement.",
+    steps: ["Verifiez le total", "Validez la commande", "Payez sur PayDunya"]
+  },
+  [WAVE_PROVIDER]: {
+    title: "Paiement Wave manuel",
+    text: "La commande est enregistree, puis le bouton Wave s'affiche. Payez avec Wave et envoyez la preuve au support WhatsApp.",
+    steps: ["Creez la commande", "Payez avec Wave", "Envoyez la preuve"]
+  },
+  [CASH_ON_DELIVERY_PROVIDER]: {
+    title: "Paiement a la livraison",
+    text: "Notre equipe confirme le stock et la livraison. L'email de commande part apres validation du paiement.",
+    steps: ["Commande enregistree", "Confirmation WhatsApp", "Paiement a la reception"]
+  }
+};
 
 const $ = selector => document.querySelector(selector);
 const $$ = selector => document.querySelectorAll(selector);
@@ -262,6 +279,30 @@ function getSelectedDeliveryOption(){
   return getDeliveryOption(select?.value);
 }
 
+function getSelectedPaymentProvider(){
+  return $(".payment-options button.selected")?.dataset.payment || "PayDunya";
+}
+
+function renderPaymentGuide(total){
+  const provider = getSelectedPaymentProvider();
+  const guide = paymentGuides[provider] || paymentGuides.PayDunya;
+  const guideBox = $("#paymentGuide");
+  const paymentLabel = $("#checkoutPaymentMethod");
+  if (paymentLabel) paymentLabel.textContent = formatPaymentProviderLabel(provider);
+  if (!guideBox) return;
+  const minimumText = provider === "PayDunya" && total > 0 && total < PAYDUNYA_MINIMUM_AMOUNT
+    ? `<p class="payment-guide-alert">PayDunya est disponible a partir de ${formatPrice(PAYDUNYA_MINIMUM_AMOUNT)}. Pour ce panier, choisissez Wave, A la livraison ou WhatsApp.</p>`
+    : "";
+  guideBox.innerHTML = `
+    <strong>${escapeHtml(guide.title)}</strong>
+    <p>${escapeHtml(guide.text)}</p>
+    <div>
+      ${guide.steps.map((step, index) => `<span><b>${index + 1}</b>${escapeHtml(step)}</span>`).join("")}
+    </div>
+    ${minimumText}
+  `;
+}
+
 function renderCheckoutSummary(){
   const itemsBox = $("#checkoutItems");
   if (!itemsBox) return;
@@ -276,6 +317,7 @@ function renderCheckoutSummary(){
   $("#checkoutDeliveryFee").textContent = delivery ? formatPrice(deliveryFee) : "Choisir zone";
   $("#checkoutGrandTotal").textContent = formatPrice(total);
   if ($("#checkoutTotal")) $("#checkoutTotal").textContent = formatPrice(total);
+  renderPaymentGuide(total);
   const minimumNotice = $("#paydunyaMinimumNotice");
   if (minimumNotice) {
     const showMinimumNotice = total > 0 && total < PAYDUNYA_MINIMUM_AMOUNT;
@@ -511,6 +553,7 @@ function showOrderSuccess(result, customerPhone, provider) {
   const showWaveLink = isWavePayment || isManualPayment;
   const waveLink = $("#orderWaveLink");
   $("#successOrderId").textContent = orderId;
+  renderSuccessOrderSummary(result, provider);
   if (waveLink) {
     waveLink.href = WAVE_PAYMENT_URL;
     waveLink.hidden = !showWaveLink;
@@ -522,11 +565,37 @@ function showOrderSuccess(result, customerPhone, provider) {
   } else {
     $("#successNotificationInfo").textContent = "L'email de commande sera envoye apres validation du paiement.";
   }
-  $("#orderWhatsappLink").href = `https://wa.me/221772177176?text=${encodeURIComponent(`Bonjour DieguemTech Store, je viens de passer la commande ${orderId}.`)}`;
+  const whatsappLabel = isWavePayment
+    ? "Envoyer preuve WhatsApp"
+    : isManualPayment
+      ? "Confirmer sur WhatsApp"
+      : "WhatsApp support";
+  const whatsappText = isWavePayment
+    ? `Bonjour DieguemTech Store, je viens de payer avec Wave pour la commande ${orderId}. Je vous envoie la preuve.`
+    : isManualPayment
+      ? `Bonjour DieguemTech Store, je confirme ma commande ${orderId} et je souhaite payer a la livraison.`
+      : `Bonjour DieguemTech Store, je viens de passer la commande ${orderId}.`;
+  $("#orderWhatsappLink").textContent = whatsappLabel;
+  $("#orderWhatsappLink").href = `https://wa.me/221772177176?text=${encodeURIComponent(whatsappText)}`;
   $("#trackingForm").elements.orderId.value = orderId;
   $("#trackingForm").elements.phone.value = customerPhone;
   openModal($("#orderSuccessModal"));
   showToast("Commande creee", `Numero ${orderId} - ${formatPaymentProviderLabel(provider)} en attente.`);
+}
+
+function renderSuccessOrderSummary(result, provider) {
+  const box = $("#successOrderSummary");
+  if (!box) return;
+  const total = Number(result.total || 0);
+  const deliveryFee = Number(result.deliveryFee || 0);
+  const subtotal = Number(result.subtotal || Math.max(0, total - deliveryFee));
+  box.hidden = false;
+  box.innerHTML = `
+    <div><span>Total</span><strong>${formatPrice(total)}</strong></div>
+    <div><span>Paiement</span><strong>${escapeHtml(formatPaymentProviderLabel(provider))}</strong></div>
+    <div><span>Livraison</span><strong>${escapeHtml(result.deliveryZone || "A confirmer")}${deliveryFee ? ` - ${formatPrice(deliveryFee)}` : ""}</strong></div>
+    <div><span>Produits</span><strong>${formatPrice(subtotal)}</strong></div>
+  `;
 }
 
 async function copyOrderId() {
@@ -623,7 +692,7 @@ $("#checkoutForm").addEventListener("submit", async event => {
     showToast("Panier vide", "Votre panier ne contient aucun produit.");
     return;
   }
-  const provider = $(".payment-options button.selected").dataset.payment;
+  const provider = getSelectedPaymentProvider();
   const customerPhone = String(formData.get("customerPhone") || "").trim();
   const deliveryZone = String(formData.get("deliveryZone") || "").trim();
   const delivery = getDeliveryOption(deliveryZone);

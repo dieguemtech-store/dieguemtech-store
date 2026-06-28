@@ -95,5 +95,17 @@
 @media(max-width:480px){.logo-image{width:43px}.footer-brand .logo-image{width:190px}.product-description{display:none}.product-image{max-height:125px}.product-detail-emoji{font-size:110px}.info-grid{grid-template-columns:1fr}}
 .payment-options{grid-template-columns:repeat(3,1fr)}
 .checkout-warning a,.success-notification a{color:#f68b1e;font-weight:900;text-decoration:underline}
+.payment-guide{background:#fffaf4;border:1px solid rgba(246,139,30,.24);border-radius:14px;padding:13px 14px;margin-top:12px;color:#5f4a32}
+.payment-guide strong{display:block;font:800 13px Manrope;color:var(--ink);margin-bottom:4px}
+.payment-guide p{margin:0!important;color:#6f6255!important;font-size:12px!important;line-height:1.55}
+.payment-guide>div{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:11px}
+.payment-guide span{background:#fff;border:1px solid rgba(246,139,30,.16);border-radius:10px;padding:9px 8px;font-size:10px;font-weight:900;color:#66594d;display:flex;align-items:center;gap:7px}
+.payment-guide b{width:20px;height:20px;border-radius:50%;background:var(--orange);color:#fff;display:grid;place-items:center;font-size:10px;min-width:20px}
+.payment-guide-alert{margin-top:10px!important;color:#8a4b00!important;font-weight:800}
+.success-order-summary{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.success-order-summary div{background:#fafafa;border:1px solid #eee;border-radius:12px;padding:10px;text-align:left}
+.success-order-summary span{display:block;color:#888;text-transform:uppercase;font-size:9px;font-weight:900;letter-spacing:.8px;margin-bottom:3px}
+.success-order-summary strong{display:block;color:var(--ink);font-size:12px;line-height:1.35}
 @media(max-width:900px){.payment-options{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.payment-guide>div,.success-order-summary{grid-template-columns:1fr}}
 @media(max-width:480px){.payment-options{grid-template-columns:1fr}}
