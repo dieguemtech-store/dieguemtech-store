@@ -1797,7 +1797,7 @@ ${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
           </ul>
         </div>
         <div class="seo-actions">
-          <a class="button primary" href="/#boutique">Acheter sur la boutique</a>
+          <a class="button primary" href="/#boutique">Commander sur la boutique</a>
           <a class="button outline" href="https://wa.me/221772177176?text=${encodeURIComponent(`Bonjour DieguemTech Store, je suis interesse par ${product.name}.`)}" target="_blank" rel="noopener">Demander sur WhatsApp</a>
         </div>
         <p class="seo-note">Cette fiche produit est optimisee pour le referencement et le partage. Les prix et stocks peuvent etre confirmes au moment de la commande.</p>

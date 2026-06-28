@@ -759,7 +759,7 @@ function openProductDetail(id){
         <span class="price"><strong>${formatPrice(product.price)}</strong>${product.oldPrice ? `<del>${formatPrice(product.oldPrice)}</del>` : ""}</span>
         <div class="product-detail-actions">
           <a class="button outline" href="${productUrl(product)}">Page produit</a>
-          <button class="button primary" data-cart="${product.id}">Ajouter au panier</button>
+          <button class="button primary" data-cart="${product.id}" data-open-cart-after-add="true">Commander</button>
         </div>
       </div>
     </div>
@@ -797,6 +797,9 @@ document.addEventListener("click", event => {
 
   if (cartButton) {
     addToCart(Number(cartButton.dataset.cart));
+    if (cartButton.dataset.openCartAfterAdd === "true") {
+      openDrawer($("#cartDrawer"));
+    }
     return;
   }
   if (wishButton) {
