@@ -2635,7 +2635,7 @@ function formatPaymentProviderLabel(provider) {
 
 function usesWavePaymentLink(order) {
   const provider = String(order.paymentProvider || "").trim();
-  return provider === waveProvider || provider === cashOnDeliveryProvider;
+  return provider === waveProvider;
 }
 
 function getOrderSubtotal(order) {

@@ -40,11 +40,6 @@ const paymentGuides = {
     text: "Apres confirmation, vous serez redirige vers PayDunya pour payer. L'email de commande part seulement apres confirmation du paiement.",
     steps: ["Verifiez le total", "Validez la commande", "Payez sur PayDunya"]
   },
-  [WAVE_PROVIDER]: {
-    title: "Paiement Wave manuel",
-    text: "La commande est enregistree, puis le bouton Wave s'affiche. Payez avec Wave et envoyez la preuve au support WhatsApp.",
-    steps: ["Creez la commande", "Payez avec Wave", "Envoyez la preuve"]
-  },
   [CASH_ON_DELIVERY_PROVIDER]: {
     title: "Paiement a la livraison",
     text: "Notre equipe confirme le stock et la livraison. L'email de commande part apres validation du paiement.",
@@ -648,11 +643,17 @@ function getSelectedPaymentProvider(){
 
 function renderPaymentGuide(total){
   const provider = getSelectedPaymentProvider();
-  const guide = paymentGuides[provider] || paymentGuides.PayDunya;
   const guideBox = $("#paymentGuide");
   const paymentLabel = $("#checkoutPaymentMethod");
   if (paymentLabel) paymentLabel.textContent = formatPaymentProviderLabel(provider);
   if (!guideBox) return;
+  if (provider === WAVE_PROVIDER) {
+    guideBox.hidden = true;
+    guideBox.innerHTML = "";
+    return;
+  }
+  guideBox.hidden = false;
+  const guide = paymentGuides[provider] || paymentGuides.PayDunya;
   const minimumText = provider === "PayDunya" && total > 0 && total < PAYDUNYA_MINIMUM_AMOUNT
     ? `<p class="payment-guide-alert">PayDunya est disponible a partir de ${formatPrice(PAYDUNYA_MINIMUM_AMOUNT)}. Pour ce panier, choisissez Wave, A la livraison ou WhatsApp.</p>`
     : "";
@@ -952,7 +953,7 @@ function showOrderSuccess(result, customerPhone, provider) {
   const orderId = result.orderId;
   const isWavePayment = provider === WAVE_PROVIDER;
   const isManualPayment = provider === CASH_ON_DELIVERY_PROVIDER;
-  const showWaveLink = isWavePayment || isManualPayment;
+  const showWaveLink = isWavePayment;
   const waveLink = $("#orderWaveLink");
   $("#successOrderId").textContent = orderId;
   renderSuccessOrderSummary(result, provider);
@@ -961,19 +962,19 @@ function showOrderSuccess(result, customerPhone, provider) {
     waveLink.hidden = !showWaveLink;
   }
   if (isWavePayment) {
-    $("#successNotificationInfo").innerHTML = `Votre commande est enregistree. Cliquez sur <a href="${WAVE_PAYMENT_URL}" target="_blank" rel="noopener">Payer avec Wave</a>, puis envoyez la confirmation au support. L'email de commande sera envoye apres validation du paiement.`;
+    $("#successNotificationInfo").textContent = "Votre commande est enregistree. Utilisez le bouton Wave ci-dessous pour finaliser le paiement.";
   } else if (isManualPayment) {
-    $("#successNotificationInfo").innerHTML = `Votre commande est enregistree. Vous pouvez payer a la livraison ou payer DieguemTech Store avec <a href="${WAVE_PAYMENT_URL}" target="_blank" rel="noopener">Wave</a>, puis envoyer la confirmation au support. L'email de commande sera envoye apres validation du paiement.`;
+    $("#successNotificationInfo").textContent = "Votre commande est enregistree. Le paiement se fera a la livraison apres confirmation.";
   } else {
     $("#successNotificationInfo").textContent = "L'email de commande sera envoye apres validation du paiement.";
   }
   const whatsappLabel = isWavePayment
-    ? "Envoyer preuve WhatsApp"
+    ? "WhatsApp support"
     : isManualPayment
       ? "Confirmer sur WhatsApp"
       : "WhatsApp support";
   const whatsappText = isWavePayment
-    ? `Bonjour DieguemTech Store, je viens de payer avec Wave pour la commande ${orderId}. Je vous envoie la preuve.`
+    ? `Bonjour DieguemTech Store, j'ai besoin d'aide pour la commande ${orderId}.`
     : isManualPayment
       ? `Bonjour DieguemTech Store, je confirme ma commande ${orderId} et je souhaite payer a la livraison.`
       : `Bonjour DieguemTech Store, je viens de passer la commande ${orderId}.`;
