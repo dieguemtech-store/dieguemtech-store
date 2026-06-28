@@ -1414,12 +1414,14 @@ ${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
     .category-cart-button{border:0;background:#f68b1e;color:#fff;border-radius:8px;padding:9px 10px;font-size:11px;font-weight:900}
     .category-cart-button:hover{background:#313133}
     .category-empty{padding:50px;text-align:center;color:#777}
-    .category-toast{position:fixed;right:24px;bottom:24px;background:#222;color:#fff;border-radius:12px;padding:14px 18px;box-shadow:0 16px 40px rgba(0,0,0,.24);transform:translateY(90px);opacity:0;transition:.25s;z-index:100}
+    .category-toast{position:fixed;right:24px;bottom:24px;background:#222;color:#fff;border-radius:14px;padding:18px 20px;box-shadow:0 16px 40px rgba(0,0,0,.24);transform:translateY(90px);opacity:0;transition:.25s;z-index:100;display:flex;align-items:flex-start;gap:15px;max-width:470px}
     .category-toast.active{transform:translateY(0);opacity:1}
-    .category-toast strong{display:block;font-size:12px}.category-toast small{color:#bbb;font-size:11px}
+    .category-toast>span{width:27px;height:27px;border-radius:50%;background:#16a66a;display:grid;place-items:center;min-width:27px}
+    .category-toast p{margin:0;min-width:0;flex:1;display:flex;flex-direction:column}.category-toast strong{display:block;font-size:13px}.category-toast small{color:#bbb;font-size:11px;line-height:1.45}
+    .category-toast-actions{display:flex;gap:10px;margin-left:4px}.category-toast-actions button{border:0;border-radius:9px;background:#f68b1e;color:#fff;font-weight:800;font-size:12px;padding:11px 14px;white-space:nowrap}.category-toast-actions button.ghost{background:#3a3a3d}
     @media(max-width:1000px){.category-products-grid,.category-subgrid{grid-template-columns:repeat(3,1fr)}.category-hero{grid-template-columns:1fr}}
     @media(max-width:760px){.category-page{width:min(100% - 24px,1180px);padding-top:18px}.category-top{align-items:flex-start;flex-direction:column}.category-logo img{width:185px}.category-hero{padding:30px 22px}.category-hero-visual{min-height:210px}.category-products-grid,.category-subgrid{grid-template-columns:repeat(2,1fr)}.category-section{padding:18px}.category-section-head{align-items:flex-start;flex-direction:column}}
-    @media(max-width:520px){.category-products-grid,.category-subgrid{grid-template-columns:1fr}.category-product-visual{height:180px}.category-hero h1{letter-spacing:-1px}.category-product-actions{align-items:stretch;flex-direction:column}.category-cart-button,.category-see-link{text-align:center;width:100%}}
+    @media(max-width:520px){.category-products-grid,.category-subgrid{grid-template-columns:1fr}.category-product-visual{height:180px}.category-hero h1{letter-spacing:-1px}.category-product-actions{align-items:stretch;flex-direction:column}.category-cart-button,.category-see-link{text-align:center;width:100%}.category-toast{left:14px;right:14px;bottom:14px;display:grid;grid-template-columns:27px 1fr}.category-toast-actions{grid-column:1/-1;margin-left:0;width:100%;display:grid;grid-template-columns:1fr 1fr}.category-toast-actions button{width:100%}}
   </style>
   <script type="application/ld+json">${toJsonLdScript(structuredData)}</script>
 </head>
@@ -1470,17 +1472,28 @@ ${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
       </div>` : `<div class="category-empty"><h3>Aucun produit disponible</h3><p>Cette categorie sera mise a jour tres bientot.</p></div>`}
     </section>
   </main>
-  <div class="category-toast" id="categoryToast" aria-live="polite"><strong>Produit ajoute</strong><small>Votre panier a ete mis a jour.</small></div>
+  <div class="category-toast" id="categoryToast" aria-live="polite">
+    <span>✓</span>
+    <p><strong>Produit ajoute</strong><small>Voulez-vous aller au panier ou continuer vos achats ?</small></p>
+    <div class="category-toast-actions">
+      <button type="button" id="categoryCartOpen">Voir le panier</button>
+      <button type="button" class="ghost" id="categoryCartContinue">Continuer</button>
+    </div>
+  </div>
   <script>
     (function(){
       var toast = document.getElementById("categoryToast");
       function showToast(name) {
         if (!toast) return;
         toast.querySelector("strong").textContent = "Produit ajoute";
-        toast.querySelector("small").textContent = name ? name + " est dans votre panier." : "Votre panier a ete mis a jour.";
+        toast.querySelector("small").textContent = name ? name + " est dans votre panier. Que voulez-vous faire ?" : "Votre panier a ete mis a jour. Que voulez-vous faire ?";
         toast.classList.add("active");
         clearTimeout(showToast.timer);
-        showToast.timer = setTimeout(function(){ toast.classList.remove("active"); }, 2600);
+      }
+      function hideToast(){
+        if (!toast) return;
+        toast.classList.remove("active");
+        clearTimeout(showToast.timer);
       }
       document.querySelectorAll("[data-cart-product]").forEach(function(button){
         button.addEventListener("click", function(){
@@ -1495,6 +1508,17 @@ ${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
           showToast(name);
         });
       });
+      var openCartButton = document.getElementById("categoryCartOpen");
+      if (openCartButton) {
+        openCartButton.addEventListener("click", function(){
+          hideToast();
+          window.location.href = "/?cart=open#boutique";
+        });
+      }
+      var continueButton = document.getElementById("categoryCartContinue");
+      if (continueButton) {
+        continueButton.addEventListener("click", hideToast);
+      }
     })();
   </script>
 </body>
@@ -1743,10 +1767,12 @@ ${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
     .seo-related-visual img{max-width:100%;max-height:112px;object-fit:contain;filter:drop-shadow(0 12px 14px rgba(0,0,0,.12))}
     .seo-related-visual span{font:800 32px Manrope;color:#f68b1e}
     .seo-related-body{padding:13px}.seo-related-body h3{font:800 13px Manrope;margin:0 0 8px;color:#1c1c1e}.seo-related-body strong{color:#f68b1e;font-size:13px}
-    .seo-cart-toast{align-items:flex-start;max-width:390px}
+    .seo-cart-toast{align-items:flex-start;max-width:470px;padding:18px 20px;gap:15px}
     .seo-cart-toast p{min-width:0;flex:1}
-    .seo-cart-toast .toast-actions{display:flex;gap:8px;margin-left:4px}
-    .seo-cart-toast .toast-actions button{border:0;border-radius:7px;background:#f68b1e;color:#fff;font-weight:800;font-size:11px;padding:9px 11px;white-space:nowrap}
+    .seo-cart-toast strong{font-size:13px}
+    .seo-cart-toast small{font-size:11px;line-height:1.45}
+    .seo-cart-toast .toast-actions{display:flex;gap:10px;margin-left:4px}
+    .seo-cart-toast .toast-actions button{border:0;border-radius:9px;background:#f68b1e;color:#fff;font-weight:800;font-size:12px;padding:11px 14px;white-space:nowrap}
     .seo-cart-toast .toast-actions button.ghost{background:#3a3a3d}
     @media(max-width:900px){.seo-service-grid,.seo-related-grid{grid-template-columns:repeat(2,1fr)}}
     @media(max-width:760px){.seo-card{grid-template-columns:1fr;padding:20px}.seo-gallery{min-height:300px;position:relative;top:auto}.seo-gallery-main{min-height:220px}.seo-actions .button{width:100%}.seo-top{align-items:flex-start;flex-direction:column}.seo-help{align-items:flex-start;flex-direction:column}.seo-help .button{width:100%}}
@@ -1890,7 +1916,6 @@ ${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
         cartToast.querySelector("small").textContent = name + " est dans votre panier. Que voulez-vous faire ?";
         cartToast.classList.add("active");
         clearTimeout(hideCartChoice.timer);
-        hideCartChoice.timer = setTimeout(hideCartChoice, 7000);
       }
       if (cartButton) {
         cartButton.addEventListener("click", function(){

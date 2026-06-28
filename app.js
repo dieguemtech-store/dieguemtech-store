@@ -528,7 +528,6 @@ function showCartChoiceToast(product, options = {}){
   toast.querySelector("small").textContent = `${product.name} est dans votre panier. Que voulez-vous faire ?`;
   toast.classList.add("active");
   clearTimeout(showCartChoiceToast.timer);
-  showCartChoiceToast.timer = setTimeout(() => toast.classList.remove("active"), 6500);
 }
 
 function hideCartChoiceToast(){
