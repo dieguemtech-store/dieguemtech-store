@@ -1743,9 +1743,14 @@ ${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
     .seo-related-visual img{max-width:100%;max-height:112px;object-fit:contain;filter:drop-shadow(0 12px 14px rgba(0,0,0,.12))}
     .seo-related-visual span{font:800 32px Manrope;color:#f68b1e}
     .seo-related-body{padding:13px}.seo-related-body h3{font:800 13px Manrope;margin:0 0 8px;color:#1c1c1e}.seo-related-body strong{color:#f68b1e;font-size:13px}
+    .seo-cart-toast{align-items:flex-start;max-width:390px}
+    .seo-cart-toast p{min-width:0;flex:1}
+    .seo-cart-toast .toast-actions{display:flex;gap:8px;margin-left:4px}
+    .seo-cart-toast .toast-actions button{border:0;border-radius:7px;background:#f68b1e;color:#fff;font-weight:800;font-size:11px;padding:9px 11px;white-space:nowrap}
+    .seo-cart-toast .toast-actions button.ghost{background:#3a3a3d}
     @media(max-width:900px){.seo-service-grid,.seo-related-grid{grid-template-columns:repeat(2,1fr)}}
     @media(max-width:760px){.seo-card{grid-template-columns:1fr;padding:20px}.seo-gallery{min-height:300px;position:relative;top:auto}.seo-gallery-main{min-height:220px}.seo-actions .button{width:100%}.seo-top{align-items:flex-start;flex-direction:column}.seo-help{align-items:flex-start;flex-direction:column}.seo-help .button{width:100%}}
-    @media(max-width:520px){.seo-service-grid,.seo-related-grid{grid-template-columns:1fr}.seo-card{padding:16px}.seo-product-page{width:min(100% - 24px,1120px);padding-top:18px}.seo-logo img{width:180px}.seo-info h1{letter-spacing:-1px}}
+    @media(max-width:520px){.seo-service-grid,.seo-related-grid{grid-template-columns:1fr}.seo-card{padding:16px}.seo-product-page{width:min(100% - 24px,1120px);padding-top:18px}.seo-logo img{width:180px}.seo-info h1{letter-spacing:-1px}.seo-cart-toast{display:grid;grid-template-columns:27px 1fr;align-items:start}.seo-cart-toast .toast-actions{grid-column:1/-1;margin-left:0;width:100%;display:grid;grid-template-columns:1fr 1fr}.seo-cart-toast .toast-actions button{width:100%}}
   </style>
   <script type="application/ld+json">${toJsonLdScript(structuredData)}</script>
 </head>
@@ -1797,7 +1802,7 @@ ${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
           </ul>
         </div>
         <div class="seo-actions">
-          <a class="button primary" href="/#boutique">Commander sur la boutique</a>
+          <button class="button primary" type="button" data-seo-cart-product="${Number(product.id)}" data-product-name="${escapeHtml(product.name)}">Ajouter ce produit au panier</button>
           <a class="button outline" href="https://wa.me/221772177176?text=${encodeURIComponent(`Bonjour DieguemTech Store, je suis interesse par ${product.name}.`)}" target="_blank" rel="noopener">Demander sur WhatsApp</a>
         </div>
         <p class="seo-note">Cette fiche produit est optimisee pour le referencement et le partage. Les prix et stocks peuvent etre confirmes au moment de la commande.</p>
@@ -1836,6 +1841,14 @@ ${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
       </div>
     </section>` : ""}
   </main>
+  <div class="toast cart-choice-toast seo-cart-toast" id="seoCartToast" aria-live="polite">
+    <span>✓</span>
+    <p><strong>Produit ajoute</strong><small>Voulez-vous aller au panier ou continuer vos achats ?</small></p>
+    <div class="toast-actions">
+      <button type="button" id="seoCartOpen">Voir le panier</button>
+      <button type="button" class="ghost" id="seoCartContinue">Continuer</button>
+    </div>
+  </div>
   <script>
     (function(){
       var mainImage = document.querySelector("[data-main-image]");
@@ -1863,6 +1876,45 @@ ${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
           if (window.history.length > 1) window.history.back();
           else window.location.href = "/#boutique";
         });
+      }
+      var cartButton = document.querySelector("[data-seo-cart-product]");
+      var cartToast = document.getElementById("seoCartToast");
+      function hideCartChoice(){
+        if (!cartToast) return;
+        cartToast.classList.remove("active");
+        clearTimeout(hideCartChoice.timer);
+      }
+      function showCartChoice(name){
+        if (!cartToast) return;
+        cartToast.querySelector("strong").textContent = "Produit ajoute";
+        cartToast.querySelector("small").textContent = name + " est dans votre panier. Que voulez-vous faire ?";
+        cartToast.classList.add("active");
+        clearTimeout(hideCartChoice.timer);
+        hideCartChoice.timer = setTimeout(hideCartChoice, 7000);
+      }
+      if (cartButton) {
+        cartButton.addEventListener("click", function(){
+          var id = Number(cartButton.getAttribute("data-seo-cart-product"));
+          var name = cartButton.getAttribute("data-product-name") || "Ce produit";
+          var cart = [];
+          try { cart = JSON.parse(localStorage.getItem("dt-cart") || "[]"); } catch (error) { cart = []; }
+          var item = cart.find(function(entry){ return Number(entry.id) === id; });
+          if (item) item.qty = Number(item.qty || 0) + 1;
+          else cart.push({ id: id, qty: 1 });
+          localStorage.setItem("dt-cart", JSON.stringify(cart));
+          showCartChoice(name);
+        });
+      }
+      var openCartButton = document.getElementById("seoCartOpen");
+      if (openCartButton) {
+        openCartButton.addEventListener("click", function(){
+          hideCartChoice();
+          window.location.href = "/?cart=open#boutique";
+        });
+      }
+      var continueButton = document.getElementById("seoCartContinue");
+      if (continueButton) {
+        continueButton.addEventListener("click", hideCartChoice);
       }
     })();
   </script>

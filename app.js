@@ -1225,6 +1225,17 @@ function getInitialSearch(){
   return new URLSearchParams(window.location.search).get("q")?.trim() || "";
 }
 
+function consumeCartOpenIntent(){
+  const url = new URL(window.location.href);
+  const shouldOpenCart = url.searchParams.get("cart") === "open";
+  if (shouldOpenCart) {
+    url.searchParams.delete("cart");
+    const nextSearch = url.searchParams.toString();
+    window.history.replaceState(null, "", `${url.pathname}${nextSearch ? `?${nextSearch}` : ""}${url.hash}`);
+  }
+  return shouldOpenCart;
+}
+
 async function initializeStore(){
   try {
     captureCampaignAttribution();
@@ -1242,6 +1253,11 @@ async function initializeStore(){
     renderCart();
     renderWishlist();
     persist();
+    const shouldOpenCart = consumeCartOpenIntent();
+    if (shouldOpenCart) {
+      renderCart();
+      openDrawer($("#cartDrawer"));
+    }
     await initializeMarketingTracking();
     trackAnalytics("page_view", {
       metadata: {
@@ -1249,6 +1265,13 @@ async function initializeStore(){
         initialSearch: initialSearch || ""
       }
     });
+    if (shouldOpenCart) {
+      const details = getCartDetails();
+      trackAnalytics("cart_open", {
+        value: details.total,
+        metadata: { itemCount: details.count, lineCount: details.items.length, source: "product_page" }
+      });
+    }
     if (initialSearch) {
       trackAnalytics("search", {
         value: initialSearch.length,
