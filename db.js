@@ -54,6 +54,7 @@ async function initializeDatabase() {
       payment_provider TEXT NOT NULL,
       payment_status TEXT NOT NULL DEFAULT 'pending',
       order_status TEXT NOT NULL DEFAULT 'pending',
+      paid_notification_sent_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
@@ -87,7 +88,8 @@ async function initializeDatabase() {
       ADD COLUMN IF NOT EXISTS customer_email TEXT,
       ADD COLUMN IF NOT EXISTS delivery_zone TEXT,
       ADD COLUMN IF NOT EXISTS subtotal INTEGER NOT NULL DEFAULT 0,
-      ADD COLUMN IF NOT EXISTS delivery_fee INTEGER NOT NULL DEFAULT 0;
+      ADD COLUMN IF NOT EXISTS delivery_fee INTEGER NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS paid_notification_sent_at TIMESTAMPTZ;
 
     UPDATE orders
     SET subtotal = total
@@ -582,6 +584,7 @@ async function getOrders() {
       o.payment_provider AS "paymentProvider",
       o.payment_status AS "paymentStatus",
       o.order_status AS "orderStatus",
+      o.paid_notification_sent_at AS "paidNotificationSentAt",
       o.created_at AS "createdAt",
       COALESCE(
         json_agg(
@@ -625,6 +628,7 @@ async function getOrder(id) {
       o.payment_provider AS "paymentProvider",
       o.payment_status AS "paymentStatus",
       o.order_status AS "orderStatus",
+      o.paid_notification_sent_at AS "paidNotificationSentAt",
       o.created_at AS "createdAt",
       COALESCE(
         json_agg(
@@ -670,8 +674,23 @@ async function updateOrderStatus(id, { orderStatus, paymentStatus }) {
       payment_provider AS "paymentProvider",
       payment_status AS "paymentStatus",
       order_status AS "orderStatus",
+      paid_notification_sent_at AS "paidNotificationSentAt",
       created_at AS "createdAt"
   `, [id, orderStatus || null, paymentStatus || null]);
+  return result.rows[0] || null;
+}
+
+async function markPaidNotificationSent(id) {
+  if (!pool) return markLocalPaidNotificationSent(id);
+
+  const result = await pool.query(`
+    UPDATE orders
+    SET paid_notification_sent_at = COALESCE(paid_notification_sent_at, NOW())
+    WHERE id = $1
+    RETURNING
+      id,
+      paid_notification_sent_at AS "paidNotificationSentAt"
+  `, [id]);
   return result.rows[0] || null;
 }
 
@@ -699,6 +718,19 @@ async function updateLocalOrderStatus(id, { orderStatus, paymentStatus }) {
   return order;
 }
 
+async function markLocalPaidNotificationSent(id) {
+  const fs = require("node:fs/promises");
+  const path = require("node:path");
+  const file = path.join(__dirname, "data", "orders.json");
+  const orders = await getLocalOrders();
+  const normalized = orders.slice().reverse();
+  const order = normalized.find(entry => entry.id === id);
+  if (!order) return null;
+  order.paidNotificationSentAt = order.paidNotificationSentAt || new Date().toISOString();
+  await fs.writeFile(file, JSON.stringify(normalized, null, 2));
+  return order;
+}
+
 function orderError(message, status) {
   const error = new Error(message);
   error.status = status;
@@ -719,5 +751,6 @@ module.exports = {
   createOrder,
   getOrders,
   getOrder,
-  updateOrderStatus
+  updateOrderStatus,
+  markPaidNotificationSent
 };

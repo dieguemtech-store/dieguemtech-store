@@ -132,9 +132,12 @@ app.patch("/api/admin/orders/:id", requireAdmin, async (request, response, next)
     if (paymentStatus && !getPaymentStatuses().includes(paymentStatus)) {
       return response.status(400).json({ error: "Statut de paiement invalide." });
     }
+    const previousOrder = await database.getOrder(request.params.id);
     const order = await database.updateOrderStatus(request.params.id, { orderStatus, paymentStatus });
     if (!order) return response.status(404).json({ error: "Commande introuvable." });
-    response.json(order);
+    const fullOrder = await database.getOrder(order.id) || order;
+    const notifications = await notifyPaidOrderIfNeeded(fullOrder, request, previousOrder);
+    response.json({ ...fullOrder, notifications });
   } catch (error) {
     next(error);
   }
@@ -306,7 +309,6 @@ app.post("/api/orders", async (request, response, next) => {
 
     if (paymentProvider === "PayDunya") {
       const payment = await createPayDunyaPayment(order, request);
-      const notifications = await notifyOrderCreated(order, request);
       return response.status(201).json({
         orderId: order.id,
         total: order.total,
@@ -318,11 +320,10 @@ app.post("/api/orders", async (request, response, next) => {
         deliveryFee: order.deliveryFee,
         redirect_url: payment.redirectUrl,
         payment_token: payment.token,
-        notifications
+        notifications: getDeferredPaymentNotifications()
       });
     }
 
-    const notifications = await notifyOrderCreated(order, request);
     response.status(201).json({
       orderId: order.id,
       total: order.total,
@@ -332,7 +333,7 @@ app.post("/api/orders", async (request, response, next) => {
       subtotal: order.subtotal,
       deliveryZone: order.deliveryZone,
       deliveryFee: order.deliveryFee,
-      notifications
+      notifications: getDeferredPaymentNotifications()
     });
   } catch (error) {
     next(error);
@@ -378,11 +379,13 @@ app.post("/api/paydunya/ipn", async (request, response, next) => {
     }
 
     const update = await updateOrderFromPayDunyaData(data);
+    const notifications = await notifyPaidOrderIfNeeded(update.order, request, update.previousOrder);
     console.log("Notification PayDunya:", {
       orderId: update.orderId,
       status: data?.status,
       paymentStatus: update.paymentStatus,
-      orderUpdated: Boolean(update.order)
+      orderUpdated: Boolean(update.order),
+      paidNotifications: notifications
     });
     response.status(200).send("OK");
   } catch (error) {
@@ -403,6 +406,7 @@ app.get("/payment-success/paydunya", async (request, response, next) => {
 
     const data = await confirmPayDunyaInvoice(token);
     const update = await updateOrderFromPayDunyaData(data);
+    await notifyPaidOrderIfNeeded(update.order, request, update.previousOrder);
     const isPaid = update.paymentStatus === "paid";
     const isFailed = update.paymentStatus === "failed";
     response.send(renderPaymentPage(
@@ -1775,12 +1779,45 @@ function toJsonLdScript(value) {
   return JSON.stringify(value).replace(/</g, "\\u003c");
 }
 
-async function notifyOrderCreated(order, request) {
+function getDeferredPaymentNotifications() {
+  return {
+    adminEmail: "deferred_until_paid",
+    customerEmail: "deferred_until_paid"
+  };
+}
+
+function getSkippedPaidNotifications(reason = "skipped") {
+  return {
+    adminEmail: reason,
+    customerEmail: reason
+  };
+}
+
+async function notifyPaidOrderIfNeeded(order, request, previousOrder = null) {
+  if (!order || order.paymentStatus !== "paid") {
+    return getSkippedPaidNotifications("not_paid");
+  }
+  if (previousOrder?.paymentStatus === "paid") {
+    return getSkippedPaidNotifications("already_paid");
+  }
+  const fullOrder = await database.getOrder(order.id) || order;
+  if (fullOrder.paidNotificationSentAt) {
+    return getSkippedPaidNotifications("already_sent");
+  }
+
+  const notifications = await sendPaidOrderEmails(fullOrder, request);
+  const hasFailure = Object.values(notifications)
+    .some(status => String(status || "").startsWith("failed"));
+  if (!hasFailure) {
+    await database.markPaidNotificationSent(fullOrder.id);
+  }
+  return notifications;
+}
+
+async function sendPaidOrderEmails(order, request) {
   const notifications = {
     adminEmail: "skipped",
-    customerEmail: "skipped",
-    adminWhatsapp: "skipped",
-    customerWhatsapp: "skipped"
+    customerEmail: "skipped"
   };
 
   const tasks = [
@@ -1789,7 +1826,7 @@ async function notifyOrderCreated(order, request) {
       if (!adminEmail) return "skipped";
       return sendOrderEmail({
         to: adminEmail,
-        subject: `Nouvelle commande ${order.id} - DieguemTech Store`,
+        subject: `Paiement confirme - commande ${order.id} - DieguemTech Store`,
         text: buildAdminOrderText(order, request),
         html: buildOrderEmailHtml(order, request, "admin")
       });
@@ -1799,23 +1836,11 @@ async function notifyOrderCreated(order, request) {
       if (!customerEmail) return "skipped";
       return sendOrderEmail({
         to: customerEmail,
-        subject: `Votre commande ${order.id} - DieguemTech Store`,
+        subject: `Paiement confirme - commande ${order.id} - DieguemTech Store`,
         text: buildCustomerOrderText(order, request),
         html: buildOrderEmailHtml(order, request, "customer")
       });
-    }),
-    runNotification("adminWhatsapp", async () => sendOrderWhatsApp({
-      to: process.env.ORDER_ADMIN_WHATSAPP || process.env.ADMIN_WHATSAPP || "",
-      text: buildAdminOrderText(order, request),
-      templateName: process.env.WHATSAPP_ADMIN_TEMPLATE_NAME,
-      templateParams: getAdminWhatsAppTemplateParams(order)
-    })),
-    runNotification("customerWhatsapp", async () => sendOrderWhatsApp({
-      to: order.customer?.phone || order.customerPhone || "",
-      text: buildCustomerOrderText(order, request),
-      templateName: process.env.WHATSAPP_CUSTOMER_TEMPLATE_NAME,
-      templateParams: getCustomerWhatsAppTemplateParams(order)
-    }))
+    })
   ];
 
   const results = await Promise.all(tasks);
@@ -1964,8 +1989,9 @@ function buildWhatsAppTextPayload(to, text) {
 }
 
 function buildAdminOrderText(order, request) {
+  const isPaid = order.paymentStatus === "paid";
   const lines = [
-    `Nouvelle commande ${order.id}`,
+    `${isPaid ? "Commande payee" : "Nouvelle commande"} ${order.id}`,
     `Client: ${getOrderCustomerName(order)}`,
     `Telephone: ${getOrderCustomerPhone(order)}`,
     getOrderCustomerEmail(order) ? `Email: ${getOrderCustomerEmail(order)}` : "",
@@ -1973,9 +1999,10 @@ function buildAdminOrderText(order, request) {
     `Adresse: ${getOrderAddress(order)}`,
     `Sous-total: ${formatSeoPrice(getOrderSubtotal(order))}`,
     `Livraison: ${formatSeoPrice(getOrderDeliveryFee(order))}`,
-    `Total a payer: ${formatSeoPrice(order.total)}`,
+    `${isPaid ? "Total paye" : "Total a payer"}: ${formatSeoPrice(order.total)}`,
     `Paiement: ${formatPaymentProviderLabel(order.paymentProvider)}`,
-    usesWavePaymentLink(order) ? `Paiement Wave: ${wavePaymentUrl}` : "",
+    isPaid ? "Paiement confirme: oui" : "",
+    !isPaid && usesWavePaymentLink(order) ? `Paiement Wave: ${wavePaymentUrl}` : "",
     "",
     "Articles:",
     ...getOrderItems(order).map(item => `- ${item.name} x${item.quantity} = ${formatSeoPrice(item.lineTotal)}`),
@@ -1986,24 +2013,32 @@ function buildAdminOrderText(order, request) {
 }
 
 function buildCustomerOrderText(order, request) {
+  const isPaid = order.paymentStatus === "paid";
   return [
     `Bonjour ${getOrderCustomerName(order)},`,
-    `Votre commande ${order.id} chez DieguemTech Store est bien enregistree.`,
+    isPaid
+      ? `Votre paiement pour la commande ${order.id} chez DieguemTech Store est confirme.`
+      : `Votre commande ${order.id} chez DieguemTech Store est bien enregistree.`,
     `Sous-total produits: ${formatSeoPrice(getOrderSubtotal(order))}.`,
     `Livraison ${getOrderDeliveryZone(order)}: ${formatSeoPrice(getOrderDeliveryFee(order))}.`,
-    `Total a payer: ${formatSeoPrice(order.total)}.`,
-    usesWavePaymentLink(order) ? `Vous pouvez payer DieguemTech Store avec Wave en cliquant sur ce lien: ${wavePaymentUrl}` : "",
-    "Notre equipe confirme le stock, la livraison et le paiement avant expedition.",
+    `${isPaid ? "Total paye" : "Total a payer"}: ${formatSeoPrice(order.total)}.`,
+    !isPaid && usesWavePaymentLink(order) ? `Vous pouvez payer DieguemTech Store avec Wave en cliquant sur ce lien: ${wavePaymentUrl}` : "",
+    isPaid
+      ? "Notre equipe confirme le stock et organise la preparation/livraison."
+      : "Notre equipe confirme le stock, la livraison et le paiement avant expedition.",
     `Suivi: ${getPublicBaseUrl(request)}/#suivi`
   ].filter(Boolean).join("\n");
 }
 
 function buildOrderEmailHtml(order, request, audience) {
   const isAdmin = audience === "admin";
-  const title = isAdmin ? "Nouvelle commande recue" : "Votre commande est enregistree";
+  const isPaid = order.paymentStatus === "paid";
+  const title = isAdmin
+    ? (isPaid ? "Commande payee recue" : "Nouvelle commande recue")
+    : (isPaid ? "Paiement confirme" : "Votre commande est enregistree");
   const intro = isAdmin
-    ? "Une nouvelle commande vient d'arriver sur DieguemTech Store."
-    : "Merci pour votre commande. Gardez ce numero pour le suivi et les echanges avec le support.";
+    ? (isPaid ? "Le paiement de cette commande est confirme." : "Une nouvelle commande vient d'arriver sur DieguemTech Store.")
+    : (isPaid ? "Merci pour votre paiement. Gardez ce numero pour le suivi et les echanges avec le support." : "Merci pour votre commande. Gardez ce numero pour le suivi et les echanges avec le support.");
   const items = getOrderItems(order)
     .map(item => `<tr><td>${escapeHtml(item.name)}</td><td>${Number(item.quantity)}</td><td>${escapeHtml(formatSeoPrice(item.lineTotal))}</td></tr>`)
     .join("");
@@ -2026,7 +2061,8 @@ function buildOrderEmailHtml(order, request, audience) {
         <tr><td style="padding:8px 0;color:#777">Zone livraison</td><td style="padding:8px 0;text-align:right">${escapeHtml(getOrderDeliveryZone(order))}</td></tr>
         <tr><td style="padding:8px 0;color:#777">Adresse</td><td style="padding:8px 0;text-align:right">${escapeHtml(getOrderAddress(order))}</td></tr>
         <tr><td style="padding:8px 0;color:#777">Paiement</td><td style="padding:8px 0;text-align:right">${escapeHtml(formatPaymentProviderLabel(order.paymentProvider))}</td></tr>
-        ${usesWavePaymentLink(order) ? `<tr><td style="padding:8px 0;color:#777">Wave</td><td style="padding:8px 0;text-align:right"><a href="${escapeHtml(wavePaymentUrl)}" style="color:#f68b1e;font-weight:700">Payer avec Wave</a></td></tr>` : ""}
+        ${isPaid ? `<tr><td style="padding:8px 0;color:#777">Statut paiement</td><td style="padding:8px 0;text-align:right;color:#0f8f5f;font-weight:700">Confirme</td></tr>` : ""}
+        ${!isPaid && usesWavePaymentLink(order) ? `<tr><td style="padding:8px 0;color:#777">Wave</td><td style="padding:8px 0;text-align:right"><a href="${escapeHtml(wavePaymentUrl)}" style="color:#f68b1e;font-weight:700">Payer avec Wave</a></td></tr>` : ""}
       </table>
       <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead><tr style="background:#fafafa"><th style="text-align:left;padding:10px">Produit</th><th style="text-align:center;padding:10px">Qte</th><th style="text-align:right;padding:10px">Total</th></tr></thead>
@@ -2306,10 +2342,14 @@ async function updateOrderFromPayDunyaData(data) {
     : paymentStatus === "failed"
       ? "cancelled"
       : null;
-  const order = orderId
+  const previousOrder = orderId ? await database.getOrder(orderId) : null;
+  const updatedOrder = orderId
     ? await database.updateOrderStatus(orderId, { orderStatus, paymentStatus })
     : null;
-  return { orderId, paymentStatus, order };
+  const order = updatedOrder
+    ? await database.getOrder(updatedOrder.id) || updatedOrder
+    : null;
+  return { orderId, paymentStatus, order, previousOrder };
 }
 
 function getPayDunyaOrderId(data) {

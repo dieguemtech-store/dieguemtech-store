@@ -506,8 +506,6 @@ function openModal(modal) {
 
 function showOrderSuccess(result, customerPhone, provider) {
   const orderId = result.orderId;
-  const notifications = result.notifications || {};
-  const customerNotified = notifications.customerEmail === "sent" || notifications.customerWhatsapp === "sent";
   const isWavePayment = provider === WAVE_PROVIDER;
   const isManualPayment = provider === CASH_ON_DELIVERY_PROVIDER;
   const showWaveLink = isWavePayment || isManualPayment;
@@ -518,13 +516,11 @@ function showOrderSuccess(result, customerPhone, provider) {
     waveLink.hidden = !showWaveLink;
   }
   if (isWavePayment) {
-    $("#successNotificationInfo").innerHTML = `Votre commande est enregistree. Cliquez sur <a href="${WAVE_PAYMENT_URL}" target="_blank" rel="noopener">Payer avec Wave</a>, puis envoyez la confirmation au support.`;
+    $("#successNotificationInfo").innerHTML = `Votre commande est enregistree. Cliquez sur <a href="${WAVE_PAYMENT_URL}" target="_blank" rel="noopener">Payer avec Wave</a>, puis envoyez la confirmation au support. L'email de commande sera envoye apres validation du paiement.`;
   } else if (isManualPayment) {
-    $("#successNotificationInfo").innerHTML = `Votre commande est enregistree. Vous pouvez payer a la livraison ou payer DieguemTech Store avec <a href="${WAVE_PAYMENT_URL}" target="_blank" rel="noopener">Wave</a>, puis envoyer la confirmation au support.`;
+    $("#successNotificationInfo").innerHTML = `Votre commande est enregistree. Vous pouvez payer a la livraison ou payer DieguemTech Store avec <a href="${WAVE_PAYMENT_URL}" target="_blank" rel="noopener">Wave</a>, puis envoyer la confirmation au support. L'email de commande sera envoye apres validation du paiement.`;
   } else {
-    $("#successNotificationInfo").textContent = customerNotified
-      ? "Une confirmation vient aussi de vous etre envoyee."
-      : "Le support confirmera votre commande par WhatsApp ou telephone.";
+    $("#successNotificationInfo").textContent = "L'email de commande sera envoye apres validation du paiement.";
   }
   $("#orderWhatsappLink").href = `https://wa.me/221772177176?text=${encodeURIComponent(`Bonjour DieguemTech Store, je viens de passer la commande ${orderId}.`)}`;
   $("#trackingForm").elements.orderId.value = orderId;
