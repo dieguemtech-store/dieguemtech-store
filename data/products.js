@@ -242,6 +242,29 @@ module.exports = [
     description: "Ecouteurs Bluetooth Oraimo avec reduction de bruit, audio spatial et format compact pour musique, appels et deplacements."
   },
   {
+    id: 159,
+    name: "Ecouteurs TWS Semi Intra-auriculaires Bluetooth 5.4",
+    category: "Audio",
+    subcategory: "Ecouteurs TWS",
+    price: 15000,
+    oldPrice: null,
+    emoji: "DT",
+    rating: 4.6,
+    reviews: 12,
+    badge: "Nouveau",
+    stock: 18,
+    image: "/assets/products/ecouteurs-tws-semi-intra-bleu-boitier.jpeg",
+    images: [
+      "/assets/products/ecouteurs-tws-semi-intra-bleu-boitier.jpeg",
+      "/assets/products/ecouteurs-tws-semi-intra-affiche.jpeg",
+      "/assets/products/ecouteurs-tws-semi-intra-bleu.jpeg",
+      "/assets/products/ecouteurs-tws-semi-intra-blanc-boitier.jpeg",
+      "/assets/products/ecouteurs-tws-semi-intra-blanc.jpeg",
+      "/assets/products/ecouteurs-tws-semi-intra-vert.jpeg"
+    ],
+    description: "Ecouteurs TWS semi intra-auriculaires au design moderne, disponibles en bleu, blanc et vert. Connexion Bluetooth 5.4 rapide et stable, portee 10 a 15 metres, faible latence 30 ms, commandes tactiles Touch Control et son stereo HD haute fidelite. Batterie ecouteurs 200 mAh, autonomie estimee 3 a 5 heures, recharge Type-C en 1 a 2 heures, indicateur LED et resistance IPX5. Ideals pour musique, appels mains libres, sport, fitness, travail, etudes, voyages et deplacements."
+  },
+  {
     id: 117,
     name: "Lampe de Bureau LED Pliable 12W",
     category: "Accessoires",
