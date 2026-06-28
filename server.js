@@ -56,6 +56,7 @@ app.disable("x-powered-by");
 app.set("trust proxy", 1);
 app.use(express.json({ limit: "100kb" }));
 app.use(express.urlencoded({ extended: true, limit: "100kb" }));
+app.use(canonicalDomainRedirect);
 
 app.get("/api/health", (request, response) => {
   response.json({
@@ -309,10 +310,20 @@ app.get("/api/uploads/:id", async (request, response, next) => {
   }
 });
 
+app.get("/robots.txt", (request, response) => {
+  response
+    .type("text/plain")
+    .set("Cache-Control", "public, max-age=3600")
+    .send(renderRobotsTxt(getPublicBaseUrl(request)));
+});
+
 app.get("/sitemap.xml", async (request, response, next) => {
   try {
     const products = await database.getProducts();
-    response.type("application/xml").send(renderSitemap(getPublicBaseUrl(request), products));
+    response
+      .type("application/xml")
+      .set("Cache-Control", "public, max-age=3600")
+      .send(renderSitemap(getPublicBaseUrl(request), products));
   } catch (error) {
     next(error);
   }
@@ -673,6 +684,30 @@ function getOrderStatuses() {
 
 function getPaymentStatuses() {
   return ["pending", "paid", "failed", "refunded"];
+}
+
+function canonicalDomainRedirect(request, response, next) {
+  if (!["GET", "HEAD"].includes(request.method)) return next();
+  const hostname = String(request.hostname || "").toLowerCase();
+  const shouldRedirect = hostname === "www.dieguemtechstore.com" || hostname.endsWith(".onrender.com");
+  if (!shouldRedirect) return next();
+  if (request.path.startsWith("/api/")) return next();
+  response.redirect(301, `https://dieguemtechstore.com${request.originalUrl || request.url || "/"}`);
+}
+
+function renderRobotsTxt(baseUrl) {
+  return `User-agent: *
+Allow: /
+Allow: /assets/
+Allow: /api/uploads/
+Disallow: /admin.html
+Disallow: /admin.css
+Disallow: /admin.js
+Disallow: /api/
+Disallow: /payment-cancel
+
+Sitemap: ${baseUrl}/sitemap.xml
+`;
 }
 
 function cleanAnalyticsString(value, maxLength = 240) {
@@ -1113,27 +1148,38 @@ function renderSitemap(baseUrl, products) {
     {
       loc: `${baseUrl}/`,
       changefreq: "daily",
-      priority: "1.0"
+      priority: "1.0",
+      image: `${baseUrl}/assets/hero-tech.png`,
+      imageTitle: "DieguemTech Store - boutique high-tech au Senegal"
     },
     ...categoryPages.map(page => ({
       loc: `${baseUrl}${page.path}`,
       changefreq: "weekly",
-      priority: page.priority
+      priority: page.priority,
+      image: page.image ? absoluteUrl(page.image, baseUrl) : `${baseUrl}/assets/hero-tech.png`,
+      imageTitle: page.title
     })),
     ...products.map(product => ({
       loc: `${baseUrl}${productPath(product)}`,
       changefreq: "weekly",
-      priority: "0.8"
+      priority: "0.8",
+      image: absoluteUrl(getProductImages(product)[0], baseUrl),
+      imageTitle: product.name
     }))
   ];
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 ${urls.map(url => `  <url>
     <loc>${escapeXml(url.loc)}</loc>
     <lastmod>${today}</lastmod>
     <changefreq>${url.changefreq}</changefreq>
     <priority>${url.priority}</priority>
+${url.image ? `    <image:image>
+      <image:loc>${escapeXml(url.image)}</image:loc>
+      <image:title>${escapeXml(url.imageTitle || "DieguemTech Store")}</image:title>
+    </image:image>` : ""}
   </url>`).join("\n")}
 </urlset>`;
 }
@@ -1236,6 +1282,7 @@ function renderCategorySeoPage({
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="index, follow">
+  <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
   <meta name="description" content="${escapeHtml(description)}">
 ${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
@@ -1246,10 +1293,12 @@ ${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
   <meta property="og:description" content="${escapeHtml(description)}">
   <meta property="og:url" content="${escapeHtml(canonicalUrl)}">
   <meta property="og:image" content="${escapeHtml(heroImageUrl)}">
+  <meta property="og:image:alt" content="${escapeHtml(currentTitle)}">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${escapeHtml(pageTitle)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
   <meta name="twitter:image" content="${escapeHtml(heroImageUrl)}">
+  <meta name="twitter:image:alt" content="${escapeHtml(currentTitle)}">
   <meta name="theme-color" content="#f68b1e">
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
   <link rel="shortcut icon" href="/assets/favicon.svg">
@@ -1492,6 +1541,24 @@ function renderProductSeoPage(product, baseUrl, relatedProducts = []) {
         itemListElement: productBreadcrumbItems
       },
       {
+        "@type": "WebPage",
+        "@id": `${canonicalUrl}#webpage`,
+        name: title,
+        description,
+        url: canonicalUrl,
+        isPartOf: {
+          "@type": "WebSite",
+          "@id": `${baseUrl}/#website`,
+          name: "DieguemTech Store",
+          url: `${baseUrl}/`
+        },
+        about: {
+          "@id": `${canonicalUrl}#product`
+        },
+        primaryImageOfPage: mainImage,
+        inLanguage: "fr-SN"
+      },
+      {
         "@type": "Product",
         "@id": `${canonicalUrl}#product`,
         name: product.name,
@@ -1535,6 +1602,7 @@ function renderProductSeoPage(product, baseUrl, relatedProducts = []) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="index, follow">
+  <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
   <meta name="description" content="${escapeHtml(description)}">
 ${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
@@ -1552,6 +1620,7 @@ ${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
   <meta name="twitter:title" content="${escapeHtml(title)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
   <meta name="twitter:image" content="${escapeHtml(mainImage)}">
+  <meta name="twitter:image:alt" content="${escapeHtml(product.name)}">
   <meta name="theme-color" content="#f68b1e">
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
   <link rel="shortcut icon" href="/assets/favicon.svg">
@@ -1781,11 +1850,19 @@ function getCategorySitemapEntries(products) {
     const categoryProducts = products.filter(product => product.category === category);
     const subcategories = getCategorySubcategories(categoryProducts);
     const visibleSubcategories = subcategories.length > 1 ? subcategories : [];
+    const categoryTitle = getCategoryDisplayName(category);
     return [
-      { path: categoryPath(category), priority: "0.9" },
+      {
+        path: categoryPath(category),
+        priority: "0.9",
+        title: `${categoryTitle} - DieguemTech Store`,
+        image: getProductImages(categoryProducts[0] || {})[0]
+      },
       ...visibleSubcategories.map(subcategory => ({
         path: subcategoryPath(category, subcategory.name),
-        priority: "0.85"
+        priority: "0.85",
+        title: `${subcategory.name} - ${categoryTitle}`,
+        image: getProductImages(subcategory.products[0] || {})[0]
       }))
     ];
   });

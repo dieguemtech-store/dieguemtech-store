@@ -1,9 +1,11 @@
 User-agent: *
 Allow: /
+Allow: /assets/
 Allow: /api/uploads/
 Disallow: /admin.html
 Disallow: /admin.css
 Disallow: /admin.js
 Disallow: /api/
+Disallow: /payment-cancel
 
 Sitemap: https://dieguemtechstore.com/sitemap.xml
