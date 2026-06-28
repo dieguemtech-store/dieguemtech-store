@@ -34,4 +34,7 @@
 .analytics-day span{width:100%;min-height:6px;border-radius:999px 999px 6px 6px;background:linear-gradient(180deg,var(--orange),#ffbd77);box-shadow:0 8px 18px rgba(246,139,30,.16)}
 .analytics-day small{font-size:10px;color:#777;white-space:nowrap;writing-mode:vertical-rl;transform:rotate(180deg)}
 @media(max-width:850px){.analytics-grid{grid-template-columns:1fr}}
-@media(max-width:650px){.admin-tabs{grid-template-columns:repeat(3,1fr)}.analytics-timeline{min-height:180px}.analytics-day{height:140px}}
+.backup-list{display:grid;gap:10px}
+.backup-list span{background:#fff8e9;border:1px solid rgba(246,139,30,.18);border-radius:12px;color:#6b5a43;font-size:13px;font-weight:800;padding:12px}
+.backup-card .notification-actions select{min-width:190px}
+@media(max-width:650px){.admin-tabs{grid-template-columns:repeat(2,1fr)}.analytics-timeline{min-height:180px}.analytics-day{height:140px}.backup-card .notification-actions select{min-width:0;width:100%}}

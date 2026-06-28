@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=20260628-analytics">
+  <link rel="stylesheet" href="admin.css?v=20260628-backup">
 </head>
 <body>
   <main class="admin-shell">
@@ -45,6 +45,7 @@
         <button class="active" data-admin-tab="orders">Commandes</button>
         <button data-admin-tab="products">Produits</button>
         <button data-admin-tab="analytics">Analytics</button>
+        <button data-admin-tab="backup">Sauvegarde</button>
       </div>
 
       <section id="ordersPanel">
@@ -178,6 +179,40 @@
           <div class="analytics-timeline" id="analyticsTimeline"></div>
         </article>
       </section>
+
+      <section id="backupPanel" hidden>
+        <div class="notification-admin-card backup-card">
+          <div>
+            <span class="eyebrow">Sauvegarde</span>
+            <h2>Sauvegarde complète du site</h2>
+            <p>Téléchargez un fichier JSON contenant les produits, les commandes et les analytics récents.</p>
+            <p class="notification-message" id="backupStatus"></p>
+          </div>
+          <div class="notification-actions">
+            <select id="backupAnalyticsDays" aria-label="Periode analytics incluse">
+              <option value="90">Analytics 90 jours</option>
+              <option value="180">Analytics 180 jours</option>
+              <option value="365" selected>Analytics 365 jours</option>
+            </select>
+            <button type="button" id="downloadBackup">Télécharger sauvegarde</button>
+          </div>
+        </div>
+
+        <div class="analytics-grid backup-grid">
+          <article class="analytics-card">
+            <h3>Ce qui est sauvegardé</h3>
+            <div class="backup-list">
+              <span>Produits, prix, stocks, catégories et images</span>
+              <span>Commandes, clients, livraison et statuts</span>
+              <span>Résumé analytics et événements récents</span>
+            </div>
+          </article>
+          <article class="analytics-card">
+            <h3>Conseil sécurité</h3>
+            <p class="analytics-empty">Gardez ce fichier hors du site public. Il contient les informations clients des commandes.</p>
+          </article>
+        </div>
+      </section>
     </section>
   </main>
 
@@ -193,6 +228,6 @@
       <form id="productForm"></form>
     </section>
   </div>
-  <script src="admin.js?v=20260628-analytics"></script>
+  <script src="admin.js?v=20260628-backup"></script>
 </body>
 </html>

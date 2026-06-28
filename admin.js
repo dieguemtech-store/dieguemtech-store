@@ -825,6 +825,48 @@ function exportOrdersCsv() {
   URL.revokeObjectURL(url);
 }
 
+async function downloadBackup() {
+  const button = $("#downloadBackup");
+  const status = $("#backupStatus");
+  const analyticsDays = $("#backupAnalyticsDays")?.value || "365";
+  if (!button || !status) return;
+  button.disabled = true;
+  status.classList.remove("error", "success");
+  status.textContent = "Preparation de la sauvegarde...";
+  try {
+    const response = await fetch(`/api/admin/backup?analyticsDays=${encodeURIComponent(analyticsDays)}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || "Sauvegarde impossible.");
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const fallbackName = `dieguemtech-store-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    link.href = url;
+    link.download = getDownloadFilename(response, fallbackName);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    status.classList.add("success");
+    status.textContent = "Sauvegarde telechargee. Conservez le fichier dans un endroit prive.";
+  } catch (error) {
+    status.classList.add("error");
+    status.textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function getDownloadFilename(response, fallbackName) {
+  const header = response.headers.get("content-disposition") || "";
+  const match = header.match(/filename="?([^"]+)"?/i);
+  return match?.[1] || fallbackName;
+}
+
 function csvCell(value) {
   return `"${String(value ?? "").replace(/"/g, '""')}"`;
 }
@@ -924,6 +966,7 @@ $("#productCategoryFilter").addEventListener("change", renderProducts);
 $("#productStatusFilter").addEventListener("change", renderProducts);
 $("#productFeaturedFilter").addEventListener("change", renderProducts);
 $("#addProductButton").addEventListener("click", openCreateProductModal);
+$("#downloadBackup").addEventListener("click", downloadBackup);
 $("#refreshAnalytics").addEventListener("click", () => {
   loadAnalytics().catch(error => {
     const status = $("#analyticsStatus");
@@ -1021,6 +1064,7 @@ document.querySelectorAll("[data-admin-tab]").forEach(button => {
     $("#ordersPanel").hidden = selectedTab !== "orders";
     $("#productsPanel").hidden = selectedTab !== "products";
     $("#analyticsPanel").hidden = selectedTab !== "analytics";
+    $("#backupPanel").hidden = selectedTab !== "backup";
     if (selectedTab === "products" && products.length === 0) await loadProducts();
     if (selectedTab === "analytics" && !analytics) await loadAnalytics();
   });

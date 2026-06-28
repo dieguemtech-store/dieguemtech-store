@@ -175,6 +175,21 @@ app.get("/api/admin/analytics", requireAdmin, async (request, response, next) =>
   }
 });
 
+app.get("/api/admin/backup", requireAdmin, async (request, response, next) => {
+  try {
+    const backup = await buildAdminBackup(request);
+    const stamp = new Date().toISOString().slice(0, 10);
+    response.set({
+      "Cache-Control": "no-store",
+      "Content-Type": "application/json; charset=utf-8",
+      "Content-Disposition": `attachment; filename="dieguemtech-store-backup-${stamp}.json"`
+    });
+    response.send(JSON.stringify(backup, null, 2));
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.patch("/api/admin/orders/:id", requireAdmin, async (request, response, next) => {
   try {
     const { orderStatus, paymentStatus } = request.body || {};
@@ -701,6 +716,46 @@ function getAnalyticsRangeDays(value) {
   const days = Number(value || 30);
   if (!Number.isFinite(days)) return 30;
   return Math.min(365, Math.max(1, Math.round(days)));
+}
+
+async function buildAdminBackup(request) {
+  const analyticsDays = getAnalyticsRangeDays(request.query.analyticsDays || 365);
+  const [orders, products, analyticsEvents] = await Promise.all([
+    database.getOrders(),
+    database.getAdminProducts(),
+    database.getAnalyticsEvents(analyticsDays)
+  ]);
+  const paidOrders = orders.filter(order => order.paymentStatus === "paid");
+  const productsCount = products.length;
+  const activeProductsCount = products.filter(product => product.active !== false).length;
+
+  return {
+    schemaVersion: 1,
+    generatedAt: new Date().toISOString(),
+    service: "DieguemTech Store",
+    source: {
+      url: getPublicBaseUrl(request),
+      database: database.hasDatabase ? "postgresql" : "local"
+    },
+    counts: {
+      orders: orders.length,
+      paidOrders: paidOrders.length,
+      products: productsCount,
+      activeProducts: activeProductsCount,
+      analyticsEvents: analyticsEvents.length
+    },
+    totals: {
+      paidRevenue: paidOrders.reduce((sum, order) => sum + Number(order.total || 0), 0),
+      currency: "XOF"
+    },
+    products,
+    orders,
+    analytics: {
+      days: analyticsDays,
+      summary: buildAnalyticsSummary(analyticsEvents, analyticsDays),
+      events: analyticsEvents
+    }
+  };
 }
 
 function buildAnalyticsSummary(events = [], days = 30) {
