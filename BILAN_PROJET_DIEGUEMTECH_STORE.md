@@ -404,6 +404,7 @@ git push
 - Ajout des pages legales completes et mise a jour du sitemap.
 - Ajout du guide de sauvegarde et du script de telechargement de backup admin.
 - Ajout d'un message flottant d'assistance WhatsApp sur les pages principales du site.
+- Correction mobile de la page de confirmation commande : champs plus lisibles, anti-zoom automatique et meilleur scroll clavier.
 
 ## 17. Points a surveiller
 
@@ -420,6 +421,7 @@ git push
 
 - Branche Git : `main`
 - Dernier commit securite : `c027eff Harden site security`
+- Derniere correction interface : commande mobile amelioree pour eviter le zoom automatique sur les champs.
 - Site public teste :
   - page d'accueil : OK
   - headers securite : OK

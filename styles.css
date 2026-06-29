@@ -122,3 +122,58 @@
 @media(max-width:900px){.payment-options{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:560px){.payment-guide>div,.success-order-summary{grid-template-columns:1fr}}
 @media(max-width:480px){.payment-options{grid-template-columns:1fr}}
+
+/* Mobile checkout: keep fields readable so mobile browsers do not auto-zoom on focus. */
+.checkout-form input,
+.checkout-form select,
+.checkout-form textarea{
+  font-size:16px;
+  line-height:1.35;
+}
+
+@media(max-width:560px){
+  .checkout-modal{
+    height:100vh;
+    height:100dvh;
+    max-height:100dvh;
+    overflow-y:auto;
+    overflow-x:hidden;
+    overscroll-behavior-y:contain;
+    touch-action:auto;
+  }
+
+  .checkout-layout{
+    min-height:100%;
+  }
+
+  .checkout-main{
+    padding:50px 16px 18px;
+  }
+
+  .checkout-aside{
+    padding:0 16px calc(112px + env(safe-area-inset-bottom));
+  }
+
+  .checkout-main h2{
+    font-size:24px;
+    padding-right:36px;
+  }
+
+  .checkout-card-head{
+    gap:10px;
+  }
+
+  .checkout-form input,
+  .checkout-form select{
+    min-height:50px;
+  }
+
+  .checkout-form textarea{
+    min-height:96px;
+  }
+
+  .checkout-submit{
+    bottom:max(10px,env(safe-area-inset-bottom));
+    border-radius:13px;
+  }
+}

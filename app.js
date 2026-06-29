@@ -734,12 +734,24 @@ function openDrawer(drawer){
 }
 
 function closeAll(){
+  const activeElement = document.activeElement;
+  if (activeElement?.matches?.("input, select, textarea")) {
+    activeElement.blur();
+  }
   $$(".drawer,.modal").forEach(element => {
     element.classList.remove("active");
     element.setAttribute("aria-hidden", "true");
   });
   $("#overlay").classList.remove("active");
   document.body.classList.remove("no-scroll");
+}
+
+function resetCheckoutModalScroll(modal){
+  if (!modal?.classList.contains("checkout-modal")) return;
+  modal.scrollTop = 0;
+  requestAnimationFrame(() => {
+    modal.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  });
 }
 
 function productDetailVisual(product){
@@ -949,6 +961,7 @@ function openModal(modal) {
   modal.setAttribute("aria-hidden", "false");
   $("#overlay").classList.add("active");
   document.body.classList.add("no-scroll");
+  resetCheckoutModalScroll(modal);
 }
 
 function showOrderSuccess(result, customerPhone, provider) {
@@ -1235,6 +1248,18 @@ function initializeFloatingMessage(){
   });
 }
 
+function initializeCheckoutMobileComfort(){
+  const checkoutModal = $("#checkoutModal");
+  if (!checkoutModal) return;
+  checkoutModal.addEventListener("focusin", event => {
+    const field = event.target.closest("input, select, textarea");
+    if (!field) return;
+    window.setTimeout(() => {
+      field.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+    }, 220);
+  });
+}
+
 const deadline = Date.now() + (2 * 24 * 60 * 60 * 1000) + (14 * 60 * 60 * 1000);
 setInterval(() => {
   const diff = Math.max(0, deadline - Date.now());
@@ -1340,4 +1365,5 @@ function cleanWebsiteServiceWorker(){
 
 cleanWebsiteServiceWorker();
 initializeFloatingMessage();
+initializeCheckoutMobileComfort();
 initializeStore();
