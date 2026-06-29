@@ -5,7 +5,8 @@
   "description": "Boutique e-commerce DieguemTech Store",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "backup:admin": "powershell -ExecutionPolicy Bypass -File scripts/download-admin-backup.ps1"
   },
   "engines": {
     "node": ">=20"

@@ -274,6 +274,8 @@ Sauvegardes disponibles :
 - Base de donnees PostgreSQL sur Render.
 - Export JSON depuis l'admin.
 - Historique Git complet.
+- Guide dedie : `SAUVEGARDE_DIEGUEMTECH_STORE.md`.
+- Script Windows : `scripts/download-admin-backup.ps1`.
 
 Commande utile pour verifier l'etat local :
 
@@ -293,6 +295,14 @@ Sauvegarde admin :
 - Onglet sauvegarde.
 - Telecharger le JSON.
 - Conserver ce fichier dans un endroit separe.
+
+Sauvegarde admin par script :
+
+```bash
+npm.cmd run backup:admin
+```
+
+Le dossier `backups/` est ignore par Git pour eviter d'envoyer des donnees clients dans GitHub.
 
 ## 14. Variables Render a conserver
 
@@ -391,6 +401,7 @@ git push
 - Suppression possible des commandes admin.
 - Passe securite generale.
 - Ajout des pages legales completes et mise a jour du sitemap.
+- Ajout du guide de sauvegarde et du script de telechargement de backup admin.
 
 ## 17. Points a surveiller
 
