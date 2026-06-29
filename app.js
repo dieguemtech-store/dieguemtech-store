@@ -455,7 +455,9 @@ function productCard(product){
       <button class="wishlist-toggle ${liked ? "active" : ""}" data-wishlist="${product.id}" aria-label="Ajouter aux favoris">
         <svg><use href="#icon-heart"></use></svg>
       </button>
-      ${productVisual(product)}
+      <a class="product-visual-link" href="${productUrl(product)}" data-product-page data-product-id="${product.id}" aria-label="Voir la page de ${escapeHtml(product.name)}">
+        ${productVisual(product)}
+      </a>
     </div>
     <div class="product-info">
       <span class="product-category">${escapeHtml(getProductCategoryLabel(product))}</span>
@@ -747,9 +749,9 @@ function productDetailVisual(product){
   }
   return `<div class="product-detail-visual">
     <div class="product-detail-gallery">
-      <div class="product-detail-main">
+      <a class="product-detail-main product-image-link" href="${productUrl(product)}" data-product-page data-product-id="${product.id}" aria-label="Voir la page de ${escapeHtml(product.name)}">
         <img class="product-image" id="productDetailMainImage" src="${escapeHtml(images[0])}" alt="${escapeHtml(product.name)}">
-      </div>
+      </a>
       ${images.length > 1 ? `<div class="product-detail-thumbs" aria-label="Images du produit">
         ${images.map((image, index) => `<button type="button" class="product-detail-thumb ${index === 0 ? "active" : ""}" data-detail-image="${escapeHtml(image)}" aria-label="Afficher image ${index + 1}">
           <img src="${escapeHtml(image)}" alt="" loading="lazy">
