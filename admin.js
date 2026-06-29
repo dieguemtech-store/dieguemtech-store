@@ -88,6 +88,9 @@ async function api(path, options = {}) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
+    if (response.status === 401 && path !== "/api/admin/login") {
+      logout();
+    }
     const message = [data.error, data.detail, data.hint].filter(Boolean).join(" - ");
     throw new Error(message || "Operation impossible.");
   }

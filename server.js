@@ -24,6 +24,11 @@ const defaultPayDunyaMinimumAmount = 6000;
 const cashOnDeliveryProvider = "Paiement livraison";
 const waveProvider = "Wave";
 const wavePaymentUrl = process.env.WAVE_PAYMENT_URL || "https://pay.wave.com/m/M_sn_Y0u8_bUZ_dN-/c/sn/";
+const adminSessionTtlMs = 8 * 60 * 60 * 1000;
+const adminLoginWindowMs = 15 * 60 * 1000;
+const adminLoginMaxAttempts = 8;
+const adminSessions = new Map();
+const adminLoginAttempts = new Map();
 const analyticsEventNames = new Set([
   "page_view",
   "product_view",
@@ -54,6 +59,7 @@ const upload = multer({
 
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
+app.use(securityHeaders);
 app.use(express.json({ limit: "100kb" }));
 app.use(express.urlencoded({ extended: true, limit: "100kb" }));
 app.use(canonicalDomainRedirect);
@@ -66,7 +72,7 @@ app.get("/api/health", (request, response) => {
   });
 });
 
-app.get("/api/paydunya/status", (request, response) => {
+app.get("/api/paydunya/status", requireAdmin, (request, response) => {
   response.json({
     configured: hasPayDunyaConfig(),
     mode: getPayDunyaMode(),
@@ -75,7 +81,7 @@ app.get("/api/paydunya/status", (request, response) => {
   });
 });
 
-app.get("/api/email/status", (request, response) => {
+app.get("/api/email/status", requireAdmin, (request, response) => {
   response.json(getEmailStatus());
 });
 
@@ -114,13 +120,19 @@ app.post("/api/analytics", async (request, response, next) => {
 
 app.post("/api/admin/login", (request, response) => {
   const { password } = request.body || {};
+  const clientKey = getAdminLoginKey(request);
   if (!getAdminPassword()) {
     return response.status(503).json({ error: "ADMIN_PASSWORD n'est pas configure dans Render." });
   }
-  if (password !== getAdminPassword()) {
+  if (isAdminLoginBlocked(clientKey)) {
+    return response.status(429).json({ error: "Trop de tentatives. Reessayez dans quelques minutes." });
+  }
+  if (!isValidAdminPassword(password)) {
+    recordFailedAdminLogin(clientKey);
     return response.status(401).json({ error: "Mot de passe admin invalide." });
   }
-  response.json({ token: getAdminPassword() });
+  resetAdminLoginAttempts(clientKey);
+  response.json(createAdminSession());
 });
 
 app.post("/api/admin/email/test", requireAdmin, async (request, response) => {
@@ -536,10 +548,23 @@ app.get("/favicon.ico", (request, response) => {
   response.redirect(301, "/assets/favicon.svg");
 });
 
-app.use(express.static(__dirname, {
-  extensions: ["html"],
-  index: "index.html"
+app.use("/assets", express.static(path.join(__dirname, "assets"), {
+  dotfiles: "ignore",
+  etag: true,
+  immutable: true,
+  index: false,
+  maxAge: "7d"
 }));
+
+app.get("/", sendPublicFile("index.html"));
+app.get("/index.html", sendPublicFile("index.html"));
+app.get("/app.js", sendPublicFile("app.js"));
+app.get("/styles.css", sendPublicFile("styles.css"));
+app.get("/offline.html", sendPublicFile("offline.html"));
+app.get("/admin", sendPublicFile("admin.html", { noStore: true }));
+app.get("/admin.html", sendPublicFile("admin.html", { noStore: true }));
+app.get("/admin.js", sendPublicFile("admin.js", { noStore: true }));
+app.get("/admin.css", sendPublicFile("admin.css", { noStore: true }));
 
 app.use((error, request, response, next) => {
   console.error(error.response?.data || error);
@@ -553,6 +578,39 @@ app.use((error, request, response, next) => {
     error: error.status ? error.message : "Une erreur interne est survenue."
   });
 });
+
+function securityHeaders(request, response, next) {
+  response.set({
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Cross-Origin-Opener-Policy": "same-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+    "Content-Security-Policy": [
+      "default-src 'self'",
+      "base-uri 'self'",
+      "frame-ancestors 'none'",
+      "form-action 'self'",
+      "object-src 'none'",
+      "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://analytics.tiktok.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com data:",
+      "img-src 'self' data: blob: https:",
+      "connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://www.facebook.com https://analytics.tiktok.com https://paydunya.com https://*.paydunya.com",
+      "manifest-src 'self'",
+      "worker-src 'self'"
+    ].join("; ")
+  });
+  next();
+}
+
+function sendPublicFile(fileName, options = {}) {
+  const filePath = path.join(__dirname, fileName);
+  return (request, response) => {
+    response.set("Cache-Control", options.noStore ? "no-store" : "public, max-age=300");
+    response.sendFile(filePath);
+  };
+}
 
 function validateOrder(customer, items, paymentProvider) {
   if (!customer || !customer.name?.trim() || !customer.phone?.trim() || !customer.address?.trim()) {
@@ -696,12 +754,83 @@ function getAdminPassword() {
   return process.env.ADMIN_PASSWORD || "";
 }
 
+function isValidAdminPassword(password) {
+  const expected = getAdminPassword();
+  const received = String(password || "");
+  const expectedBuffer = Buffer.from(expected);
+  const receivedBuffer = Buffer.from(received);
+  if (expectedBuffer.length !== receivedBuffer.length) return false;
+  return crypto.timingSafeEqual(receivedBuffer, expectedBuffer);
+}
+
+function createAdminSession() {
+  cleanupAdminSessions();
+  const token = crypto.randomBytes(32).toString("hex");
+  const expiresAt = Date.now() + adminSessionTtlMs;
+  adminSessions.set(hashAdminToken(token), { expiresAt });
+  return {
+    token,
+    expiresAt: new Date(expiresAt).toISOString()
+  };
+}
+
+function hashAdminToken(token) {
+  return crypto.createHash("sha256").update(String(token || "")).digest("hex");
+}
+
+function cleanupAdminSessions(now = Date.now()) {
+  for (const [tokenHash, session] of adminSessions.entries()) {
+    if (!session?.expiresAt || session.expiresAt <= now) adminSessions.delete(tokenHash);
+  }
+}
+
+function getBearerToken(request) {
+  const header = String(request.get("authorization") || "");
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  return match ? match[1].trim() : "";
+}
+
+function isValidAdminSession(token) {
+  if (!token) return false;
+  cleanupAdminSessions();
+  const session = adminSessions.get(hashAdminToken(token));
+  if (!session || session.expiresAt <= Date.now()) return false;
+  return true;
+}
+
+function getAdminLoginKey(request) {
+  return String(request.ip || request.socket?.remoteAddress || "unknown").slice(0, 120);
+}
+
+function isAdminLoginBlocked(key) {
+  const entry = adminLoginAttempts.get(key);
+  if (!entry) return false;
+  if (entry.resetAt <= Date.now()) {
+    adminLoginAttempts.delete(key);
+    return false;
+  }
+  return entry.count >= adminLoginMaxAttempts;
+}
+
+function recordFailedAdminLogin(key) {
+  const now = Date.now();
+  const current = adminLoginAttempts.get(key);
+  if (!current || current.resetAt <= now) {
+    adminLoginAttempts.set(key, { count: 1, resetAt: now + adminLoginWindowMs });
+    return;
+  }
+  current.count += 1;
+}
+
+function resetAdminLoginAttempts(key) {
+  adminLoginAttempts.delete(key);
+}
+
 function requireAdmin(request, response, next) {
-  const token = String(request.get("authorization") || "").replace(/^Bearer\s+/i, "");
   if (!getAdminPassword()) {
     return response.status(503).json({ error: "ADMIN_PASSWORD n'est pas configure dans Render." });
   }
-  if (token !== getAdminPassword()) {
+  if (!isValidAdminSession(getBearerToken(request))) {
     return response.status(401).json({ error: "Acces admin refuse." });
   }
   next();
