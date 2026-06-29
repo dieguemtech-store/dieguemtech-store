@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=20260628-campaigns">
+  <link rel="stylesheet" href="admin.css?v=20260629-clean-admin">
 </head>
 <body>
   <main class="admin-shell">
@@ -32,9 +32,11 @@
       <header class="dashboard-header">
         <div>
           <span class="eyebrow">Tableau admin</span>
-          <h1>Commandes DieguemTech</h1>
+          <h1>Admin DieguemTech</h1>
+          <p class="dashboard-subtitle">Commandes, produits, analytics et sauvegardes au même endroit.</p>
         </div>
         <div class="header-actions">
+          <a href="/" class="ghost admin-store-link" target="_blank" rel="noopener">Voir boutique</a>
           <button id="exportOrders" class="ghost">Exporter CSV</button>
           <button id="refreshOrders">Actualiser</button>
           <button id="logoutButton" class="ghost">Deconnexion</button>
@@ -277,6 +279,6 @@
       <form id="productForm"></form>
     </section>
   </div>
-  <script src="admin.js?v=20260628-campaigns"></script>
+  <script src="admin.js?v=20260629-clean-admin"></script>
 </body>
 </html>
