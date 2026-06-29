@@ -1586,6 +1586,7 @@ ${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
   <script type="application/ld+json">${toJsonLdScript(structuredData)}</script>
 </head>
 <body>
+  ${renderFloatingSupportMessage()}
   <main class="category-page">
     <nav class="category-top" aria-label="Navigation categorie">
       <a class="category-logo" href="/" aria-label="DieguemTech Store - Accueil"><img src="/assets/logo.svg" alt="DieguemTech Store" width="220" height="56"></a>
@@ -1681,6 +1682,7 @@ ${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
       }
     })();
   </script>
+  ${renderFloatingSupportScript()}
 </body>
 </html>`;
 }
@@ -2074,6 +2076,7 @@ ${renderLocalSeoMeta({ canonicalUrl, keywords: getLocalSeoKeywords([page.title, 
   <script type="application/ld+json">${toJsonLdScript(structuredData)}</script>
 </head>
 <body>
+  ${renderFloatingSupportMessage()}
   <main class="legal-page">
     <nav class="legal-top" aria-label="Navigation">
       <a class="legal-logo" href="/" aria-label="DieguemTech Store - Accueil"><img src="/assets/logo.svg" alt="DieguemTech Store" width="220" height="56"></a>
@@ -2106,6 +2109,7 @@ ${renderLocalSeoMeta({ canonicalUrl, keywords: getLocalSeoKeywords([page.title, 
       </aside>
     </div>
   </main>
+  ${renderFloatingSupportScript()}
 </body>
 </html>`;
 }
@@ -2115,6 +2119,43 @@ function renderLegalSection(section) {
     <h2>${escapeHtml(section.title)}</h2>
     ${section.paragraphs.map(paragraph => `<p>${escapeHtml(paragraph)}</p>`).join("")}
   </section>`;
+}
+
+function renderFloatingSupportMessage() {
+  return `<a href="https://wa.me/221772177176?text=Bonjour%20DieguemTech%20Store,%20je%20souhaite%20obtenir%20plus%20d'informations."
+   class="whatsapp-float"
+   target="_blank"
+   rel="noopener"
+   aria-label="Contacter DieguemTech Store sur WhatsApp">
+    💬
+  </a>
+  <div class="floating-message" id="floatingMessage" role="complementary" aria-label="Assistance DieguemTech Store" hidden>
+    <button class="floating-message-close" id="floatingMessageClose" type="button" aria-label="Fermer le message">×</button>
+    <span>Support rapide</span>
+    <strong>Besoin d'aide pour choisir ?</strong>
+    <p>Confirmez le stock, le prix et la livraison avec un conseiller.</p>
+    <a href="https://wa.me/221772177176?text=Bonjour%20DieguemTech%20Store,%20je%20veux%20commander%20un%20produit." target="_blank" rel="noopener">Commander sur WhatsApp</a>
+  </div>`;
+}
+
+function renderFloatingSupportScript() {
+  return `<script>
+    (function(){
+      var message = document.getElementById("floatingMessage");
+      var closeButton = document.getElementById("floatingMessageClose");
+      if (!message || !closeButton) return;
+      var storageKey = "dt-floating-message-closed-until";
+      var closedUntil = Number(localStorage.getItem(storageKey) || 0);
+      if (Number.isFinite(closedUntil) && closedUntil > Date.now()) return;
+      message.hidden = false;
+      requestAnimationFrame(function(){ message.classList.add("active"); });
+      closeButton.addEventListener("click", function(){
+        message.classList.remove("active");
+        localStorage.setItem(storageKey, String(Date.now() + 24 * 60 * 60 * 1000));
+        setTimeout(function(){ message.hidden = true; }, 300);
+      });
+    })();
+  </script>`;
 }
 
 function renderProductSeoPage(product, baseUrl, relatedProducts = []) {
@@ -2337,6 +2378,7 @@ ${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
   <script type="application/ld+json">${toJsonLdScript(structuredData)}</script>
 </head>
 <body>
+  ${renderFloatingSupportMessage()}
   <main class="seo-product-page">
     <nav class="seo-top" aria-label="Navigation produit">
       <a class="seo-logo" href="/" aria-label="DieguemTech Store - Accueil"><img src="/assets/logo.svg" alt="DieguemTech Store" width="220" height="56"></a>
@@ -2499,6 +2541,7 @@ ${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
       }
     })();
   </script>
+  ${renderFloatingSupportScript()}
 </body>
 </html>`;
 }

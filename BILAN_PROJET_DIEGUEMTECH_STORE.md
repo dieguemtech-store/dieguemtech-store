@@ -53,6 +53,7 @@ Les produits initiaux de demo ont ete supprimes. Le catalogue a ete reconstruit 
 - Panier dynamique.
 - Apres ajout au panier, le client choisit entre aller au panier ou continuer ses achats.
 - Le message de choix panier reste affiche tant que le client n'a pas choisi.
+- Message flottant d'assistance WhatsApp ajoute sur le site, avec fermeture memorisee 24h.
 
 ## 5. Commande et paiement
 
@@ -402,6 +403,7 @@ git push
 - Passe securite generale.
 - Ajout des pages legales completes et mise a jour du sitemap.
 - Ajout du guide de sauvegarde et du script de telechargement de backup admin.
+- Ajout d'un message flottant d'assistance WhatsApp sur les pages principales du site.
 
 ## 17. Points a surveiller
 

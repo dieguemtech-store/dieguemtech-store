@@ -27,6 +27,9 @@
     transform:scale(1.1);
     transition:.3s;
 }
+.floating-message{position:fixed;left:22px;bottom:22px;width:min(360px,calc(100% - 120px));background:#fff;border:1px solid rgba(246,139,30,.22);border-radius:18px;padding:18px 18px 16px;box-shadow:0 18px 45px rgba(0,0,0,.18);z-index:95;transform:translateY(28px);opacity:0;transition:.28s ease}.floating-message.active{transform:translateY(0);opacity:1}.floating-message span{display:inline-flex;background:#fff8f0;color:var(--orange);border-radius:999px;padding:6px 9px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1px;margin-bottom:9px}.floating-message strong{display:block;font:800 18px/1.15 Manrope;color:var(--ink);letter-spacing:-.5px;margin-right:24px}.floating-message p{color:#666;font-size:12px;line-height:1.55;margin:8px 0 13px}.floating-message a{display:inline-flex;align-items:center;justify-content:center;background:#25d366;color:#fff;border-radius:10px;padding:11px 13px;font-size:12px;font-weight:900}.floating-message a:hover{filter:brightness(.96);transform:translateY(-1px)}.floating-message-close{position:absolute;right:10px;top:10px;width:30px;height:30px;border:0;border-radius:50%;background:#f5f5f5;color:#555;font-size:20px;line-height:1}.floating-message-close:hover{background:#313133;color:#fff}
+@media(max-width:760px){.floating-message{left:14px;right:14px;bottom:88px;width:auto;padding:16px}.floating-message strong{font-size:16px}.floating-message p{font-size:11px}.floating-message a{width:100%}}
+@media(max-width:480px){.floating-message{bottom:84px}.whatsapp-float{width:54px;height:54px;line-height:54px;font-size:27px}}
 .logo-picture{display:block;line-height:0}
 .logo-image{display:block;width:210px;max-width:100%;height:auto}
 .install-app-button{border:1px solid rgba(246,139,30,.18);background:#fff8ef;border-radius:10px;padding:8px 10px;color:var(--orange)}

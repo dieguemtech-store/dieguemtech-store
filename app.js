@@ -1215,6 +1215,26 @@ $("#newsletterForm").addEventListener("submit", event => {
   showToast("Inscription reussie", "Bienvenue dans la communaute DieguemTech !");
 });
 
+function initializeFloatingMessage(){
+  const message = $("#floatingMessage");
+  const closeButton = $("#floatingMessageClose");
+  if (!message || !closeButton) return;
+
+  const storageKey = "dt-floating-message-closed-until";
+  const closedUntil = Number(localStorage.getItem(storageKey) || 0);
+  if (Number.isFinite(closedUntil) && closedUntil > Date.now()) return;
+
+  message.hidden = false;
+  requestAnimationFrame(() => message.classList.add("active"));
+  closeButton.addEventListener("click", () => {
+    message.classList.remove("active");
+    localStorage.setItem(storageKey, String(Date.now() + 24 * 60 * 60 * 1000));
+    setTimeout(() => {
+      message.hidden = true;
+    }, 300);
+  });
+}
+
 const deadline = Date.now() + (2 * 24 * 60 * 60 * 1000) + (14 * 60 * 60 * 1000);
 setInterval(() => {
   const diff = Math.max(0, deadline - Date.now());
@@ -1319,4 +1339,5 @@ function cleanWebsiteServiceWorker(){
 }
 
 cleanWebsiteServiceWorker();
+initializeFloatingMessage();
 initializeStore();
