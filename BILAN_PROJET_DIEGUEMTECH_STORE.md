@@ -222,6 +222,7 @@ SEO final realise :
 - Meta title et meta description.
 - Pages produits SEO.
 - Pages categories SEO.
+- Pages legales indexables : conditions generales, confidentialite, livraison/retours, mentions legales.
 - Donnees structurees JSON-LD.
 - SEO local Senegal.
 - Signaux confiance : livraison, paiement securise, support, garantie.
@@ -234,6 +235,10 @@ Pages SEO importantes :
 - `/produit/:id/:slug`
 - `/categorie/:categorySlug`
 - `/categorie/:categorySlug/:subcategorySlug`
+- `/conditions-generales`
+- `/politique-confidentialite`
+- `/livraison-retours`
+- `/mentions-legales`
 - `/sitemap.xml`
 - `/robots.txt`
 
@@ -385,6 +390,7 @@ git push
 - Nettoyage admin.
 - Suppression possible des commandes admin.
 - Passe securite generale.
+- Ajout des pages legales completes et mise a jour du sitemap.
 
 ## 17. Points a surveiller
 
@@ -395,7 +401,7 @@ git push
 - Mettre a jour les prix et stocks.
 - Surveiller les commandes Wave et paiement a la livraison pour bien les marquer payees dans l'admin.
 - Continuer a enrichir les descriptions produits.
-- Ajouter de vraies conditions generales, politique de confidentialite et mentions legales adaptees juridiquement.
+- Faire relire les conditions generales, la politique de confidentialite et les mentions legales par un juriste lorsque l'entreprise aura ses informations administratives finales.
 
 ## 18. Dernier etat connu
 
@@ -407,4 +413,3 @@ git push
   - `server.js` public : bloque en 404
   - statut email sans admin : bloque en 401
 - Audit dependencies : 0 vulnerabilite connue.
-

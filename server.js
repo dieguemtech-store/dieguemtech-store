@@ -358,6 +358,10 @@ app.get("/produit/:id", renderProductSeoRoute);
 app.get("/produit/:id/:slug", renderProductSeoRoute);
 app.get("/categorie/:categorySlug", renderCategorySeoRoute);
 app.get("/categorie/:categorySlug/:subcategorySlug", renderCategorySeoRoute);
+app.get("/conditions-generales", renderLegalPageRoute);
+app.get("/politique-confidentialite", renderLegalPageRoute);
+app.get("/livraison-retours", renderLegalPageRoute);
+app.get("/mentions-legales", renderLegalPageRoute);
 
 app.post("/api/orders", async (request, response, next) => {
   try {
@@ -1264,6 +1268,17 @@ function getLocalSeoKeywords(items = []) {
   ].filter(Boolean).join(", ");
 }
 
+function renderLegalPageRoute(request, response, next) {
+  try {
+    const slug = request.path.replace(/^\/+/, "").toLowerCase();
+    const page = getLegalPage(slug);
+    if (!page) return next();
+    response.send(renderLegalPage(page, getPublicBaseUrl(request)));
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function renderProductSeoRoute(request, response, next) {
   try {
     const product = await database.getProduct(Number(request.params.id));
@@ -1337,6 +1352,7 @@ async function renderCategorySeoRoute(request, response, next) {
 function renderSitemap(baseUrl, products) {
   const today = new Date().toISOString().slice(0, 10);
   const categoryPages = getCategorySitemapEntries(products);
+  const legalPages = getLegalPages();
   const urls = [
     {
       loc: `${baseUrl}/`,
@@ -1350,6 +1366,13 @@ function renderSitemap(baseUrl, products) {
       changefreq: "weekly",
       priority: page.priority,
       image: page.image ? absoluteUrl(page.image, baseUrl) : `${baseUrl}/assets/hero-tech.png`,
+      imageTitle: page.title
+    })),
+    ...legalPages.map(page => ({
+      loc: `${baseUrl}${page.path}`,
+      changefreq: "monthly",
+      priority: "0.5",
+      image: `${baseUrl}/assets/hero-tech.png`,
       imageTitle: page.title
     })),
     ...products.map(product => ({
@@ -1696,6 +1719,402 @@ function renderCategoryProductCard(product) {
       <button class="category-cart-button" type="button" data-cart-product="${Number(product.id)}" data-product-name="${escapeHtml(product.name)}">Ajouter au panier</button>
     </div>
   </article>`;
+}
+
+function getLegalPages() {
+  return [
+    {
+      slug: "conditions-generales",
+      path: "/conditions-generales",
+      title: "Conditions generales de vente",
+      eyebrow: "Cadre d'achat",
+      description: "Conditions generales applicables aux commandes passees sur DieguemTech Store au Senegal.",
+      intro: "Ces conditions expliquent les regles de commande, de paiement, de livraison, de garantie et de support pour les achats effectues sur DieguemTech Store.",
+      sections: [
+        {
+          title: "1. Objet",
+          paragraphs: [
+            "Les presentes conditions generales encadrent les ventes de produits high-tech, gaming, IPTV, smartphones, accessoires, gadgets electroniques et petit electromenager proposees par DieguemTech Store.",
+            "Toute commande passee sur le site implique l'acceptation de ces conditions par le client."
+          ]
+        },
+        {
+          title: "2. Produits et disponibilite",
+          paragraphs: [
+            "Les produits sont presentes avec leurs caracteristiques principales, images, prix et informations utiles. Les images sont fournies a titre illustratif et peuvent legerement differer du produit reel selon les arrivages, couleurs ou variantes.",
+            "La disponibilite du stock peut etre confirmee par l'equipe avant expedition, notamment pour les produits a forte demande."
+          ]
+        },
+        {
+          title: "3. Prix",
+          paragraphs: [
+            "Les prix sont affiches en FCFA. Les frais de livraison sont ajoutes selon la zone choisie par le client.",
+            "DieguemTech Store peut mettre a jour les prix, promotions et stocks a tout moment. Le prix applicable est celui affiche au moment de la validation de la commande."
+          ]
+        },
+        {
+          title: "4. Commande",
+          paragraphs: [
+            "Le client doit fournir des informations exactes : nom, telephone joignable, zone de livraison, adresse ou repere, et email si disponible.",
+            "Une commande est consideree comme enregistree apres validation du formulaire. Elle est confirmee apres paiement valide ou confirmation directe par l'equipe pour les paiements a la livraison."
+          ]
+        },
+        {
+          title: "5. Paiement",
+          paragraphs: [
+            "Les moyens de paiement disponibles sont PayDunya, Wave et paiement a la livraison selon les produits et zones.",
+            "PayDunya peut appliquer un montant minimum. Pour les petites commandes, le client peut choisir Wave, paiement a la livraison ou commander via WhatsApp.",
+            "Les emails de confirmation de commande sont envoyes apres validation effective du paiement lorsque le moyen de paiement le permet."
+          ]
+        },
+        {
+          title: "6. Livraison",
+          paragraphs: [
+            "La livraison est disponible a Dakar et dans plusieurs zones du Senegal. Les delais peuvent varier selon la disponibilite du produit, la zone et la confirmation du client.",
+            "Le client doit rester joignable pour faciliter la livraison. En cas d'adresse incomplete ou d'indisponibilite du client, la livraison peut etre reprogrammee."
+          ]
+        },
+        {
+          title: "7. Retours, garantie et reclamations",
+          paragraphs: [
+            "Tout probleme constate a la reception doit etre signale rapidement au support avec le numero de commande, des photos ou videos si necessaire.",
+            "Les retours et garanties sont etudies selon la nature du produit, son etat, les conditions fournisseur et l'utilisation constatee.",
+            "Les produits endommages par mauvaise utilisation, choc, humidite, modification ou installation incorrecte peuvent etre exclus de la garantie."
+          ]
+        },
+        {
+          title: "8. Responsabilites",
+          paragraphs: [
+            "DieguemTech Store s'engage a traiter les commandes avec serieux, a conseiller les clients et a fournir les informations disponibles sur les produits.",
+            "Le client reste responsable du choix du produit, de la compatibilite avec ses appareils et de l'exactitude des informations fournies."
+          ]
+        },
+        {
+          title: "9. Contact",
+          paragraphs: [
+            "Pour toute question, reclamation ou assistance, le client peut contacter DieguemTech Store par WhatsApp au +221772177176 ou par email a contact@dieguemtech.com."
+          ]
+        }
+      ]
+    },
+    {
+      slug: "politique-confidentialite",
+      path: "/politique-confidentialite",
+      title: "Politique de confidentialite",
+      eyebrow: "Donnees personnelles",
+      description: "Politique de confidentialite de DieguemTech Store concernant les donnees collectees pour les commandes, paiements, livraison, support et analytics.",
+      intro: "Cette politique explique quelles donnees sont collectees, pourquoi elles sont utilisees, avec qui elles peuvent etre partagees et comment exercer vos droits.",
+      sections: [
+        {
+          title: "1. Donnees collectees",
+          paragraphs: [
+            "Lors d'une commande, DieguemTech Store peut collecter le nom, le telephone, l'email, l'adresse ou le repere de livraison, la zone de livraison, les produits commandes et les informations de suivi de paiement.",
+            "Le site peut aussi collecter des donnees techniques limitees comme la page visitee, le produit consulte, la source de campagne, le navigateur et des evenements de navigation utiles pour ameliorer le service."
+          ]
+        },
+        {
+          title: "2. Finalites",
+          paragraphs: [
+            "Les donnees sont utilisees pour traiter les commandes, confirmer le stock, organiser la livraison, suivre le paiement, fournir le support client, envoyer des emails de confirmation et ameliorer l'experience du site.",
+            "Les donnees de navigation et campagnes servent a comprendre les performances commerciales et publicitaires de la boutique."
+          ]
+        },
+        {
+          title: "3. Base de traitement et consentement",
+          paragraphs: [
+            "Les donnees de commande sont necessaires a l'execution de la vente et au suivi client.",
+            "Les donnees marketing ou publicitaires peuvent dependre du consentement de l'utilisateur ou des reglages de son navigateur lorsque des outils tiers sont utilises."
+          ]
+        },
+        {
+          title: "4. Partage des donnees",
+          paragraphs: [
+            "Les donnees peuvent etre partagees uniquement avec les prestataires necessaires au service : hebergement, base de donnees, paiement, email, livraison, analytics ou support.",
+            "DieguemTech Store ne revend pas les donnees personnelles des clients."
+          ]
+        },
+        {
+          title: "5. Paiement",
+          paragraphs: [
+            "Les paiements en ligne sont traites par les prestataires selectionnes, notamment PayDunya. DieguemTech Store ne stocke pas les donnees sensibles de carte bancaire.",
+            "Pour Wave ou paiement a la livraison, les informations de commande servent a confirmer et suivre le paiement."
+          ]
+        },
+        {
+          title: "6. Conservation",
+          paragraphs: [
+            "Les donnees de commande sont conservees aussi longtemps que necessaire pour le suivi commercial, le support, les obligations administratives et la preuve de transaction.",
+            "Les donnees analytics peuvent etre conservees sous forme technique pour suivre les performances du site."
+          ]
+        },
+        {
+          title: "7. Securite",
+          paragraphs: [
+            "Le site utilise HTTPS, un acces admin protege, des sessions temporaires, des limites de televersement et des controles serveur afin de reduire les risques d'acces non autorise.",
+            "Aucune mesure technique n'etant absolue, DieguemTech Store continue d'ameliorer la securite du site."
+          ]
+        },
+        {
+          title: "8. Droits des clients",
+          paragraphs: [
+            "Le client peut demander l'acces, la correction ou la suppression de ses donnees lorsque cela est applicable.",
+            "Pour exercer ces droits, contactez DieguemTech Store par email a contact@dieguemtech.com ou par WhatsApp au +221772177176."
+          ]
+        },
+        {
+          title: "9. Cookies, analytics et publicite",
+          paragraphs: [
+            "Le site peut utiliser des technologies de mesure ou de publicite comme Google, Meta ou TikTok lorsque les identifiants correspondants sont configures.",
+            "Ces outils servent a mesurer les visites, les conversions et l'efficacite des campagnes. Le client peut limiter certains suivis depuis les reglages de son navigateur."
+          ]
+        }
+      ]
+    },
+    {
+      slug: "livraison-retours",
+      path: "/livraison-retours",
+      title: "Livraison, retours et garantie",
+      eyebrow: "Service client",
+      description: "Informations sur les zones de livraison, frais, retours et garantie chez DieguemTech Store.",
+      intro: "Cette page detaille les frais de livraison, la confirmation des commandes, les retours et la prise en charge en cas de probleme produit.",
+      sections: [
+        {
+          title: "1. Zones et frais de livraison",
+          paragraphs: [
+            "DieguemTech Store livre a Dakar et dans plusieurs zones du Senegal apres confirmation de la commande.",
+            "Frais indicatifs : Dakar 1 500 FCFA, Pikine 2 000 FCFA, Guediawaye 2 000 FCFA, Rufisque 2 500 FCFA, Thies 4 000 FCFA, Mbour 4 000 FCFA, autre zone Senegal 5 000 FCFA."
+          ]
+        },
+        {
+          title: "2. Delais",
+          paragraphs: [
+            "Les delais dependent du stock, de la zone, du jour de commande et de la disponibilite du client.",
+            "L'equipe peut contacter le client par telephone ou WhatsApp pour confirmer le stock, le paiement et le point de livraison."
+          ]
+        },
+        {
+          title: "3. Reception du produit",
+          paragraphs: [
+            "Le client doit verifier le produit a la reception lorsque cela est possible : etat general, accessoires, couleur, modele et fonctionnement apparent.",
+            "Toute anomalie doit etre signalee rapidement avec le numero de commande et, si possible, des photos ou videos."
+          ]
+        },
+        {
+          title: "4. Retours",
+          paragraphs: [
+            "Un retour peut etre etudie si le produit recu presente un probleme signale rapidement, si le produit est incomplet ou si une erreur de reference est constatee.",
+            "Le produit doit etre retourne dans le meilleur etat possible avec ses accessoires, emballages et preuves d'achat disponibles."
+          ]
+        },
+        {
+          title: "5. Cas non couverts",
+          paragraphs: [
+            "La garantie ou le retour peut etre refuse en cas de casse, choc, humidite, mauvaise installation, mauvaise utilisation, modification non autorisee, accessoires manquants ou degradation visible apres livraison.",
+            "Les produits consommables, ecouteurs, accessoires d'hygiene ou produits fortement manipules peuvent etre soumis a des conditions particulieres."
+          ]
+        },
+        {
+          title: "6. Support",
+          paragraphs: [
+            "Pour toute demande, contactez le support au +221772177176 avec le numero de commande, le nom du produit et une description claire du probleme."
+          ]
+        }
+      ]
+    },
+    {
+      slug: "mentions-legales",
+      path: "/mentions-legales",
+      title: "Mentions legales",
+      eyebrow: "Informations officielles",
+      description: "Mentions legales de DieguemTech Store : editeur, contact, hebergement, propriete intellectuelle et responsabilite.",
+      intro: "Cette page rassemble les informations legales et pratiques relatives au site DieguemTech Store.",
+      sections: [
+        {
+          title: "1. Editeur du site",
+          paragraphs: [
+            "Le site DieguemTech Store est edite par DieguemTech Store, boutique basee a Dakar, Senegal.",
+            "Contact principal : contact@dieguemtech.com. Support WhatsApp : +221772177176.",
+            "Les informations administratives complementaires comme RCCM, NINEA ou adresse complete pourront etre ajoutees lorsque les donnees definitives seront disponibles."
+          ]
+        },
+        {
+          title: "2. Responsable de publication",
+          paragraphs: [
+            "Le responsable de publication est DieguemTech Store. Pour toute demande concernant le contenu du site, utilisez l'adresse contact@dieguemtech.com."
+          ]
+        },
+        {
+          title: "3. Hebergement",
+          paragraphs: [
+            "Le site est heberge par Render. Le domaine dieguemtechstore.com est gere via LWS.",
+            "Les services techniques associes peuvent inclure PostgreSQL, Resend pour les emails, PayDunya pour les paiements et des outils analytics/publicitaires selon configuration."
+          ]
+        },
+        {
+          title: "4. Propriete intellectuelle",
+          paragraphs: [
+            "Les textes, elements graphiques, logos, structures de pages et contenus de DieguemTech Store sont proteges. Toute reproduction non autorisee est interdite.",
+            "Les marques, logos ou images de produits tiers restent la propriete de leurs titulaires respectifs."
+          ]
+        },
+        {
+          title: "5. Responsabilite",
+          paragraphs: [
+            "DieguemTech Store s'efforce de fournir des informations fiables et a jour. Des erreurs, ruptures de stock ou variations de caracteristiques peuvent toutefois survenir.",
+            "En cas de doute sur un produit, le client est invite a contacter le support avant achat."
+          ]
+        },
+        {
+          title: "6. Contact",
+          paragraphs: [
+            "Email : contact@dieguemtech.com.",
+            "WhatsApp : +221772177176.",
+            "Zone principale de service : Dakar et Senegal selon confirmation."
+          ]
+        }
+      ]
+    }
+  ];
+}
+
+function getLegalPage(slug) {
+  return getLegalPages().find(page => page.slug === slug) || null;
+}
+
+function renderLegalPage(page, baseUrl) {
+  const canonicalUrl = `${baseUrl}${page.path}`;
+  const relatedPages = getLegalPages();
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      getLocalBusinessStructuredData(baseUrl),
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Accueil", item: `${baseUrl}/` },
+          { "@type": "ListItem", position: 2, name: page.title, item: canonicalUrl }
+        ]
+      },
+      {
+        "@type": "WebPage",
+        "@id": `${canonicalUrl}#webpage`,
+        name: page.title,
+        description: page.description,
+        url: canonicalUrl,
+        isPartOf: {
+          "@type": "WebSite",
+          name: "DieguemTech Store",
+          url: `${baseUrl}/`
+        },
+        publisher: {
+          "@id": `${baseUrl}/#store`
+        },
+        dateModified: "2026-06-29",
+        inLanguage: "fr-SN"
+      }
+    ]
+  };
+
+  return `<!doctype html>
+<html lang="fr-SN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="index, follow">
+  <meta name="description" content="${escapeHtml(page.description)}">
+${renderLocalSeoMeta({ canonicalUrl, keywords: getLocalSeoKeywords([page.title, "conditions vente Senegal", "confidentialite boutique Senegal"]) })}
+  <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="fr_SN">
+  <meta property="og:site_name" content="DieguemTech Store">
+  <meta property="og:title" content="${escapeHtml(page.title)} | DieguemTech Store">
+  <meta property="og:description" content="${escapeHtml(page.description)}">
+  <meta property="og:url" content="${escapeHtml(canonicalUrl)}">
+  <meta property="og:image" content="${escapeHtml(`${baseUrl}/assets/hero-tech.png`)}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#f68b1e">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="shortcut icon" href="/assets/favicon.svg">
+  <title>${escapeHtml(page.title)} | DieguemTech Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body{background:#f7f7f7}
+    .legal-page{width:min(1120px,calc(100% - 34px));margin:0 auto;padding:28px 0 72px}
+    .legal-top{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:24px}
+    .legal-logo img{display:block;width:210px;height:auto}
+    .legal-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .legal-actions a{display:inline-flex;align-items:center;justify-content:center;border:1px solid #e4e4e4;background:#fff;color:#313133;border-radius:9px;padding:11px 14px;font-weight:900;font-size:13px}
+    .legal-actions a:hover{border-color:#f68b1e;color:#f68b1e}
+    .legal-hero{border-radius:26px;background:radial-gradient(circle at 90% 20%,rgba(246,139,30,.26),transparent 28%),linear-gradient(135deg,#242426,#121213);color:#fff;padding:48px;box-shadow:0 18px 45px rgba(0,0,0,.13)}
+    .legal-hero h1{font:800 clamp(34px,5vw,58px)/1.04 Manrope;margin:0 0 14px;letter-spacing:-1.8px}
+    .legal-hero p{color:#d7d7d7;max-width:760px;margin:0;font-size:15px;line-height:1.75}
+    .legal-updated{display:inline-flex;margin-top:22px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.08);border-radius:999px;padding:8px 12px;font-size:12px;font-weight:900}
+    .legal-layout{display:grid;grid-template-columns:1fr 300px;gap:22px;align-items:start;margin-top:24px}
+    .legal-content,.legal-side{background:#fff;border:1px solid #ededed;border-radius:22px;box-shadow:0 12px 34px rgba(0,0,0,.045)}
+    .legal-content{padding:32px}
+    .legal-section{padding:0 0 24px;margin:0 0 24px;border-bottom:1px solid #f0f0f0}
+    .legal-section:last-child{border-bottom:0;margin-bottom:0;padding-bottom:0}
+    .legal-section h2{font:800 23px Manrope;margin:0 0 12px;color:#1c1c1e;letter-spacing:-.5px}
+    .legal-section p{color:#606060;font-size:14px;line-height:1.8;margin:0 0 12px}
+    .legal-side{padding:20px;position:sticky;top:18px}
+    .legal-side h2{font:800 16px Manrope;margin:0 0 12px;color:#1c1c1e}
+    .legal-side nav{display:grid;gap:9px}
+    .legal-side a{border:1px solid #f0f0f0;border-radius:12px;padding:11px 12px;color:#666;font-weight:800;font-size:12px;background:#fff}
+    .legal-side a.active,.legal-side a:hover{border-color:rgba(246,139,30,.28);background:#fff8f0;color:#f68b1e}
+    .legal-contact{margin-top:16px;background:#fff8f0;border:1px solid rgba(246,139,30,.24);border-radius:14px;padding:14px}
+    .legal-contact strong{display:block;color:#1c1c1e;font-size:13px;margin-bottom:6px}
+    .legal-contact p{font-size:12px;color:#666;line-height:1.6;margin:0 0 10px}
+    .legal-contact a{display:inline-flex;background:#f68b1e;color:#fff;border-radius:9px;padding:10px 12px;font-size:12px;font-weight:900}
+    .legal-note{margin-top:18px;color:#888;font-size:12px;line-height:1.65}
+    @media(max-width:860px){.legal-layout{grid-template-columns:1fr}.legal-side{position:static}.legal-hero{padding:34px 24px}.legal-content{padding:24px}.legal-top{align-items:flex-start;flex-direction:column}.legal-logo img{width:185px}}
+  </style>
+  <script type="application/ld+json">${toJsonLdScript(structuredData)}</script>
+</head>
+<body>
+  <main class="legal-page">
+    <nav class="legal-top" aria-label="Navigation">
+      <a class="legal-logo" href="/" aria-label="DieguemTech Store - Accueil"><img src="/assets/logo.svg" alt="DieguemTech Store" width="220" height="56"></a>
+      <div class="legal-actions">
+        <a href="/">Retour a l'accueil</a>
+        <a href="/#boutique">Voir la boutique</a>
+      </div>
+    </nav>
+    <section class="legal-hero">
+      <span class="eyebrow light">${escapeHtml(page.eyebrow)}</span>
+      <h1>${escapeHtml(page.title)}</h1>
+      <p>${escapeHtml(page.intro)}</p>
+      <span class="legal-updated">Derniere mise a jour : 29 juin 2026</span>
+    </section>
+    <div class="legal-layout">
+      <article class="legal-content">
+        ${page.sections.map(renderLegalSection).join("")}
+        <p class="legal-note">Ce document est une base d'information commerciale. Il peut etre ajuste en fonction de l'evolution de l'activite, des partenaires et des obligations legales applicables.</p>
+      </article>
+      <aside class="legal-side" aria-label="Pages legales">
+        <h2>Pages utiles</h2>
+        <nav>
+          ${relatedPages.map(item => `<a class="${item.slug === page.slug ? "active" : ""}" href="${escapeHtml(item.path)}">${escapeHtml(item.title)}</a>`).join("")}
+        </nav>
+        <div class="legal-contact">
+          <strong>Besoin d'une precision ?</strong>
+          <p>Contactez le support avec votre question ou votre numero de commande.</p>
+          <a href="https://wa.me/221772177176?text=Bonjour%20DieguemTech%20Store,%20j'ai%20une%20question%20sur%20les%20conditions." target="_blank" rel="noopener">WhatsApp support</a>
+        </div>
+      </aside>
+    </div>
+  </main>
+</body>
+</html>`;
+}
+
+function renderLegalSection(section) {
+  return `<section class="legal-section">
+    <h2>${escapeHtml(section.title)}</h2>
+    ${section.paragraphs.map(paragraph => `<p>${escapeHtml(paragraph)}</p>`).join("")}
+  </section>`;
 }
 
 function renderProductSeoPage(product, baseUrl, relatedProducts = []) {
