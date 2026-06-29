@@ -986,6 +986,30 @@ async function cancelOrder(id) {
   });
 }
 
+async function deleteAllOrders() {
+  if (!orders.length) {
+    window.alert("Aucune commande a supprimer.");
+    return;
+  }
+  const confirmed = window.confirm(`Supprimer definitivement les ${orders.length} commandes de l'admin ? Cette action est irreversible.`);
+  if (!confirmed) return;
+  const typed = window.prompt('Pour confirmer, tapez SUPPRIMER en majuscules.');
+  if (typed !== "SUPPRIMER") return;
+  const button = $("#deleteAllOrders");
+  const previousText = button.textContent;
+  button.disabled = true;
+  button.textContent = "Suppression...";
+  try {
+    const result = await api("/api/admin/orders", { method: "DELETE" });
+    orders = [];
+    renderOrders();
+    window.alert(`${formatNumber(result.deletedCount || 0)} commande${Number(result.deletedCount || 0) > 1 ? "s" : ""} supprimee${Number(result.deletedCount || 0) > 1 ? "s" : ""}.`);
+  } finally {
+    button.disabled = false;
+    button.textContent = previousText;
+  }
+}
+
 async function saveProduct(form) {
   const formData = new FormData(form);
   const id = formData.get("id");
@@ -1034,6 +1058,9 @@ $("#loginForm").addEventListener("submit", async event => {
 $("#logoutButton").addEventListener("click", logout);
 $("#refreshOrders").addEventListener("click", loadOrders);
 $("#exportOrders").addEventListener("click", exportOrdersCsv);
+$("#deleteAllOrders").addEventListener("click", () => {
+  deleteAllOrders().catch(error => window.alert(error.message));
+});
 $("#testEmailButton").addEventListener("click", () => {
   testAdminEmail().catch(error => window.alert(error.message));
 });

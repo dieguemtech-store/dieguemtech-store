@@ -171,6 +171,14 @@ app.get("/api/admin/orders", requireAdmin, async (request, response, next) => {
   }
 });
 
+app.delete("/api/admin/orders", requireAdmin, async (request, response, next) => {
+  try {
+    response.json(await database.deleteAllOrders());
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.get("/api/admin/analytics", requireAdmin, async (request, response, next) => {
   try {
     const days = getAnalyticsRangeDays(request.query.days);

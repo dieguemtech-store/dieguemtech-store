@@ -632,6 +632,19 @@ async function getOrders() {
   return result.rows;
 }
 
+async function deleteAllOrders() {
+  if (!pool) {
+    const orders = await getLocalOrders();
+    const file = path.join(__dirname, "data", "orders.json");
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    await fs.writeFile(file, "[]\n");
+    return { deletedCount: orders.length };
+  }
+
+  const result = await pool.query("DELETE FROM orders");
+  return { deletedCount: result.rowCount || 0 };
+}
+
 async function getOrder(id) {
   if (!pool) {
     const orders = await getLocalOrders();
@@ -923,6 +936,7 @@ module.exports = {
   getProductUpload,
   createOrder,
   getOrders,
+  deleteAllOrders,
   getOrder,
   updateOrderStatus,
   markPaidNotificationSent,

@@ -57,6 +57,8 @@ body{overflow-x:hidden;background:linear-gradient(180deg,#fafafa 0,#f3f3f3 100%)
 .header-actions button,.admin-store-link{min-height:44px;border-radius:12px;padding:0 15px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;font-weight:900;font-size:13px}
 .admin-store-link{background:#fff;color:var(--charcoal);border:1px solid var(--line)}
 .admin-store-link:hover,button.ghost:hover{border-color:rgba(246,139,30,.35);color:var(--orange);background:#fff8ef}
+.header-actions .danger-button{background:#fff0ef!important;color:var(--red)!important;border:1px solid rgba(223,75,63,.24)!important}
+.header-actions .danger-button:hover{background:#df4b3f!important;color:#fff!important}
 .admin-tabs{position:sticky;top:0;z-index:20;background:rgba(246,246,246,.9);backdrop-filter:blur(12px);border:1px solid rgba(236,236,236,.8);border-radius:18px;padding:8px;margin:0 0 18px;overflow-x:auto;box-shadow:0 10px 26px rgba(0,0,0,.035)}
 .admin-tabs button{border-radius:12px;min-height:44px;padding:0 18px;white-space:nowrap}
 .admin-tabs button.active{box-shadow:0 10px 22px rgba(246,139,30,.22)}
