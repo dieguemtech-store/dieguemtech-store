@@ -140,6 +140,10 @@ Travail realise :
 - Diagnostic email ajoute dans l'admin.
 - Bouton de test email admin.
 - Les emails de commande ne partent pas avant confirmation du paiement.
+- Email client et admin apres paiement confirme.
+- Email client quand l'admin valide la commande en la passant en preparation.
+- Email client quand l'admin passe la commande en expedition / en cours de livraison.
+- Protection anti-doublon : chaque email de statut important n'est envoye qu'une seule fois par commande.
 
 Variables Render a garder :
 
@@ -405,6 +409,7 @@ git push
 - Ajout du guide de sauvegarde et du script de telechargement de backup admin.
 - Ajout d'un message flottant d'assistance WhatsApp sur les pages principales du site.
 - Correction mobile de la page de confirmation commande : champs plus lisibles, anti-zoom automatique et meilleur scroll clavier.
+- Ajout des emails client automatiques pour validation admin et livraison en cours.
 
 ## 17. Points a surveiller
 

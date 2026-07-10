@@ -59,6 +59,8 @@ async function initializeDatabase() {
       order_status TEXT NOT NULL DEFAULT 'pending',
       attribution JSONB NOT NULL DEFAULT '{}'::jsonb,
       paid_notification_sent_at TIMESTAMPTZ,
+      preparing_notification_sent_at TIMESTAMPTZ,
+      shipped_notification_sent_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
@@ -112,7 +114,9 @@ async function initializeDatabase() {
       ADD COLUMN IF NOT EXISTS subtotal INTEGER NOT NULL DEFAULT 0,
       ADD COLUMN IF NOT EXISTS delivery_fee INTEGER NOT NULL DEFAULT 0,
       ADD COLUMN IF NOT EXISTS attribution JSONB NOT NULL DEFAULT '{}'::jsonb,
-      ADD COLUMN IF NOT EXISTS paid_notification_sent_at TIMESTAMPTZ;
+      ADD COLUMN IF NOT EXISTS paid_notification_sent_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS preparing_notification_sent_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS shipped_notification_sent_at TIMESTAMPTZ;
 
     UPDATE orders
     SET subtotal = total
@@ -610,6 +614,8 @@ async function getOrders() {
       o.order_status AS "orderStatus",
       o.attribution,
       o.paid_notification_sent_at AS "paidNotificationSentAt",
+      o.preparing_notification_sent_at AS "preparingNotificationSentAt",
+      o.shipped_notification_sent_at AS "shippedNotificationSentAt",
       o.created_at AS "createdAt",
       COALESCE(
         json_agg(
@@ -668,6 +674,8 @@ async function getOrder(id) {
       o.order_status AS "orderStatus",
       o.attribution,
       o.paid_notification_sent_at AS "paidNotificationSentAt",
+      o.preparing_notification_sent_at AS "preparingNotificationSentAt",
+      o.shipped_notification_sent_at AS "shippedNotificationSentAt",
       o.created_at AS "createdAt",
       COALESCE(
         json_agg(
@@ -715,6 +723,8 @@ async function updateOrderStatus(id, { orderStatus, paymentStatus }) {
       order_status AS "orderStatus",
       attribution,
       paid_notification_sent_at AS "paidNotificationSentAt",
+      preparing_notification_sent_at AS "preparingNotificationSentAt",
+      shipped_notification_sent_at AS "shippedNotificationSentAt",
       created_at AS "createdAt"
   `, [id, orderStatus || null, paymentStatus || null]);
   return result.rows[0] || null;
@@ -732,6 +742,29 @@ async function markPaidNotificationSent(id) {
       paid_notification_sent_at AS "paidNotificationSentAt"
   `, [id]);
   return result.rows[0] || null;
+}
+
+async function markOrderStatusNotificationSent(id, status) {
+  if (!pool) return markLocalOrderStatusNotificationSent(id, status);
+
+  const column = getOrderStatusNotificationColumn(status);
+  if (!column) return null;
+  const result = await pool.query(`
+    UPDATE orders
+    SET ${column} = COALESCE(${column}, NOW())
+    WHERE id = $1
+    RETURNING
+      id,
+      preparing_notification_sent_at AS "preparingNotificationSentAt",
+      shipped_notification_sent_at AS "shippedNotificationSentAt"
+  `, [id]);
+  return result.rows[0] || null;
+}
+
+function getOrderStatusNotificationColumn(status) {
+  if (status === "preparing") return "preparing_notification_sent_at";
+  if (status === "shipped") return "shipped_notification_sent_at";
+  return "";
 }
 
 async function getLocalOrders() {
@@ -767,6 +800,24 @@ async function markLocalPaidNotificationSent(id) {
   const order = normalized.find(entry => entry.id === id);
   if (!order) return null;
   order.paidNotificationSentAt = order.paidNotificationSentAt || new Date().toISOString();
+  await fs.writeFile(file, JSON.stringify(normalized, null, 2));
+  return order;
+}
+
+async function markLocalOrderStatusNotificationSent(id, status) {
+  const fs = require("node:fs/promises");
+  const path = require("node:path");
+  const file = path.join(__dirname, "data", "orders.json");
+  const orders = await getLocalOrders();
+  const normalized = orders.slice().reverse();
+  const order = normalized.find(entry => entry.id === id);
+  if (!order) return null;
+  if (status === "preparing") {
+    order.preparingNotificationSentAt = order.preparingNotificationSentAt || new Date().toISOString();
+  }
+  if (status === "shipped") {
+    order.shippedNotificationSentAt = order.shippedNotificationSentAt || new Date().toISOString();
+  }
   await fs.writeFile(file, JSON.stringify(normalized, null, 2));
   return order;
 }
@@ -940,6 +991,7 @@ module.exports = {
   getOrder,
   updateOrderStatus,
   markPaidNotificationSent,
+  markOrderStatusNotificationSent,
   recordAnalyticsEvent,
   getAnalyticsEvents
 };

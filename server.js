@@ -229,7 +229,10 @@ app.patch("/api/admin/orders/:id", requireAdmin, async (request, response, next)
     const order = await database.updateOrderStatus(request.params.id, { orderStatus, paymentStatus });
     if (!order) return response.status(404).json({ error: "Commande introuvable." });
     const fullOrder = await database.getOrder(order.id) || order;
-    const notifications = await notifyPaidOrderIfNeeded(fullOrder, request, previousOrder);
+    const notifications = {
+      paid: await notifyPaidOrderIfNeeded(fullOrder, request, previousOrder),
+      status: await notifyOrderStatusIfNeeded(fullOrder, request, previousOrder)
+    };
     response.json({ ...fullOrder, notifications });
   } catch (error) {
     next(error);
@@ -2893,6 +2896,12 @@ function getSkippedPaidNotifications(reason = "skipped") {
   };
 }
 
+function getSkippedStatusNotifications(reason = "skipped") {
+  return {
+    customerEmail: reason
+  };
+}
+
 async function notifyPaidOrderIfNeeded(order, request, previousOrder = null) {
   if (!order || order.paymentStatus !== "paid") {
     return getSkippedPaidNotifications("not_paid");
@@ -2910,6 +2919,29 @@ async function notifyPaidOrderIfNeeded(order, request, previousOrder = null) {
     .some(status => String(status || "").startsWith("failed"));
   if (!hasFailure) {
     await database.markPaidNotificationSent(fullOrder.id);
+  }
+  return notifications;
+}
+
+async function notifyOrderStatusIfNeeded(order, request, previousOrder = null) {
+  const config = getOrderStatusNotificationConfig(order?.orderStatus);
+  if (!order || !config) {
+    return getSkippedStatusNotifications("status_not_notifiable");
+  }
+  if (previousOrder?.orderStatus === order.orderStatus) {
+    return getSkippedStatusNotifications("status_unchanged");
+  }
+
+  const fullOrder = await database.getOrder(order.id) || order;
+  if (fullOrder[config.sentAtKey]) {
+    return getSkippedStatusNotifications("already_sent");
+  }
+
+  const notifications = await sendOrderStatusEmail(fullOrder, request, config);
+  const hasFailure = Object.values(notifications)
+    .some(status => String(status || "").startsWith("failed"));
+  if (!hasFailure && notifications.customerEmail === "sent") {
+    await database.markOrderStatusNotificationSent(fullOrder.id, config.status);
   }
   return notifications;
 }
@@ -2948,6 +2980,49 @@ async function sendPaidOrderEmails(order, request) {
     notifications[result.name] = result.status;
   }
   return notifications;
+}
+
+async function sendOrderStatusEmail(order, request, config) {
+  const notifications = {
+    customerEmail: "skipped"
+  };
+
+  const result = await runNotification("customerEmail", async () => {
+    const customerEmail = getOrderCustomerEmail(order);
+    if (!customerEmail) return "skipped";
+    return sendOrderEmail({
+      to: customerEmail,
+      subject: `${config.subject} - commande ${order.id} - DieguemTech Store`,
+      text: buildOrderStatusEmailText(order, request, config),
+      html: buildOrderStatusEmailHtml(order, request, config)
+    });
+  });
+  notifications[result.name] = result.status;
+  return notifications;
+}
+
+function getOrderStatusNotificationConfig(status) {
+  const configs = {
+    preparing: {
+      status: "preparing",
+      sentAtKey: "preparingNotificationSentAt",
+      subject: "Commande validee",
+      title: "Votre commande est validee",
+      badge: "Preparation",
+      intro: "Votre commande a ete validee par notre equipe. Nous preparons vos produits et organisons la livraison.",
+      nextStep: "Restez joignable : un conseiller peut vous contacter pour confirmer le point de livraison ou une precision sur le produit."
+    },
+    shipped: {
+      status: "shipped",
+      sentAtKey: "shippedNotificationSentAt",
+      subject: "Commande en cours de livraison",
+      title: "Votre commande est en cours de livraison",
+      badge: "Livraison",
+      intro: "Bonne nouvelle : votre commande est en cours de livraison.",
+      nextStep: "Gardez votre telephone disponible afin de faciliter la remise du colis."
+    }
+  };
+  return configs[status] || null;
 }
 
 async function runNotification(name, task) {
@@ -3180,6 +3255,61 @@ function buildOrderEmailHtml(order, request, audience) {
 </html>`;
 }
 
+function buildOrderStatusEmailText(order, request, config) {
+  return [
+    `Bonjour ${getOrderCustomerName(order)},`,
+    config.intro,
+    `Commande: ${order.id}.`,
+    `Statut: ${config.badge}.`,
+    `Paiement: ${formatPaymentProviderLabel(order.paymentProvider)} - ${formatPaymentStatusLabel(order.paymentStatus)}.`,
+    `Livraison ${getOrderDeliveryZone(order)}: ${formatSeoPrice(getOrderDeliveryFee(order))}.`,
+    `Total: ${formatSeoPrice(order.total)}.`,
+    config.nextStep,
+    `Suivi: ${getPublicBaseUrl(request)}/#suivi`
+  ].filter(Boolean).join("\n");
+}
+
+function buildOrderStatusEmailHtml(order, request, config) {
+  const items = getOrderItems(order)
+    .map(item => `<tr><td>${escapeHtml(item.name)}</td><td style="text-align:center">${Number(item.quantity)}</td><td style="text-align:right">${escapeHtml(formatSeoPrice(item.lineTotal))}</td></tr>`)
+    .join("");
+  return `<!doctype html>
+<html lang="fr">
+<body style="margin:0;background:#f6f6f6;font-family:Arial,sans-serif;color:#313133">
+  <main style="max-width:680px;margin:0 auto;padding:24px">
+    <section style="background:#fff;border-radius:18px;padding:26px;border:1px solid #ececec">
+      <p style="margin:0 0 8px;color:#f68b1e;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px">DieguemTech Store</p>
+      <h1 style="margin:0 0 10px;font-size:26px;color:#1c1c1e">${escapeHtml(config.title)}</h1>
+      <p style="margin:0 0 22px;color:#666;line-height:1.6">${escapeHtml(config.intro)}</p>
+      <div style="background:#fff8f0;border:1px dashed rgba(246,139,30,.35);border-radius:14px;padding:16px;margin-bottom:18px">
+        <span style="display:block;color:#777;font-size:12px;text-transform:uppercase;font-weight:800">Numero de commande</span>
+        <strong style="font-size:24px;color:#f68b1e">${escapeHtml(order.id)}</strong>
+      </div>
+      <table style="width:100%;border-collapse:collapse;margin:18px 0;font-size:14px">
+        <tr><td style="padding:8px 0;color:#777">Statut</td><td style="padding:8px 0;text-align:right;color:#f68b1e;font-weight:800">${escapeHtml(config.badge)}</td></tr>
+        <tr><td style="padding:8px 0;color:#777">Client</td><td style="padding:8px 0;text-align:right;font-weight:700">${escapeHtml(getOrderCustomerName(order))}</td></tr>
+        <tr><td style="padding:8px 0;color:#777">Telephone</td><td style="padding:8px 0;text-align:right">${escapeHtml(getOrderCustomerPhone(order))}</td></tr>
+        <tr><td style="padding:8px 0;color:#777">Zone livraison</td><td style="padding:8px 0;text-align:right">${escapeHtml(getOrderDeliveryZone(order))}</td></tr>
+        <tr><td style="padding:8px 0;color:#777">Adresse</td><td style="padding:8px 0;text-align:right">${escapeHtml(getOrderAddress(order))}</td></tr>
+        <tr><td style="padding:8px 0;color:#777">Paiement</td><td style="padding:8px 0;text-align:right">${escapeHtml(formatPaymentProviderLabel(order.paymentProvider))} - ${escapeHtml(formatPaymentStatusLabel(order.paymentStatus))}</td></tr>
+      </table>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:#fafafa"><th style="text-align:left;padding:10px">Produit</th><th style="text-align:center;padding:10px">Qte</th><th style="text-align:right;padding:10px">Total</th></tr></thead>
+        <tbody>${items}</tbody>
+      </table>
+      <div style="margin:18px 0 0;margin-left:auto;max-width:300px;font-size:14px">
+        <p style="display:flex;justify-content:space-between;margin:6px 0;color:#666"><span>Sous-total</span><strong>${escapeHtml(formatSeoPrice(getOrderSubtotal(order)))}</strong></p>
+        <p style="display:flex;justify-content:space-between;margin:6px 0;color:#666"><span>Livraison</span><strong>${escapeHtml(formatSeoPrice(getOrderDeliveryFee(order)))}</strong></p>
+        <p style="display:flex;justify-content:space-between;margin:10px 0 0;padding-top:10px;border-top:1px solid #eee;font-size:20px;font-weight:800;color:#f68b1e"><span>Total</span><strong>${escapeHtml(formatSeoPrice(order.total))}</strong></p>
+      </div>
+      <p style="margin:20px 0 0;background:#fafafa;border:1px solid #eee;border-radius:12px;padding:14px;color:#666;line-height:1.6">${escapeHtml(config.nextStep)}</p>
+      <p style="margin:22px 0 0;color:#777;font-size:12px;line-height:1.6">Suivi commande: ${escapeHtml(getPublicBaseUrl(request))}/#suivi</p>
+    </section>
+  </main>
+</body>
+</html>`;
+}
+
 function getAdminWhatsAppTemplateParams(order) {
   return [
     order.id,
@@ -3230,6 +3360,16 @@ function formatPaymentProviderLabel(provider) {
   if (value === cashOnDeliveryProvider) return "Paiement a la livraison";
   if (value === waveProvider) return "Wave";
   return value || "A confirmer";
+}
+
+function formatPaymentStatusLabel(status) {
+  const value = String(status || "").trim();
+  return {
+    pending: "En attente",
+    paid: "Paye",
+    failed: "Echoue",
+    refunded: "Rembourse"
+  }[value] || value || "A confirmer";
 }
 
 function usesWavePaymentLink(order) {
