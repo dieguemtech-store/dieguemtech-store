@@ -11,6 +11,7 @@ const database = require("./db");
 const app = express();
 const port = process.env.PORT || 3000;
 const ordersFile = path.join(__dirname, "data", "orders.json");
+const seoContentLastModified = "2026-07-17";
 const deliveryOptions = {
   Dakar: { zone: "Dakar", label: "Dakar", fee: 1500 },
   Pikine: { zone: "Pikine", label: "Pikine", fee: 2000 },
@@ -564,7 +565,7 @@ app.use("/assets", express.static(path.join(__dirname, "assets"), {
 }));
 
 app.get("/", sendPublicFile("index.html"));
-app.get("/index.html", sendPublicFile("index.html"));
+app.get("/index.html", (request, response) => response.redirect(301, "/"));
 app.get("/app.js", sendPublicFile("app.js"));
 app.get("/styles.css", sendPublicFile("styles.css"));
 app.get("/offline.html", sendPublicFile("offline.html"));
@@ -888,11 +889,7 @@ function renderRobotsTxt(baseUrl) {
 Allow: /
 Allow: /assets/
 Allow: /api/uploads/
-Disallow: /admin.html
-Disallow: /admin.css
-Disallow: /admin.js
 Disallow: /api/
-Disallow: /payment-cancel
 
 Sitemap: ${baseUrl}/sitemap.xml
 `;
@@ -1248,27 +1245,13 @@ function getLocalBusinessStructuredData(baseUrl) {
   };
 }
 
-function renderLocalSeoMeta({ canonicalUrl = "", keywords = "" } = {}) {
-  return `${keywords ? `  <meta name="keywords" content="${escapeHtml(keywords)}">\n` : ""}  <meta name="language" content="fr-SN">
+function renderLocalSeoMeta({ canonicalUrl = "" } = {}) {
+  return `  <meta name="language" content="fr-SN">
   <meta name="geo.region" content="SN-DK">
   <meta name="geo.placename" content="Dakar, Senegal">
   <meta name="geo.position" content="14.7167;-17.4677">
   <meta name="ICBM" content="14.7167, -17.4677">
   ${canonicalUrl ? `<link rel="alternate" hreflang="fr-SN" href="${escapeHtml(canonicalUrl)}">\n  <link rel="alternate" hreflang="x-default" href="${escapeHtml(canonicalUrl)}">` : ""}`;
-}
-
-function getLocalSeoKeywords(items = []) {
-  return [
-    ...items,
-    "DieguemTech Store",
-    "boutique high-tech Senegal",
-    "smartphone Dakar",
-    "accessoires electroniques Senegal",
-    "gaming Dakar",
-    "IPTV Senegal",
-    "TV Box Dakar",
-    "livraison Dakar"
-  ].filter(Boolean).join(", ");
 }
 
 function renderLegalPageRoute(request, response, next) {
@@ -1353,35 +1336,30 @@ async function renderCategorySeoRoute(request, response, next) {
 }
 
 function renderSitemap(baseUrl, products) {
-  const today = new Date().toISOString().slice(0, 10);
   const categoryPages = getCategorySitemapEntries(products);
   const legalPages = getLegalPages();
   const urls = [
     {
       loc: `${baseUrl}/`,
-      changefreq: "daily",
-      priority: "1.0",
+      lastmod: seoContentLastModified,
       image: `${baseUrl}/assets/hero-tech.png`,
       imageTitle: "DieguemTech Store - boutique high-tech au Senegal"
     },
     ...categoryPages.map(page => ({
       loc: `${baseUrl}${page.path}`,
-      changefreq: "weekly",
-      priority: page.priority,
+      lastmod: seoContentLastModified,
       image: page.image ? absoluteUrl(page.image, baseUrl) : `${baseUrl}/assets/hero-tech.png`,
       imageTitle: page.title
     })),
     ...legalPages.map(page => ({
       loc: `${baseUrl}${page.path}`,
-      changefreq: "monthly",
-      priority: "0.5",
+      lastmod: seoContentLastModified,
       image: `${baseUrl}/assets/hero-tech.png`,
       imageTitle: page.title
     })),
     ...products.map(product => ({
       loc: `${baseUrl}${productPath(product)}`,
-      changefreq: "weekly",
-      priority: "0.8",
+      lastmod: getSitemapLastModified(product.updatedAt || product.updated_at || product.createdAt),
       image: absoluteUrl(getProductImages(product)[0], baseUrl),
       imageTitle: product.name
     }))
@@ -1392,15 +1370,19 @@ function renderSitemap(baseUrl, products) {
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 ${urls.map(url => `  <url>
     <loc>${escapeXml(url.loc)}</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>${url.changefreq}</changefreq>
-    <priority>${url.priority}</priority>
+${url.lastmod ? `    <lastmod>${escapeXml(url.lastmod)}</lastmod>` : ""}
 ${url.image ? `    <image:image>
       <image:loc>${escapeXml(url.image)}</image:loc>
       <image:title>${escapeXml(url.imageTitle || "DieguemTech Store")}</image:title>
     </image:image>` : ""}
   </url>`).join("\n")}
 </urlset>`;
+}
+
+function getSitemapLastModified(value) {
+  if (!value) return seoContentLastModified;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? seoContentLastModified : date.toISOString().slice(0, 10);
 }
 
 function renderCategorySeoPage({
@@ -1428,12 +1410,6 @@ function renderCategorySeoPage({
   const pageTitle = selectedSubcategory
     ? `${selectedSubcategory.name} ${displayCategory} au Senegal | DieguemTech Store`
     : `${displayCategory} au Senegal | DieguemTech Store`;
-  const localKeywords = getLocalSeoKeywords([
-    `${displayCategory} Senegal`,
-    `${displayCategory} Dakar`,
-    selectedSubcategory ? `${selectedSubcategory.name} Senegal` : "",
-    selectedSubcategory ? `${selectedSubcategory.name} Dakar` : ""
-  ]);
   const breadcrumbItems = [
     {
       "@type": "ListItem",
@@ -1503,7 +1479,7 @@ function renderCategorySeoPage({
   <meta name="robots" content="index, follow">
   <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
   <meta name="description" content="${escapeHtml(description)}">
-${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
+${renderLocalSeoMeta({ canonicalUrl })}
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="fr_SN">
@@ -1614,7 +1590,7 @@ ${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
         </div>
       </div>
       <div class="category-hero-visual">
-        ${heroImage ? `<img src="${escapeHtml(heroImage)}" alt="${escapeHtml(currentTitle)}">` : "<span>DT</span>"}
+        ${heroImage ? `<img src="${escapeHtml(heroImage)}" alt="${escapeHtml(currentTitle)}" fetchpriority="high" decoding="async">` : "<span>DT</span>"}
       </div>
     </section>
     ${subcategories.length ? `<section class="category-section">
@@ -1989,10 +1965,19 @@ function getLegalPage(slug) {
 function renderLegalPage(page, baseUrl) {
   const canonicalUrl = `${baseUrl}${page.path}`;
   const relatedPages = getLegalPages();
+  const organization = getLocalBusinessStructuredData(baseUrl);
+  if (page.slug === "livraison-retours") {
+    organization.hasMerchantReturnPolicy = {
+      "@type": "MerchantReturnPolicy",
+      applicableCountry: "SN",
+      returnPolicyCountry: "SN",
+      merchantReturnLink: canonicalUrl
+    };
+  }
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
-      getLocalBusinessStructuredData(baseUrl),
+      organization,
       {
         "@type": "BreadcrumbList",
         itemListElement: [
@@ -2014,7 +1999,7 @@ function renderLegalPage(page, baseUrl) {
         publisher: {
           "@id": `${baseUrl}/#store`
         },
-        dateModified: "2026-06-29",
+        dateModified: seoContentLastModified,
         inLanguage: "fr-SN"
       }
     ]
@@ -2027,7 +2012,7 @@ function renderLegalPage(page, baseUrl) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="index, follow">
   <meta name="description" content="${escapeHtml(page.description)}">
-${renderLocalSeoMeta({ canonicalUrl, keywords: getLocalSeoKeywords([page.title, "conditions vente Senegal", "confidentialite boutique Senegal"]) })}
+${renderLocalSeoMeta({ canonicalUrl })}
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="fr_SN">
@@ -2092,7 +2077,7 @@ ${renderLocalSeoMeta({ canonicalUrl, keywords: getLocalSeoKeywords([page.title, 
       <span class="eyebrow light">${escapeHtml(page.eyebrow)}</span>
       <h1>${escapeHtml(page.title)}</h1>
       <p>${escapeHtml(page.intro)}</p>
-      <span class="legal-updated">Derniere mise a jour : 29 juin 2026</span>
+      <span class="legal-updated">Derniere mise a jour : 17 juillet 2026</span>
     </section>
     <div class="legal-layout">
       <article class="legal-content">
@@ -2176,13 +2161,7 @@ function renderProductSeoPage(product, baseUrl, relatedProducts = []) {
   const discountLabel = getSeoDiscountLabel(product);
   const highlights = getSeoProductHighlights(product);
   const productSubcategory = getProductSubcategory(product);
-  const localKeywords = getLocalSeoKeywords([
-    `${product.name} Senegal`,
-    `${product.name} Dakar`,
-    `${product.category} Senegal`,
-    `${product.category} Dakar`,
-    productSubcategory ? `${productSubcategory} Senegal` : ""
-  ]);
+  const productBrand = getProductBrandName(product);
   const productBreadcrumbItems = [
     {
       "@type": "ListItem",
@@ -2246,10 +2225,12 @@ function renderProductSeoPage(product, baseUrl, relatedProducts = []) {
         image: images.length ? images : [mainImage],
         sku: `DT-${product.id}`,
         category: product.category,
-        brand: {
-          "@type": "Brand",
-          name: "DieguemTech Store"
-        },
+        ...(productBrand ? {
+          brand: {
+            "@type": "Brand",
+            name: productBrand
+          }
+        } : {}),
         offers: {
           "@type": "Offer",
           url: canonicalUrl,
@@ -2284,7 +2265,7 @@ function renderProductSeoPage(product, baseUrl, relatedProducts = []) {
   <meta name="robots" content="index, follow">
   <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
   <meta name="description" content="${escapeHtml(description)}">
-${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
+${renderLocalSeoMeta({ canonicalUrl })}
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
   <meta property="og:type" content="product">
   <meta property="og:locale" content="fr_SN">
@@ -2396,7 +2377,7 @@ ${renderLocalSeoMeta({ canonicalUrl, keywords: localKeywords })}
     <article class="seo-card">
       <section class="seo-gallery" aria-label="Images du produit">
         <div class="seo-gallery-main">
-          <img src="${escapeHtml(mainImage)}" alt="${escapeHtml(product.name)}" data-main-image>
+          <img src="${escapeHtml(mainImage)}" alt="${escapeHtml(product.name)}" fetchpriority="high" decoding="async" data-main-image>
         </div>
         ${images.length > 1 ? `<div class="seo-thumbs">${images.slice(0, 8).map((image, index) => `<button type="button" class="seo-thumb ${index === 0 ? "active" : ""}" data-seo-thumb="${escapeHtml(image)}" aria-label="Afficher image ${index + 1}"><img src="${escapeHtml(image)}" alt=""></button>`).join("")}</div>` : ""}
       </section>
@@ -2620,6 +2601,35 @@ function getCategorySubcategories(products) {
     group.products.push(product);
   }
   return [...groups.values()].sort((left, right) => right.count - left.count || left.name.localeCompare(right.name));
+}
+
+function getProductBrandName(product) {
+  const explicitBrand = String(product.brand || "").trim();
+  if (explicitBrand) return explicitBrand;
+
+  const knownBrands = [
+    "Samsung",
+    "Xiaomi",
+    "Oraimo",
+    "Sony",
+    "Hisense",
+    "HP",
+    "TP-Link",
+    "SanDisk",
+    "Tefal",
+    "Binatone",
+    "Bruhm",
+    "Canleen",
+    "Deska",
+    "Galuin",
+    "Gueeton",
+    "Lasa",
+    "Nexon",
+    "Qsonic",
+    "Roch"
+  ];
+  const normalizedName = ` ${normalizeSearchText(product.name)} `;
+  return knownBrands.find(brand => normalizedName.includes(` ${normalizeSearchText(brand)} `)) || "";
 }
 
 function getProductSubcategory(product) {
@@ -3686,6 +3696,8 @@ function renderPaymentPage(title, message, status) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="referrer" content="no-referrer">
   <title>${title} - DieguemTech Store</title>
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
   <link rel="shortcut icon" href="/assets/favicon.svg">

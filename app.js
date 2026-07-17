@@ -501,8 +501,13 @@ function updateSearchUrl(query){
 function persist(){
   localStorage.setItem("dt-cart", JSON.stringify(cart));
   localStorage.setItem("dt-wishlist", JSON.stringify(wishlist));
-  $("#cartCount").textContent = cart.reduce((sum, item) => sum + item.qty, 0);
+  const cartItemsCount = cart.reduce((sum, item) => sum + item.qty, 0);
+  $("#cartCount").textContent = cartItemsCount;
   $("#wishlistCount").textContent = wishlist.length;
+  const mobileCartCount = $("#mobileCartCount");
+  const mobileWishlistCount = $("#mobileWishlistCount");
+  if (mobileCartCount) mobileCartCount.textContent = cartItemsCount;
+  if (mobileWishlistCount) mobileWishlistCount.textContent = wishlist.length;
 }
 
 function showToast(title = "Produit ajouté", text = "Votre panier a été mis à jour."){
@@ -1097,7 +1102,26 @@ $("#wishlistButton").addEventListener("click", () => {
 });
 $("#overlay").addEventListener("click", closeAll);
 $$(".close-drawer,.modal-close").forEach(button => button.addEventListener("click", closeAll));
-$("#menuToggle").addEventListener("click", () => $("#mainNav").classList.toggle("open"));
+$("#menuToggle").addEventListener("click", () => {
+  const isOpen = $("#mainNav").classList.toggle("open");
+  $("#menuToggle").setAttribute("aria-expanded", String(isOpen));
+});
+$$('#mainNav a').forEach(link => link.addEventListener('click', () => {
+  $("#mainNav").classList.remove("open");
+  $("#menuToggle").setAttribute("aria-expanded", "false");
+}));
+
+$("#mobileSearchButton")?.addEventListener("click", () => {
+  $("#mainNav").classList.remove("open");
+  $("#menuToggle").setAttribute("aria-expanded", "false");
+  $("#searchInput").focus({ preventScroll: false });
+});
+$("#mobileWishlistButton")?.addEventListener("click", () => $("#wishlistButton").click());
+$("#mobileCartButton")?.addEventListener("click", () => $("#cartButton").click());
+$$('.mobile-bottom-nav a').forEach(link => link.addEventListener('click', () => {
+  $$('.mobile-bottom-nav a').forEach(item => item.classList.remove('active'));
+  link.classList.add('active');
+}));
 
 $("#checkoutButton").addEventListener("click", () => {
   if (!cart.length) {
