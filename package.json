@@ -6,6 +6,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "test:seo": "node scripts/check-seo.js",
     "backup:admin": "powershell -ExecutionPolicy Bypass -File scripts/download-admin-backup.ps1"
   },
   "engines": {

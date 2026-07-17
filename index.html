@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="DieguemTech Store est votre boutique high-tech au Senegal : smartphones, gaming, IPTV, TV Box, accessoires, audio et electromenager avec livraison a Dakar et partout au Senegal.">
-  <meta name="keywords" content="boutique high-tech Senegal, smartphone Dakar, accessoires telephone Senegal, gaming Dakar, IPTV Senegal, TV Box Dakar, electromenager Dakar, DieguemTech Store">
+  <meta name="description" content="Smartphones, TV Box, gaming, audio, accessoires et électroménager chez DieguemTech Store, avec livraison à Dakar et partout au Sénégal.">
   <meta name="author" content="DieguemTech Store">
   <meta name="robots" content="index, follow">
   <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
@@ -18,17 +17,18 @@
   <meta property="og:type" content="website">
   <meta property="og:locale" content="fr_SN">
   <meta property="og:site_name" content="DieguemTech Store">
-  <meta property="og:title" content="DieguemTech Store | Boutique High-Tech au Senegal">
-  <meta property="og:description" content="Achetez vos smartphones, produits gaming, IPTV, TV Box et accessoires electroniques avec livraison a Dakar et partout au Senegal.">
+  <meta property="og:title" content="DieguemTech Store | Boutique high-tech au Sénégal">
+  <meta property="og:description" content="Smartphones, TV Box, gaming, audio, accessoires et électroménager avec livraison à Dakar et partout au Sénégal.">
   <meta property="og:url" content="https://dieguemtechstore.com/">
   <meta property="og:image" content="https://dieguemtechstore.com/assets/hero-tech.png">
+  <meta property="og:image:secure_url" content="https://dieguemtechstore.com/assets/hero-tech.png">
   <meta property="og:image:alt" content="DieguemTech Store - Boutique High-Tech, Gaming, IPTV et Accessoires">
   <meta property="og:image:type" content="image/png">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
+  <meta property="og:image:width" content="1715">
+  <meta property="og:image:height" content="917">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="DieguemTech Store | Boutique High-Tech au Senegal">
-  <meta name="twitter:description" content="Boutique high-tech au Senegal : smartphones, gaming, IPTV, TV Box, accessoires et livraison a Dakar.">
+  <meta name="twitter:title" content="DieguemTech Store | Boutique high-tech au Sénégal">
+  <meta name="twitter:description" content="Smartphones, TV Box, gaming, audio et accessoires avec livraison à Dakar et partout au Sénégal.">
   <meta name="twitter:image" content="https://dieguemtechstore.com/assets/hero-tech.png">
   <meta name="twitter:image:alt" content="DieguemTech Store - Boutique High-Tech au Senegal">
   <link rel="canonical" href="https://dieguemtechstore.com/">
@@ -40,11 +40,11 @@
   <link rel="apple-touch-icon" href="/assets/logo-mark.svg">
   <link rel="preload" as="image" href="/assets/hero-tech.png" fetchpriority="high">
   <meta name="theme-color" content="#f68b1e">
-  <title>DieguemTech Store | Boutique High-Tech au Senegal et a Dakar</title>
+  <title>DieguemTech Store | Boutique high-tech au Sénégal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260629-mobile-checkout">
+  <link rel="stylesheet" href="styles.css?v=20260717-mobile-first">
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -122,6 +122,7 @@
           "@type": "WebSite",
           "@id": "https://dieguemtechstore.com/#website",
           "name": "DieguemTech Store",
+          "alternateName": "DieguemTech",
           "url": "https://dieguemtechstore.com/",
           "publisher": {
             "@id": "https://dieguemtechstore.com/#store"
@@ -264,9 +265,32 @@
     </nav>
   </header>
 
+  <nav class="mobile-bottom-nav" aria-label="Navigation mobile principale">
+    <a class="mobile-nav-item active" href="#accueil" aria-label="Accueil">
+      <svg><use href="#icon-home"></use></svg>
+      <span>Accueil</span>
+    </a>
+    <a class="mobile-nav-item" href="#boutique" aria-label="Boutique">
+      <svg><use href="#icon-grid"></use></svg>
+      <span>Boutique</span>
+    </a>
+    <button class="mobile-nav-item mobile-nav-search" id="mobileSearchButton" type="button" aria-label="Rechercher un produit">
+      <svg><use href="#icon-search"></use></svg>
+      <span>Rechercher</span>
+    </button>
+    <button class="mobile-nav-item" id="mobileWishlistButton" type="button" aria-label="Ouvrir les favoris">
+      <span class="mobile-nav-icon"><svg><use href="#icon-heart"></use></svg><b id="mobileWishlistCount">0</b></span>
+      <span>Favoris</span>
+    </button>
+    <button class="mobile-nav-item" id="mobileCartButton" type="button" aria-label="Ouvrir le panier">
+      <span class="mobile-nav-icon"><svg><use href="#icon-cart"></use></svg><b id="mobileCartCount">0</b></span>
+      <span>Panier</span>
+    </button>
+  </nav>
+
   <main>
     <section class="hero" id="accueil">
-      <img class="hero-image" src="assets/hero-tech.png" alt="">
+      <img class="hero-image" src="assets/hero-tech.png" alt="" width="1715" height="917" fetchpriority="high">
       <div class="container hero-content">
         <span class="eyebrow light">La tech qui vous ressemble</span>
         <h1>Votre univers<br><span>High-Tech</span> commence ici</h1>
@@ -666,6 +690,8 @@
   </div>
 
   <svg class="svg-sprite" aria-hidden="true">
+    <symbol id="icon-home" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10M9 20v-6h6v6"/></symbol>
+    <symbol id="icon-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
     <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
     <symbol id="icon-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
     <symbol id="icon-heart" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></symbol>
@@ -679,6 +705,6 @@
     <symbol id="icon-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
     <symbol id="icon-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
   </svg>
-  <script src="app.js?v=20260629-mobile-checkout"></script>
+  <script src="app.js?v=20260717-mobile-first"></script>
 </body>
 </html>
