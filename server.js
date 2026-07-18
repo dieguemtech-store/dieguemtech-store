@@ -1502,7 +1502,7 @@ ${renderLocalSeoMeta({ canonicalUrl })}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=20260718-mobile-polish">
+  <link rel="stylesheet" href="/styles.css?v=20260718-mobile-nav-fix">
   <style>
     body{background:#f7f7f7}
     .category-page{width:min(1180px,calc(100% - 34px));margin:0 auto;padding:28px 0 72px}
@@ -2030,7 +2030,7 @@ ${renderLocalSeoMeta({ canonicalUrl })}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=20260718-mobile-polish">
+  <link rel="stylesheet" href="/styles.css?v=20260718-mobile-nav-fix">
   <style>
     body{background:#f7f7f7}
     .legal-page{width:min(1120px,calc(100% - 34px));margin:0 auto;padding:28px 0 72px}
@@ -2319,7 +2319,7 @@ ${renderLocalSeoMeta({ canonicalUrl })}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=20260718-mobile-polish">
+  <link rel="stylesheet" href="/styles.css?v=20260718-mobile-nav-fix">
   <style>
     body{background:#f7f7f7}
     .seo-product-page{width:min(1120px,calc(100% - 34px));margin:0 auto;padding:28px 0 70px}
