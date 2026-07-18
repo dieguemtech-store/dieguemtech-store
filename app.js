@@ -1111,17 +1111,45 @@ $$('#mainNav a').forEach(link => link.addEventListener('click', () => {
   $("#menuToggle").setAttribute("aria-expanded", "false");
 }));
 
-$("#mobileSearchButton")?.addEventListener("click", () => {
-  $("#mainNav").classList.remove("open");
-  $("#menuToggle").setAttribute("aria-expanded", "false");
-  $("#searchInput").focus({ preventScroll: false });
+$("#mobileBottomNav")?.addEventListener("click", event => {
+  const item = event.target.closest("[data-mobile-action]");
+  if (!item) return;
+
+  const action = item.dataset.mobileAction;
+  $$("#mobileBottomNav .mobile-nav-item").forEach(navItem => navItem.classList.remove("active"));
+  item.classList.add("active");
+
+  if (action === "home" || action === "shop") {
+    $("#mainNav").classList.remove("open");
+    $("#menuToggle").setAttribute("aria-expanded", "false");
+    return;
+  }
+
+  event.preventDefault();
+  if (action === "search") {
+    $("#mainNav").classList.remove("open");
+    $("#menuToggle").setAttribute("aria-expanded", "false");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.setTimeout(() => $("#searchInput").focus({ preventScroll: true }), 250);
+    return;
+  }
+
+  if (action === "wishlist") {
+    renderWishlist();
+    openDrawer($("#wishlistDrawer"));
+    return;
+  }
+
+  if (action === "cart") {
+    renderCart();
+    const details = getCartDetails();
+    trackAnalytics("cart_open", {
+      value: details.total,
+      metadata: { itemCount: details.count, lineCount: details.items.length }
+    });
+    openDrawer($("#cartDrawer"));
+  }
 });
-$("#mobileWishlistButton")?.addEventListener("click", () => $("#wishlistButton").click());
-$("#mobileCartButton")?.addEventListener("click", () => $("#cartButton").click());
-$$('.mobile-bottom-nav a').forEach(link => link.addEventListener('click', () => {
-  $$('.mobile-bottom-nav a').forEach(item => item.classList.remove('active'));
-  link.classList.add('active');
-}));
 
 $("#checkoutButton").addEventListener("click", () => {
   if (!cart.length) {

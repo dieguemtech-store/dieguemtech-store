@@ -44,7 +44,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260718-mobile-polish">
+  <link rel="stylesheet" href="styles.css?v=20260718-mobile-nav-fix">
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -265,24 +265,24 @@
     </nav>
   </header>
 
-  <nav class="mobile-bottom-nav" aria-label="Navigation mobile principale">
-    <a class="mobile-nav-item active" href="#accueil" aria-label="Accueil">
+  <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Navigation mobile principale">
+    <a class="mobile-nav-item active" href="#accueil" data-mobile-action="home" aria-label="Accueil">
       <svg><use href="#icon-home"></use></svg>
       <span>Accueil</span>
     </a>
-    <a class="mobile-nav-item" href="#boutique" aria-label="Boutique">
+    <a class="mobile-nav-item" href="#boutique" data-mobile-action="shop" aria-label="Boutique">
       <svg><use href="#icon-grid"></use></svg>
       <span>Boutique</span>
     </a>
-    <button class="mobile-nav-item mobile-nav-search" id="mobileSearchButton" type="button" aria-label="Rechercher un produit">
+    <button class="mobile-nav-item mobile-nav-search" id="mobileSearchButton" data-mobile-action="search" type="button" aria-label="Rechercher un produit">
       <svg><use href="#icon-search"></use></svg>
       <span>Rechercher</span>
     </button>
-    <button class="mobile-nav-item" id="mobileWishlistButton" type="button" aria-label="Ouvrir les favoris">
+    <button class="mobile-nav-item" id="mobileWishlistButton" data-mobile-action="wishlist" type="button" aria-label="Ouvrir les favoris">
       <span class="mobile-nav-icon"><svg><use href="#icon-heart"></use></svg><b id="mobileWishlistCount">0</b></span>
       <span>Favoris</span>
     </button>
-    <button class="mobile-nav-item" id="mobileCartButton" type="button" aria-label="Ouvrir le panier">
+    <button class="mobile-nav-item" id="mobileCartButton" data-mobile-action="cart" type="button" aria-label="Ouvrir le panier">
       <span class="mobile-nav-icon"><svg><use href="#icon-cart"></use></svg><b id="mobileCartCount">0</b></span>
       <span>Panier</span>
     </button>
@@ -705,6 +705,6 @@
     <symbol id="icon-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
     <symbol id="icon-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
   </svg>
-  <script src="app.js?v=20260717-mobile-first"></script>
+  <script src="app.js?v=20260718-mobile-nav-fix"></script>
 </body>
 </html>
