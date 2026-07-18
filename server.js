@@ -1502,7 +1502,7 @@ ${renderLocalSeoMeta({ canonicalUrl })}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/styles.css?v=20260718-mobile-polish">
   <style>
     body{background:#f7f7f7}
     .category-page{width:min(1180px,calc(100% - 34px));margin:0 auto;padding:28px 0 72px}
@@ -1559,13 +1559,14 @@ ${renderLocalSeoMeta({ canonicalUrl })}
     .category-toast p{margin:0;min-width:0;flex:1;display:flex;flex-direction:column}.category-toast strong{display:block;font-size:13px}.category-toast small{color:#bbb;font-size:11px;line-height:1.45}
     .category-toast-actions{display:flex;gap:10px;margin-left:4px}.category-toast-actions button{border:0;border-radius:9px;background:#f68b1e;color:#fff;font-weight:800;font-size:12px;padding:11px 14px;white-space:nowrap}.category-toast-actions button.ghost{background:#3a3a3d}
     @media(max-width:1000px){.category-products-grid,.category-subgrid{grid-template-columns:repeat(3,1fr)}.category-hero{grid-template-columns:1fr}}
-    @media(max-width:760px){.category-page{width:min(100% - 24px,1180px);padding-top:18px}.category-top{align-items:flex-start;flex-direction:column}.category-logo img{width:185px}.category-hero{padding:30px 22px}.category-hero-visual{min-height:210px}.category-products-grid,.category-subgrid{grid-template-columns:repeat(2,1fr)}.category-section{padding:18px}.category-section-head{align-items:flex-start;flex-direction:column}}
-    @media(max-width:520px){.category-products-grid,.category-subgrid{grid-template-columns:1fr}.category-product-visual{height:180px}.category-hero h1{letter-spacing:-1px}.category-product-actions{align-items:stretch;flex-direction:column}.category-cart-button,.category-see-link{text-align:center;width:100%}.category-toast{left:14px;right:14px;bottom:14px;display:grid;grid-template-columns:27px 1fr}.category-toast-actions{grid-column:1/-1;margin-left:0;width:100%;display:grid;grid-template-columns:1fr 1fr}.category-toast-actions button{width:100%}}
+    @media(max-width:760px){.category-page{width:min(100% - 20px,1180px);padding:16px 0 32px}.category-top{align-items:flex-start;flex-direction:column;gap:12px;margin-bottom:16px}.category-logo img{width:168px}.category-nav-actions{display:grid;grid-template-columns:1fr 1fr;width:100%}.category-nav-actions a{text-align:center;min-height:44px}.category-hero{padding:26px 20px;border-radius:20px;gap:18px}.category-hero h1{font-size:34px;letter-spacing:-1px}.category-hero p{font-size:13px;line-height:1.65}.category-hero-visual{min-height:150px;padding:16px}.category-hero-visual img{max-height:140px}.category-products-grid,.category-subgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.category-section{padding:16px;border-radius:18px;margin-top:18px}.category-section-head{align-items:flex-start;flex-direction:column;gap:6px}.category-section-head h2{font-size:21px}.category-subcard{grid-template-rows:105px auto;border-radius:13px}.category-subvisual{padding:10px}.category-subvisual img{max-height:84px}.category-subbody{padding:11px}.category-product-card{border-radius:14px}.category-product-visual{height:142px;padding:10px}.category-product-visual img{max-height:120px}.category-product-body{padding:11px;gap:5px}.category-product-body h3{font-size:12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:33px}.category-product-body p{display:none}.category-product-price{font-size:13px}.category-product-actions{padding:9px;display:grid;grid-template-columns:1fr 1fr}.category-see-link,.category-cart-button{display:flex;align-items:center;justify-content:center;min-height:42px;padding:8px 6px;font-size:10px;border-radius:8px;text-align:center}.category-toast{left:12px;right:12px;bottom:calc(78px + env(safe-area-inset-bottom));max-width:none}}
+    @media(max-width:520px){.category-hero{padding:22px 18px}.category-hero h1{font-size:30px}.category-pill{padding:7px 9px;font-size:10px}.category-toast{display:grid;grid-template-columns:27px 1fr}.category-toast-actions{grid-column:1/-1;margin-left:0;width:100%;display:grid;grid-template-columns:1fr 1fr}.category-toast-actions button{width:100%}}
   </style>
   <script type="application/ld+json">${toJsonLdScript(structuredData)}</script>
 </head>
 <body>
   ${renderFloatingSupportMessage()}
+  ${renderStandaloneMobileNav("categories")}
   <main class="category-page">
     <nav class="category-top" aria-label="Navigation categorie">
       <a class="category-logo" href="/" aria-label="DieguemTech Store - Accueil"><img src="/assets/logo.svg" alt="DieguemTech Store" width="220" height="56"></a>
@@ -1696,8 +1697,8 @@ function renderCategoryProductCard(product) {
       </div>
     </a>
     <div class="category-product-actions">
-      <a class="category-see-link" href="${escapeHtml(productPath(product))}">Voir le produit</a>
-      <button class="category-cart-button" type="button" data-cart-product="${Number(product.id)}" data-product-name="${escapeHtml(product.name)}">Ajouter au panier</button>
+      <a class="category-see-link" href="${escapeHtml(productPath(product))}" aria-label="Voir ${escapeHtml(product.name)}">Voir</a>
+      <button class="category-cart-button" type="button" data-cart-product="${Number(product.id)}" data-product-name="${escapeHtml(product.name)}" aria-label="Ajouter ${escapeHtml(product.name)} au panier">Ajouter</button>
     </div>
   </article>`;
 }
@@ -2029,7 +2030,7 @@ ${renderLocalSeoMeta({ canonicalUrl })}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/styles.css?v=20260718-mobile-polish">
   <style>
     body{background:#f7f7f7}
     .legal-page{width:min(1120px,calc(100% - 34px));margin:0 auto;padding:28px 0 72px}
@@ -2065,6 +2066,7 @@ ${renderLocalSeoMeta({ canonicalUrl })}
 </head>
 <body>
   ${renderFloatingSupportMessage()}
+  ${renderStandaloneMobileNav()}
   <main class="legal-page">
     <nav class="legal-top" aria-label="Navigation">
       <a class="legal-logo" href="/" aria-label="DieguemTech Store - Accueil"><img src="/assets/logo.svg" alt="DieguemTech Store" width="220" height="56"></a>
@@ -2109,6 +2111,32 @@ function renderLegalSection(section) {
   </section>`;
 }
 
+function renderStandaloneMobileNav(activeItem = "") {
+  const itemClass = item => `standalone-nav-item${activeItem === item ? " active" : ""}`;
+  return `<nav class="standalone-mobile-nav" aria-label="Navigation mobile principale">
+    <a class="${itemClass("home")}" href="/" aria-label="Accueil">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"></path><path d="M5.5 10.5V20h13v-9.5"></path><path d="M9.5 20v-6h5v6"></path></svg>
+      <span>Accueil</span>
+    </a>
+    <a class="${itemClass("categories")}" href="/#categories" aria-label="Catégories">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1"></rect><rect x="14" y="4" width="6" height="6" rx="1"></rect><rect x="4" y="14" width="6" height="6" rx="1"></rect><rect x="14" y="14" width="6" height="6" rx="1"></rect></svg>
+      <span>Catégories</span>
+    </a>
+    <a class="${itemClass("boutique")} standalone-nav-primary" href="/#boutique" aria-label="Boutique">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 4 4"></path></svg>
+      <span>Boutique</span>
+    </a>
+    <a class="${itemClass("help")}" href="https://wa.me/221772177176?text=Bonjour%20DieguemTech%20Store,%20j'ai%20besoin%20d'aide." target="_blank" rel="noopener" aria-label="Aide WhatsApp">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a8 8 0 0 1-11.8 7L4 20l1.5-4A8 8 0 1 1 20 11.5Z"></path><path d="M9 9.5a3 3 0 0 1 5.5 1.7c0 2-2.5 2-2.5 3.3"></path><path d="M12 17h.01"></path></svg>
+      <span>Aide</span>
+    </a>
+    <a class="${itemClass("cart")}" href="/?cart=open#boutique" aria-label="Panier">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2 11h10l2-7H6"></path><circle cx="9" cy="19" r="1"></circle><circle cx="17" cy="19" r="1"></circle></svg>
+      <span>Panier</span>
+    </a>
+  </nav>`;
+}
+
 function renderFloatingSupportMessage() {
   return `<a href="https://wa.me/221772177176?text=Bonjour%20DieguemTech%20Store,%20je%20souhaite%20obtenir%20plus%20d'informations."
    class="whatsapp-float"
@@ -2132,6 +2160,7 @@ function renderFloatingSupportScript() {
       var message = document.getElementById("floatingMessage");
       var closeButton = document.getElementById("floatingMessageClose");
       if (!message || !closeButton) return;
+      if (window.matchMedia && window.matchMedia("(max-width: 760px)").matches) return;
       var storageKey = "dt-floating-message-closed-until";
       var closedUntil = Number(localStorage.getItem(storageKey) || 0);
       if (Number.isFinite(closedUntil) && closedUntil > Date.now()) return;
@@ -2290,7 +2319,7 @@ ${renderLocalSeoMeta({ canonicalUrl })}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/styles.css?v=20260718-mobile-polish">
   <style>
     body{background:#f7f7f7}
     .seo-product-page{width:min(1120px,calc(100% - 34px));margin:0 auto;padding:28px 0 70px}
@@ -2356,13 +2385,14 @@ ${renderLocalSeoMeta({ canonicalUrl })}
     .seo-cart-toast .toast-actions button{border:0;border-radius:9px;background:#f68b1e;color:#fff;font-weight:800;font-size:12px;padding:11px 14px;white-space:nowrap}
     .seo-cart-toast .toast-actions button.ghost{background:#3a3a3d}
     @media(max-width:900px){.seo-service-grid,.seo-related-grid{grid-template-columns:repeat(2,1fr)}}
-    @media(max-width:760px){.seo-card{grid-template-columns:1fr;padding:20px}.seo-gallery{min-height:300px;position:relative;top:auto}.seo-gallery-main{min-height:220px}.seo-actions .button{width:100%}.seo-top{align-items:flex-start;flex-direction:column}.seo-help{align-items:flex-start;flex-direction:column}.seo-help .button{width:100%}}
-    @media(max-width:520px){.seo-service-grid,.seo-related-grid{grid-template-columns:1fr}.seo-card{padding:16px}.seo-product-page{width:min(100% - 24px,1120px);padding-top:18px}.seo-logo img{width:180px}.seo-info h1{letter-spacing:-1px}.seo-cart-toast{display:grid;grid-template-columns:27px 1fr;align-items:start}.seo-cart-toast .toast-actions{grid-column:1/-1;margin-left:0;width:100%;display:grid;grid-template-columns:1fr 1fr}.seo-cart-toast .toast-actions button{width:100%}}
+    @media(max-width:760px){.seo-product-page{width:min(100% - 20px,1120px);padding:16px 0 32px}.seo-card{grid-template-columns:1fr;padding:14px;border-radius:18px;gap:20px}.seo-gallery{min-height:250px;position:relative;top:auto;padding:16px;border-radius:16px}.seo-gallery-main{min-height:190px}.seo-gallery-main img{max-height:205px}.seo-thumb{width:52px;height:52px}.seo-top{align-items:flex-start;flex-direction:column;gap:12px;margin-bottom:16px}.seo-logo img{width:168px}.seo-nav-actions{display:grid;grid-template-columns:1fr 1fr;width:100%}.seo-nav-actions a,.seo-back-button{display:flex;align-items:center;justify-content:center;min-height:44px;text-align:center}.seo-info h1{font-size:30px;letter-spacing:-1px}.seo-price{margin:18px 0}.seo-price strong{font-size:25px}.seo-description-card,.seo-help,.seo-related{margin-top:18px;padding:16px}.seo-actions{display:grid;grid-template-columns:1fr;margin-top:18px}.seo-actions .button{width:100%;min-width:0;min-height:50px}.seo-service-grid{grid-template-columns:1fr;gap:10px}.seo-help{align-items:flex-start;flex-direction:column}.seo-help .button{width:100%;min-height:48px}.seo-related-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.seo-related-visual{height:120px;padding:10px}.seo-related-visual img{max-height:98px}.seo-related-body{padding:11px}.seo-related-body h3{font-size:12px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:34px}.seo-cart-toast{left:12px;right:12px;bottom:calc(78px + env(safe-area-inset-bottom));max-width:none}}
+    @media(max-width:520px){.seo-card{padding:12px}.seo-info h1{font-size:27px}.seo-badges{margin:12px 0 15px}.seo-meta{padding:13px;font-size:12px}.seo-cart-toast{display:grid;grid-template-columns:27px 1fr;align-items:start}.seo-cart-toast .toast-actions{grid-column:1/-1;margin-left:0;width:100%;display:grid;grid-template-columns:1fr 1fr}.seo-cart-toast .toast-actions button{width:100%}}
   </style>
   <script type="application/ld+json">${toJsonLdScript(structuredData)}</script>
 </head>
 <body>
   ${renderFloatingSupportMessage()}
+  ${renderStandaloneMobileNav("boutique")}
   <main class="seo-product-page">
     <nav class="seo-top" aria-label="Navigation produit">
       <a class="seo-logo" href="/" aria-label="DieguemTech Store - Accueil"><img src="/assets/logo.svg" alt="DieguemTech Store" width="220" height="56"></a>
