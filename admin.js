@@ -701,10 +701,29 @@ function renderProductForm(product) {
         </select>
       </label>
     </div>
-    <label>Galerie images
-      <textarea name="images" rows="5" placeholder="Une image par ligne. Exemple: assets/nom-du-produit.png">${escapeHtml(images.join("\n"))}</textarea>
-      <small class="field-help">Formats acceptes: assets/photo.png, /assets/photo.png ou une URL https. La premiere image devient l'image principale.</small>
-    </label>
+    <section class="product-image-fields" aria-labelledby="productImagesTitle">
+      <div class="product-image-fields-head">
+        <div>
+          <strong id="productImagesTitle">Images du produit</strong>
+          <small>Ajoute une image principale et jusqu'a trois images supplementaires.</small>
+        </div>
+        <span>4 emplacements</span>
+      </div>
+      <div class="product-image-grid">
+        ${[0, 1, 2, 3].map(index => `<label class="product-image-slot">
+          <span><b>${index + 1}</b>${index === 0 ? "Image principale" : `Image supplementaire ${index}`}</span>
+          <input name="imageSlot${index}" data-image-slot="${index}" value="${escapeHtml(images[index] || "")}" placeholder="/assets/photo-${index + 1}.png ou URL https">
+        </label>`).join("")}
+      </div>
+      <small class="field-help">La premiere image apparait sur la carte produit. Les trois autres apparaitront dans la galerie de la fiche produit.</small>
+    </section>
+    <details class="advanced-image-gallery">
+      <summary>Galerie avancee (jusqu'a 8 images)</summary>
+      <label>Liste complete des images
+        <textarea name="images" rows="5" placeholder="Une image par ligne. Exemple: assets/nom-du-produit.png">${escapeHtml(images.join("\n"))}</textarea>
+        <small class="field-help">Formats acceptes: assets/photo.png, /assets/photo.png ou une URL https.</small>
+      </label>
+    </details>
     <div class="upload-card">
       <label class="upload-drop">Televerser des images
         <input id="productImageFiles" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple>
@@ -754,6 +773,26 @@ function updateProductImagePreview(value) {
   help.textContent = `${images.length} image${images.length > 1 ? "s" : ""}. La premiere sera affichee sur les cartes produit.`;
 }
 
+function syncImageSlotsToGallery() {
+  const textarea = $("#productForm textarea[name='images']");
+  if (!textarea) return;
+  const existingOverflow = parseImageLines(textarea.value).slice(4);
+  const slotImages = [...document.querySelectorAll("#productForm [data-image-slot]")]
+    .sort((left, right) => Number(left.dataset.imageSlot) - Number(right.dataset.imageSlot))
+    .map(input => input.value.trim())
+    .filter(Boolean);
+  const images = [...new Set([...slotImages, ...existingOverflow])].slice(0, 8);
+  textarea.value = images.join("\n");
+  updateProductImagePreview(textarea.value);
+}
+
+function syncGalleryToImageSlots(value) {
+  const images = parseImageLines(value);
+  document.querySelectorAll("#productForm [data-image-slot]").forEach(input => {
+    input.value = images[Number(input.dataset.imageSlot)] || "";
+  });
+}
+
 function setProductUploadStatus(message, isError = false) {
   const status = $("#productUploadStatus");
   if (!status) return;
@@ -789,6 +828,7 @@ async function uploadProductImages(fileList) {
   const uploadedUrls = (result.uploads || []).map(upload => upload.url).filter(Boolean);
   const nextImages = [...new Set([...currentImages, ...uploadedUrls])].slice(0, 8);
   textarea.value = nextImages.join("\n");
+  syncGalleryToImageSlots(textarea.value);
   updateProductImagePreview(textarea.value);
 
   const ignored = files.length - selectedFiles.length;
@@ -1014,6 +1054,7 @@ async function deleteAllOrders() {
 }
 
 async function saveProduct(form) {
+  syncImageSlotsToGallery();
   const formData = new FormData(form);
   const id = formData.get("id");
   const images = parseImageLines(formData.get("images"));
@@ -1151,7 +1192,11 @@ $("#productForm").addEventListener("click", event => {
   if (event.target.id === "cancelProductEdit") closeProductModal();
 });
 $("#productForm").addEventListener("input", event => {
-  if (event.target.name === "images") updateProductImagePreview(event.target.value);
+  if (event.target.matches("[data-image-slot]")) syncImageSlotsToGallery();
+  if (event.target.name === "images") {
+    syncGalleryToImageSlots(event.target.value);
+    updateProductImagePreview(event.target.value);
+  }
   if (event.target.name === "category") {
     const datalist = $("#productSubcategoryOptions");
     if (datalist) {
