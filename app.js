@@ -487,6 +487,20 @@ function renderProducts(search = ""){
   $("#showAllProducts").style.display = filtered.length > visibleCount ? "inline-flex" : "none";
 }
 
+function updateCategoryCounts(){
+  const counts = products.reduce((totals, product) => {
+    totals.set(product.category, (totals.get(product.category) || 0) + 1);
+    return totals;
+  }, new Map());
+
+  $$('[data-category-count]').forEach(card => {
+    const category = card.dataset.categoryCount;
+    const count = counts.get(category) || 0;
+    const label = card.querySelector("small");
+    if (label) label.textContent = `${count} produit${count === 1 ? "" : "s"}`;
+  });
+}
+
 function updateSearchUrl(query){
   const url = new URL(window.location.href);
   const cleanQuery = String(query || "").trim();
@@ -1341,6 +1355,7 @@ async function initializeStore(){
     const response = await fetch("/api/products");
     if (!response.ok) throw new Error("Catalogue indisponible.");
     products = sortProductsForStore(await response.json());
+    updateCategoryCounts();
     cart = cart.filter(item => products.some(product => product.id === item.id));
     wishlist = wishlist.filter(id => products.some(product => product.id === id));
     const initialSearch = getInitialSearch();
