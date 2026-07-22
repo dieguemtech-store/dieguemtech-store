@@ -1,4 +1,5 @@
 const jumiaGallery = image => [image];
+const { catalogProducts: jumiaCatalogPhones } = require("./jumia-phone-offers");
 
 module.exports = [
   {
@@ -900,5 +901,6 @@ module.exports = [
     image: "https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/46/319621/1.jpg?6666",
     images: jumiaGallery("https://sn.jumia.is/unsafe/fit-in/300x300/filters:fill(white)/product/46/319621/1.jpg?6666"),
     description: "Cable reseau RJ45 FTP Cat6 de 1,5 metre, pratique pour connecter un ordinateur, une box internet, un routeur ou une TV connectee avec une liaison stable."
-  }
+  },
+  ...jumiaCatalogPhones
 ];
