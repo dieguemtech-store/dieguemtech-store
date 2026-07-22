@@ -11,7 +11,7 @@ const database = require("./db");
 const app = express();
 const port = process.env.PORT || 3000;
 const ordersFile = path.join(__dirname, "data", "orders.json");
-const seoContentLastModified = "2026-07-17";
+const seoContentLastModified = "2026-07-22";
 const deliveryOptions = {
   Dakar: { zone: "Dakar", label: "Dakar", fee: 1500 },
   Pikine: { zone: "Pikine", label: "Pikine", fee: 2000 },
