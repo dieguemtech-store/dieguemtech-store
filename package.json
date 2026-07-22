@@ -6,8 +6,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "npm run test:catalog && npm run test:seo",
+    "test": "npm run test:catalog && npm run test:tecno && npm run test:seo",
     "test:catalog": "node scripts/check-jumia-catalog.js",
+    "test:tecno": "node scripts/check-jumia-tecno-catalog.js",
     "test:seo": "node scripts/check-seo.js",
     "backup:admin": "powershell -ExecutionPolicy Bypass -File scripts/download-admin-backup.ps1"
   },
